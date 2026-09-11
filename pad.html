@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pad</title>
+<style>
+  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
+         padding:24px; max-width:420px; margin-inline:auto; }
+  h1 { font-size:20px; margin:0 0 16px; }
+  form { display:grid; grid-template-columns:1fr auto; gap:8px; }
+  input, button { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33; }
+  input { background:#151a1d; color:#e8e4dc; }
+  button { background:#e8e4dc; color:#0e1113; border:0; font-weight:600; }
+  ul { list-style:none; padding:0; margin:24px 0 0; }
+  li { display:flex; justify-content:space-between; padding:10px 0;
+       border-bottom:1px solid #1b2227; font-variant-numeric:tabular-nums; }
+  li span { color:#69737a; font-size:13px; }
+  p { color:#d1584a; min-height:1.5em; }
+  a { color:#69737a; font-size:13px; }
+</style>
+
+<h1>weight</h1>
+
+<form id="f">
+  <input id="v" type="number" step="0.1" placeholder="84.2" required>
+  <button>add</button>
+</form>
+<p id="msg"></p>
+
+<ul id="list"></ul>
+<a href="#" id="out">sign out</a>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const db = supabase.createClient(WIRE.url, WIRE.key);
+
+async function guard() {
+  const { data } = await db.auth.getSession();
+  if (!data.session) location.href = 'index.html';
+}
+
+async function show() {
+  const { data, error } = await db
+    .from('events')
+    .select('value, unit, occurred_at')
+    .eq('metric', 'weight_kg')
+    .order('occurred_at', { ascending: false })
+    .limit(10);
+  if (error) { msg.textContent = error.message; return; }
+  list.innerHTML = data.map(r =>
+    `<li>${r.value} ${r.unit || ''}<span>${new Date(r.occurred_at).toLocaleString()}</span></li>`
+  ).join('');
+}
+
+f.onsubmit = async (e) => {
+  e.preventDefault();
+  msg.textContent = '';
+  const { error } = await db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric: 'weight_kg',
+    value: Number(v.value),
+    unit: 'kg',
+    source: 'pad'
+  });
+  if (error) { msg.textContent = error.message; return; }
+  v.value = '';
+  show();
+};
+
+out.onclick = async (e) => {
+  e.preventDefault();
+  await db.auth.signOut();
+  location.href = 'index.html';
+};
+
+guard().then(show);
+</script>
