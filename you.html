@@ -30,6 +30,13 @@
   .row { padding:12px 0; border-bottom:1px solid #1b2227; }
   .row .head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .row .name { flex:1; min-width:130px; }
+  .lane { position:relative; height:26px; margin-bottom:6px; }
+  .bar { position:absolute; height:22px; top:2px; border-radius:5px; padding:0 9px;
+         font:600 11px/22px ui-monospace,Menlo,monospace; white-space:nowrap;
+         overflow:hidden; background:#241c10; color:#d9a441; border:1px solid #4a3a1c; }
+  .bar.live { background:#d9a441; color:#1a1206; border-color:#d9a441; }
+  .axis { display:flex; justify-content:space-between; color:#69737a;
+          font-size:11px; border-top:1px solid #252d33; padding-top:8px; margin-top:6px; }
   .foot { margin-top:28px; display:flex; gap:16px; }
   a { color:#69737a; font-size:13px; }
   .err { color:#d1584a; font-size:13px; }
@@ -40,7 +47,7 @@
 <div id="out"></div>
 <div id="rest"></div>
 
-<div class="foot"><a href="pad.html">pad</a><a href="import.html">import</a></div>
+<div class="foot"><a href="pad.html">pad</a><a href="commit.html">commits</a><a href="import.html">import</a></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -85,6 +92,23 @@ function ruleButtons(metric, rule) {
   return html;
 }
 
+// A commit has no line of its own. It is a span, drawn under everything else.
+function lanes(commits, you) {
+  if (!commits.length || you.length < 2) return '';
+  const a = dayNum(you[0].day), b = dayNum(you[you.length - 1].day);
+  const span = (b - a) || 1;
+  const today = dayNum(new Date().toISOString().slice(0, 10));
+  const pc = d => Math.max(0, Math.min(100, ((d - a) / span) * 100));
+  const bars = commits.map(c => {
+    const s0 = pc(dayNum(c.from)), s1 = pc(Math.min(dayNum(c.to || today), b));
+    const w = Math.max(6, s1 - s0);
+    return `<div class="lane"><div class="bar ${c.to ? '' : 'live'}"
+      style="left:${s0}%;width:${w}%">${c.name}</div></div>`;
+  }).join('');
+  return `<h2>what you did</h2>${bars}
+    <div class="axis"><span>${you[0].day}</span><span>${you[you.length - 1].day}</span></div>`;
+}
+
 // Your number from day one. Your score from day fourteen.
 function card(name, points, colour, right, cls, note) {
   const n = points.length;
@@ -122,7 +146,8 @@ function wire(el) {
 }
 
 async function render() {
-  const [all, rules] = await Promise.all([readMetrics(db), readRules(db)]);
+  const [all, rules, commits] = await Promise.all(
+    [readMetrics(db), readRules(db), readCommits(db)]);
   const rows = await readDays(db, all);
   const series = rankSeries(rows, rules);
   const owned = Object.keys(series);
@@ -142,6 +167,7 @@ async function render() {
     html += card('YOU', you, '#d9a441',
       `<span>${owned.length} stocks</span>`, 'you',
       skipped ? `${skipped} days not drawn, something was stale` : 'all days complete');
+    html += lanes(commits, you);
     html += '<h2>your stocks</h2>';
     for (const m of owned) {
       html += card(m, series[m], '#4bb5a6', ruleButtons(m, rules[m]), '',
