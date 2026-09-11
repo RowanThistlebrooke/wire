@@ -28,29 +28,36 @@
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 
-function line(points, colour) {
+// Before day 14 we draw the raw number. After, we draw the rank.
+function line(points, colour, key) {
   if (points.length < 2) return '<svg></svg>';
   const w = 520, h = 90, pad = 6;
+  const vals = points.map(p => p[key]);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = (hi - lo) || 1;
   const step = (w - pad * 2) / (points.length - 1);
-  const y = r => h - pad - (r / 100) * (h - pad * 2);
-  const d = points.map((p, i) => `${pad + i * step},${y(p.rank)}`).join(' ');
-  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="rank over time">
-    <line x1="${pad}" y1="${y(50)}" x2="${w - pad}" y2="${y(50)}"
-          stroke="#252d33" stroke-width="1"/>
+  const y = v => h - pad - ((v - lo) / span) * (h - pad * 2);
+  const d = points.map((p, i) => `${pad + i * step},${y(p[key])}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="over time">
     <polyline points="${d}" fill="none" stroke="${colour}" stroke-width="2"
               stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
 }
 
+// Your number from day one. Your score from day fourteen.
 function card(name, points, colour, extra) {
-    const last = points.length >= 14 ? points[points.length - 1].rank : '—';
+  const n = points.length;
+  const ready = n >= 14;
+  const p = points[n - 1];
+  const big = !p ? '—' : ready ? p.rank : (p.value !== undefined ? p.value : '—');
+  const foot = ready ? `${n} days` : `${n} / 14 days to a score`;
   return `<div class="card">
     <div class="top">
       <span class="name">${name}</span>
-      <span class="rank">${last}</span>
+      <span class="rank">${big}</span>
     </div>
-    ${line(points, colour)}
-    <div class="sub">${points.length} days${extra ? ' · ' + extra : ''}</div>
+    ${line(points, colour, ready ? 'rank' : 'value')}
+    <div class="sub">${foot}${extra ? ' · ' + extra : ''}</div>
   </div>`;
 }
 
@@ -64,9 +71,9 @@ function card(name, points, colour, extra) {
   const series = rankSeries(rows, t.stocks);
 
   const n = Math.max(...metrics.map(m => (series[m] || []).length), 0);
-  note.textContent = n < 14
-    ? `${n} days of data. Under 14 the rank means nothing yet.`
-    : `${n} days of data.`;
+  note.textContent = n >= 14
+    ? `${n} days of data.`
+    : `${n} days in. Scores start at 14.`;
 
   let html = '';
   for (const m of metrics) {
