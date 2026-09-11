@@ -45,14 +45,15 @@ const db = supabase.createClient(WIRE.url, WIRE.key);
 let COMMITS = [], SERIES = {}, YOU = [];
 
 const TITLE = {
-  finding:    'It worked',
-  tangled:    'Cannot say',
+  finding:      'It worked',
+  tangled:      'Cannot say',
   'no finding': 'No finding',
-  'not enough': 'Not enough days'
+  early:        'Too early to call',
+  'no before':  'Nothing to compare'
 };
 const CLASS = {
   finding: 'finding', tangled: 'tangled',
-  'no finding': 'none', 'not enough': 'thin'
+  'no finding': 'none', early: 'thin', 'no before': 'thin'
 };
 
 function show() {
@@ -63,15 +64,15 @@ function show() {
   const today = new Date().toISOString().slice(0, 10);
   const r = testCommit(points, commit, COMMITS, today);
 
+  const num = (v, l) => `<div class="num"><b>${v}</b><span>${l}</span></div>`;
   out.innerHTML = `<div class="card">
     <div class="verdict ${CLASS[r.verdict]}">${TITLE[r.verdict]}</div>
     <p class="why">${r.why}</p>
     <div class="nums">
-      <div class="num"><b>${r.during}</b><span>days during</span></div>
-      <div class="num"><b>${r.before}</b><span>days before</span></div>
-      ${r.effect !== undefined ? `
-        <div class="num"><b>${r.effect > 0 ? '+' : ''}${r.effect}</b><span>rank points</span></div>
-        <div class="num"><b>${r.bar}</b><span>the bar</span></div>` : ''}
+      ${r.beforeMean !== null ? num(r.beforeMean, `before · ${r.before} days`) : ''}
+      ${r.duringMean !== null ? num(r.duringMean, `during · ${r.during} days`) : ''}
+      ${r.effect !== undefined ? num((r.effect > 0 ? '+' : '') + r.effect, 'change') : ''}
+      ${r.bar !== undefined ? num(r.bar, 'the bar') : ''}
     </div>
   </div>`;
 }
