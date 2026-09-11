@@ -1,0 +1,109 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>commits</title>
+<style>
+  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
+         padding:24px; max-width:560px; margin-inline:auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+       color:#69737a; margin:28px 0 12px; font-weight:600; }
+  .n { color:#69737a; font-size:13px; margin:0 0 20px; }
+  form { display:grid; gap:8px; }
+  .line { display:flex; gap:8px; }
+  input, button { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33; }
+  input { background:#151a1d; color:#e8e4dc; flex:1; min-width:0; }
+  button { background:#e8e4dc; color:#0e1113; border:0; font-weight:600; cursor:pointer; }
+  .row { display:flex; align-items:center; gap:10px; padding:12px 0;
+         border-bottom:1px solid #1b2227; flex-wrap:wrap; }
+  .row .name { flex:1; min-width:140px; font-family:ui-monospace,Menlo,monospace;
+               font-size:14px; }
+  .row .when { color:#69737a; font-size:12px; }
+  .row button { font-size:11px; padding:5px 10px; background:transparent;
+                border:1px solid #252d33; color:#69737a; }
+  .row button:hover { color:#e8e4dc; border-color:#39434a; }
+  .live { color:#4bb5a6; }
+  .msg { font-size:13px; min-height:1.5em; margin-top:12px; }
+  .msg.bad { color:#d1584a; }
+  .foot { margin-top:28px; display:flex; gap:16px; }
+  a { color:#69737a; font-size:13px; }
+</style>
+
+<h1>commits</h1>
+<p class="n">A stock is something you measure. A commit is something you did. It has a start and an end, not a value.</p>
+
+<form id="f">
+  <input id="name" type="text" placeholder="two coffees a day" required>
+  <div class="line">
+    <input id="from" type="date" required>
+    <button>start</button>
+  </div>
+</form>
+<p class="msg" id="msg"></p>
+
+<div id="list"></div>
+
+<div class="foot"><a href="you.html">you</a><a href="pad.html">pad</a><a href="import.html">import</a></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="you-reader.js"></script>
+<script>
+const db = supabase.createClient(WIRE.url, WIRE.key);
+
+const fmt = d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined,
+  { day: 'numeric', month: 'short', year: 'numeric' });
+
+function draw(commits) {
+  const live = commits.filter(c => !c.to);
+  const done = commits.filter(c => c.to);
+  const row = c => `<div class="row">
+      <span class="name">${c.name}</span>
+      <span class="when">${fmt(c.from)}${c.to ? ' to ' + fmt(c.to) : ''} · ${c.days} days</span>
+      ${c.to ? '' : `<button data-id="${c.id}">stop</button>`}
+    </div>`;
+  list.innerHTML =
+    (live.length ? '<h2 class="live">running</h2>' + live.map(row).join('') : '') +
+    (done.length ? '<h2>ended</h2>' + done.map(row).join('') : '');
+  list.querySelectorAll('button[data-id]').forEach(b =>
+    b.onclick = () => stop(b.dataset.id));
+}
+
+async function stop(id) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { error } = await db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric: id,
+    event_type: 'commit_end',
+    source: 'you',
+    context: { to: today }
+  });
+  if (error) { msg.className = 'msg bad'; msg.textContent = error.message; return; }
+  show();
+}
+
+f.onsubmit = async (e) => {
+  e.preventDefault();
+  msg.textContent = '';
+  const { error } = await db.from('events').insert({
+    occurred_at: new Date(from.value + 'T12:00:00Z').toISOString(),
+    metric: slugCommit(name.value),
+    event_type: 'commit',
+    source: 'you',
+    context: { name: name.value.trim(), from: from.value }
+  });
+  if (error) { msg.className = 'msg bad'; msg.textContent = error.message; return; }
+  name.value = '';
+  show();
+};
+
+async function show() {
+  draw(await readCommits(db));
+}
+
+db.auth.getSession().then(({ data }) => {
+  if (!data.session) { location.href = 'index.html'; return; }
+  from.value = new Date().toISOString().slice(0, 10);
+  show();
+});
+</script>
