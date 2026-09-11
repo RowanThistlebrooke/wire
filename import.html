@@ -39,10 +39,11 @@
 <button id="go" hidden>import</button>
 <p class="msg" id="msg"></p>
 
-<div class="foot"><a href="pad.html">pad</a><a href="you.html">you</a></div>
+<div class="foot"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="nav.js" defer></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 let PLAN = null;
