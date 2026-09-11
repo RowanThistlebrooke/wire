@@ -33,9 +33,9 @@
 <p class="n">A stock is something you measure. A commit is something you did. It has a start and an end, not a value.</p>
 
 <form id="f">
-  <input id="name" type="text" placeholder="two coffees a day" required>
+  <input id="what" type="text" placeholder="two coffees a day" required>
   <div class="line">
-    <input id="from" type="date" required>
+    <input id="what_from" type="date" required>
     <button>start</button>
   </div>
 </form>
@@ -86,14 +86,14 @@ f.onsubmit = async (e) => {
   e.preventDefault();
   msg.textContent = '';
   const { error } = await db.from('events').insert({
-    occurred_at: new Date(from.value + 'T12:00:00Z').toISOString(),
-    metric: slugCommit(name.value),
+    occurred_at: new Date(what_from.value + 'T12:00:00Z').toISOString(),
+    metric: slugCommit(what.value),
     event_type: 'commit',
     source: 'you',
-    context: { name: name.value.trim(), from: from.value }
+    context: { name: what.value.trim(), from: what_from.value }
   });
   if (error) { msg.className = 'msg bad'; msg.textContent = error.message; return; }
-  name.value = '';
+  what.value = '';
   show();
 };
 
@@ -103,7 +103,7 @@ async function show() {
 
 db.auth.getSession().then(({ data }) => {
   if (!data.session) { location.href = 'index.html'; return; }
-  from.value = new Date().toISOString().slice(0, 10);
+  what_from.value = new Date().toISOString().slice(0, 10);
   show();
 });
 </script>
