@@ -16,6 +16,7 @@
   li span { color:#69737a; font-size:13px; }
   p { color:#d1584a; min-height:1.5em; }
   a { color:#69737a; font-size:13px; }
+  .foot { display:flex; gap:16px; margin-top:24px; }
 </style>
 
 <h1>weight</h1>
@@ -27,7 +28,12 @@
 <p id="msg"></p>
 
 <ul id="list"></ul>
-<a href="#" id="out">sign out</a>
+
+<div class="foot">
+  <a href="you.html">you</a>
+  <a href="import.html">import</a>
+  <a href="#" id="out">sign out</a>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
