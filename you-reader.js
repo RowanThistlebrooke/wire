@@ -182,11 +182,15 @@ async function readCommits(db) {
 // Compare the days a commit was running against the same number of days
 // straight before it. That is it. No model, no adjustment, no cleverness.
 //
-// Two gates, and both of them refuse rather than guess:
-//   1. Fewer than MIN_DAYS on either side and there is nothing to say.
+// The numbers are always shown. Only the verdict is gated, by two rules:
+//   1. Fewer than MIN_DAYS on either side and it says too early.
 //   2. An effect smaller than two standard errors is noise wearing a number.
+//
+// The second one does the real work. With fewer days the noise estimate
+// grows, so the bar rises on its own and a weak result is still thrown
+// out. MIN_DAYS is only a floor under that.
 
-const MIN_DAYS = 14;
+const MIN_DAYS = 10;
 
 const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
@@ -226,38 +230,58 @@ function testCommit(points, commit, commits, todayStr) {
   const before = ranksBetween(points, start - length - 1, start - 1);
   const clash = collisionsWith(commit, commits, todayStr);
 
-  const out = { during: during.length, before: before.length, clash };
+  const out = {
+    during: during.length,
+    before: before.length,
+    clash,
+    duringMean: during.length ? Math.round(mean(during)) : null,
+    beforeMean: before.length ? Math.round(mean(before)) : null
+  };
 
-  if (during.length < MIN_DAYS || before.length < MIN_DAYS) {
-    out.verdict = 'not enough';
-    out.why = `${during.length} days during, ${before.length} before. ` +
-              `Needs ${MIN_DAYS} of each.`;
+  // Nothing to compare against. Say so, and still show what is there.
+  if (!before.length) {
+    out.verdict = 'no before';
+    out.why = `${during.length} days while it ran, and nothing before it. ` +
+              `Your data starts after this began, so there is no version of ` +
+              `you without it to compare against.`;
     return out;
   }
 
+  // From here on the numbers are always shown. Only the verdict is gated.
   const effect = mean(during) - mean(before);
   const se = Math.sqrt(standardError(during) ** 2 + standardError(before) ** 2);
   out.effect = Math.round(effect * 10) / 10;
-  out.se = Math.round(se * 10) / 10;
   out.bar = Math.round(2 * se * 10) / 10;
+  const dir = effect > 0 ? 'up' : 'down';
+
+  const short = Math.max(MIN_DAYS - during.length, MIN_DAYS - before.length);
+  if (short > 0) {
+    out.verdict = 'early';
+    out.needs = short;
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points so far. ` +
+              `That is real movement, but it is ${short} day${short > 1 ? 's' : ''} ` +
+              `short of being worth a verdict. Keep going.`;
+    return out;
+  }
 
   if (Math.abs(effect) < 2 * se) {
     out.verdict = 'no finding';
-    out.why = `Moved ${out.effect} rank points. The bar was ${out.bar}. ` +
-              `Too small to tell apart from noise.`;
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points. ` +
+              `The bar was ${out.bar}. Too small to tell apart from an ordinary good week.`;
     return out;
   }
 
   if (clash.length) {
     out.verdict = 'tangled';
-    out.why = `Moved ${out.effect} rank points, which clears the bar of ${out.bar}. ` +
-              `But ${clash.map(c => c.name).join(' and ')} ran at the same time, ` +
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points, ` +
+              `which clears the bar of ${out.bar}. But ` +
+              `${clash.map(c => c.name).join(' and ')} ran at the same time, ` +
               `so this cannot be pulled apart.`;
     return out;
   }
 
   out.verdict = 'finding';
-  out.why = `Moved ${out.effect} rank points against a bar of ${out.bar}, ` +
-            `with nothing else running.`;
+  out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points ` +
+            `against a bar of ${out.bar}, with nothing else running.`;
   return out;
 }
