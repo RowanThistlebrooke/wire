@@ -139,3 +139,35 @@ function coverage(series, members) {
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))];
   return { drawn: etfSeries(series, members).length, days: days.length };
 }
+
+// ---- commits: the other column ----
+//
+// A stock has a value every day. It is a noun.
+// A commit has a start and an end. It is a verb.
+// It has no line of its own. What it did shows up in everything else.
+
+const slugCommit = s =>
+  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'commit';
+
+async function readCommits(db) {
+  const { data, error } = await db
+    .from('events')
+    .select('metric, context, event_type, occurred_at')
+    .in('event_type', ['commit', 'commit_end'])
+    .order('occurred_at', { ascending: true })
+    .limit(20000);
+  if (error) throw error;
+
+  const byId = {};
+  for (const r of data) {
+    if (r.event_type === 'commit') {
+      byId[r.metric] = { id: r.metric, name: r.context.name, from: r.context.from, to: null };
+    } else if (byId[r.metric]) {
+      byId[r.metric].to = r.context.to;          // latest end wins
+    }
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  return Object.values(byId)
+    .map(c => ({ ...c, days: dayNum(c.to || today) - dayNum(c.from) + 1 }))
+    .sort((a, b) => b.from.localeCompare(a.from));
+}
