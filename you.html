@@ -43,7 +43,7 @@ function line(points, colour) {
 }
 
 function card(name, points, colour, extra) {
-  const last = points.length ? points[points.length - 1].rank : '-';
+    const last = points.length >= 14 ? points[points.length - 1].rank : '—';
   return `<div class="card">
     <div class="top">
       <span class="name">${name}</span>
