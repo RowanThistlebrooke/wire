@@ -15,6 +15,8 @@
   .row input[type=text] { flex:1; font:inherit; font-size:14px; padding:8px;
          background:#151a1d; color:#e8e4dc; border:1px solid #252d33; border-radius:6px; }
   .row span { color:#69737a; font-size:12px; white-space:nowrap; }
+  .row .nm { flex:1; color:#e8e4dc; font-size:14px;
+             font-family:ui-monospace,Menlo,monospace; }
   button { font:inherit; padding:12px 16px; border-radius:8px; border:0;
            background:#e8e4dc; color:#0e1113; font-weight:600; cursor:pointer;
            margin-top:16px; width:100%; }
@@ -64,7 +66,7 @@ function parseCSV(text) {
   return rows.filter(r => r.some(v => v.trim() !== ''));
 }
 
-const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'metric';
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || '';
 const isDate = v => v.trim() !== '' && !isNaN(Date.parse(v));
 const isNum  = v => v.trim() !== '' && !isNaN(Number(v));
 
@@ -90,17 +92,31 @@ function plan(rows, filename) {
   });
   if (!metrics.length) return { error: 'No number columns found.' };
 
-  return { head, body, dateCol, metrics, filename };
+  const guess = slug(filename.replace(/\.csv$/i, '')).split('_')[0];
+  return { head, body, dateCol, metrics, filename, guess };
 }
 
 function draw(p) {
-  found.innerHTML = `<p class="n">Dates from <b>${p.head[p.dateCol]}</b>. ${p.body.length} rows.</p>` +
-    p.metrics.map((m, i) => `<label class="row">
+  found.innerHTML = `
+    <p class="n">Dates from <b>${p.head[p.dateCol]}</b>. ${p.body.length} rows.</p>
+    <label class="row"><span>from</span>
+      <input type="text" id="src" value="${p.guess}" placeholder="yt">
+    </label>
+    <div id="names"></div>`;
+  src.oninput = names;
+  names();
+  go.hidden = false;
+}
+
+// One word. Every metric in the file gets it as a prefix.
+function names() {
+  const pre = slug(src.value);
+  document.getElementById('names').innerHTML = PLAN.metrics.map((m, i) =>
+    `<label class="row">
       <input type="checkbox" data-i="${i}" checked>
-      <input type="text" data-name="${i}" value="${m.name}">
+      <span class="nm">${pre ? pre + '_' : ''}${m.name}</span>
       <span>${m.n} values</span>
     </label>`).join('');
-  go.hidden = false;
 }
 
 function load(file) {
@@ -126,11 +142,12 @@ go.onclick = async () => {
   go.disabled = true;
   msg.className = 'msg'; msg.textContent = 'reading...';
 
+  const pre = slug(src.value);
   const chosen = [...found.querySelectorAll('input[type=checkbox]')]
     .filter(c => c.checked)
     .map(c => {
-      const i = +c.dataset.i;
-      return { ...PLAN.metrics[i], name: found.querySelector(`[data-name="${i}"]`).value.trim() };
+      const m = PLAN.metrics[+c.dataset.i];
+      return { ...m, name: pre ? pre + '_' + m.name : m.name };
     });
 
   const rows = [];
