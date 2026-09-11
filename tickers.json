@@ -1,0 +1,8 @@
+{
+  "stocks": {
+    "weight_kg": { "direction": "down" }
+  },
+  "etfs": {
+    "BODY": ["weight_kg"]
+  }
+}
