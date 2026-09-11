@@ -1,0 +1,178 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>import</title>
+<style>
+  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
+         padding:24px; max-width:560px; margin-inline:auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .n { color:#69737a; font-size:13px; margin:0 0 20px; }
+  #drop { border:1px dashed #313b42; border-radius:10px; padding:32px 16px;
+          text-align:center; color:#69737a; font-size:14px; cursor:pointer; }
+  #drop.over { border-color:#4bb5a6; color:#e8e4dc; }
+  .row { display:flex; align-items:center; gap:10px; padding:10px 0;
+         border-bottom:1px solid #1b2227; }
+  .row input[type=text] { flex:1; font:inherit; font-size:14px; padding:8px;
+         background:#151a1d; color:#e8e4dc; border:1px solid #252d33; border-radius:6px; }
+  .row span { color:#69737a; font-size:12px; white-space:nowrap; }
+  button { font:inherit; padding:12px 16px; border-radius:8px; border:0;
+           background:#e8e4dc; color:#0e1113; font-weight:600; cursor:pointer;
+           margin-top:16px; width:100%; }
+  button[disabled] { opacity:.4; cursor:default; }
+  .msg { font-size:13px; margin-top:14px; min-height:1.5em; }
+  .msg.bad { color:#d1584a; }
+  .msg.good { color:#4bb5a6; }
+  a { color:#69737a; font-size:13px; }
+  .foot { margin-top:24px; display:flex; gap:16px; }
+</style>
+
+<h1>import</h1>
+<p class="n">Drop a CSV. It finds the dates, and every number column becomes its own metric.</p>
+
+<div id="drop">choose a file, or drop one here
+  <input id="file" type="file" accept=".csv,text/csv" hidden>
+</div>
+
+<div id="found"></div>
+<button id="go" hidden>import</button>
+<p class="msg" id="msg"></p>
+
+<div class="foot"><a href="pad.html">pad</a><a href="you.html">you</a></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const db = supabase.createClient(WIRE.url, WIRE.key);
+let PLAN = null;
+
+// --- csv, handling quoted fields ---
+function parseCSV(text) {
+  const rows = [[]];
+  let field = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { rows[rows.length - 1].push(field); field = ''; }
+    else if (c === '\n') { rows[rows.length - 1].push(field); field = ''; rows.push([]); }
+    else if (c !== '\r') field += c;
+  }
+  rows[rows.length - 1].push(field);
+  return rows.filter(r => r.some(v => v.trim() !== ''));
+}
+
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'metric';
+const isDate = v => v.trim() !== '' && !isNaN(Date.parse(v));
+const isNum  = v => v.trim() !== '' && !isNaN(Number(v));
+
+// --- work out what this file is ---
+function plan(rows, filename) {
+  const head = rows[0].map(h => h.trim());
+  const body = rows.slice(1);
+
+  let dateCol = -1, best = 0;
+  head.forEach((_, c) => {
+    const hits = body.filter(r => isDate(r[c] || '')).length;
+    const nums = body.filter(r => isNum(r[c] || '')).length;
+    // a column of plain numbers is not a date column
+    if (hits > best && hits > nums) { best = hits; dateCol = c; }
+  });
+  if (dateCol === -1) return { error: 'No date column found.' };
+
+  const metrics = [];
+  head.forEach((h, c) => {
+    if (c === dateCol) return;
+    const nums = body.filter(r => isNum(r[c] || '')).length;
+    if (nums >= body.length * 0.6) metrics.push({ col: c, name: slug(h), label: h, n: nums });
+  });
+  if (!metrics.length) return { error: 'No number columns found.' };
+
+  return { head, body, dateCol, metrics, filename };
+}
+
+function draw(p) {
+  found.innerHTML = `<p class="n">Dates from <b>${p.head[p.dateCol]}</b>. ${p.body.length} rows.</p>` +
+    p.metrics.map((m, i) => `<label class="row">
+      <input type="checkbox" data-i="${i}" checked>
+      <input type="text" data-name="${i}" value="${m.name}">
+      <span>${m.n} values</span>
+    </label>`).join('');
+  go.hidden = false;
+}
+
+function load(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    const p = plan(parseCSV(r.result), file.name);
+    if (p.error) { msg.className = 'msg bad'; msg.textContent = p.error; return; }
+    PLAN = p; msg.textContent = ''; draw(p);
+  };
+  r.readAsText(file);
+}
+
+drop.onclick = () => file.click();
+file.onchange = e => e.target.files[0] && load(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);
+};
+
+go.onclick = async () => {
+  go.disabled = true;
+  msg.className = 'msg'; msg.textContent = 'reading...';
+
+  const chosen = [...found.querySelectorAll('input[type=checkbox]')]
+    .filter(c => c.checked)
+    .map(c => {
+      const i = +c.dataset.i;
+      return { ...PLAN.metrics[i], name: found.querySelector(`[data-name="${i}"]`).value.trim() };
+    });
+
+  const rows = [];
+  for (const r of PLAN.body) {
+    const raw = r[PLAN.dateCol];
+    if (!isDate(raw || '')) continue;
+    const when = new Date(raw).toISOString();
+    for (const m of chosen) {
+      const v = r[m.col];
+      if (!isNum(v || '')) continue;
+      rows.push({
+        occurred_at: when,
+        metric: m.name,
+        value: Number(v),
+        source: 'csv',
+        source_id: `${PLAN.filename}:${raw}`
+      });
+    }
+  }
+
+  // Ask the database what it already has, so the same file twice lands once.
+  const { data: have } = await db.from('events')
+    .select('source_id, metric').eq('source', 'csv');
+  const seen = new Set((have || []).map(h => h.source_id + '|' + h.metric));
+  const fresh = rows.filter(r => !seen.has(r.source_id + '|' + r.metric));
+
+  if (!fresh.length) {
+    msg.className = 'msg good';
+    msg.textContent = `Nothing new. All ${rows.length} readings are already in.`;
+    go.disabled = false; return;
+  }
+
+  for (let i = 0; i < fresh.length; i += 500) {
+    const { error } = await db.from('events').insert(fresh.slice(i, i + 500));
+    if (error) { msg.className = 'msg bad'; msg.textContent = error.message; go.disabled = false; return; }
+    msg.textContent = `${Math.min(i + 500, fresh.length)} / ${fresh.length}`;
+  }
+
+  msg.className = 'msg good';
+  msg.textContent = `${fresh.length} added. ${rows.length - fresh.length} already there.`;
+  go.disabled = false;
+};
+
+db.auth.getSession().then(({ data }) => { if (!data.session) location.href = 'index.html'; });
+</script>
