@@ -1,0 +1,66 @@
+// Counts how many commits you pushed each day and writes them to the ledger.
+//
+// This runs on GitHub's machines, not yours. Nothing is installed here.
+// It signs in as you with the publishable key, exactly like the website
+// does, so the same row level security applies. There is no admin key
+// anywhere in this repo or in this script.
+
+import { createClient } from '@supabase/supabase-js';
+
+const { WIRE_URL, WIRE_KEY, WIRE_EMAIL, WIRE_PASSWORD, GH_TOKEN, GH_USER } = process.env;
+const DAYS = 14;
+
+const db = createClient(WIRE_URL, WIRE_KEY);
+
+const { error: signInError } = await db.auth.signInWithPassword({
+  email: WIRE_EMAIL,
+  password: WIRE_PASSWORD
+});
+if (signInError) throw new Error('sign in failed: ' + signInError.message);
+
+const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+async function commitsOn(date) {
+  const q = `author:${GH_USER}+author-date:${date}`;
+  const res = await fetch(`https://api.github.com/search/commits?q=${q}&per_page=1`, {
+    headers: {
+      Authorization: `Bearer ${GH_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'wire'
+    }
+  });
+  if (res.status === 403) { await new Promise(r => setTimeout(r, 60000)); return commitsOn(date); }
+  if (!res.ok) throw new Error(`github ${res.status} on ${date}`);
+  const body = await res.json();
+  return body.total_count;
+}
+
+const rows = [];
+for (let n = 1; n <= DAYS; n++) {
+  const date = day(n);
+  const count = await commitsOn(date);
+  rows.push({
+    occurred_at: `${date}T12:00:00Z`,
+    metric: 'gh_commits',
+    value: count,
+    unit: 'commits',
+    source: 'github',
+    source_id: date              // one row per day, forever
+  });
+  await new Promise(r => setTimeout(r, 2500));   // stay under the search limit
+}
+
+// The same file can run every day without piling up duplicates, because
+// source_id is the date and the database refuses the same one twice.
+const { data: have } = await db.from('events')
+  .select('source_id').eq('source', 'github').limit(20000);
+const seen = new Set((have || []).map(h => h.source_id));
+const fresh = rows.filter(r => !seen.has(r.source_id));
+
+if (!fresh.length) {
+  console.log(`nothing new, all ${rows.length} days already in`);
+} else {
+  const { error } = await db.from('events').insert(fresh);
+  if (error) throw new Error('insert failed: ' + error.message);
+  console.log(`added ${fresh.length} days, ${rows.length - fresh.length} already there`);
+}
