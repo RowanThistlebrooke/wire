@@ -1,4 +1,4 @@
-// Reads the ledger. Turns raw numbers into ranks. Nothing else.
+const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 // A reading is good for this many days. After that the stock is stale
 // and YOU refuses to draw, rather than guessing or quietly dropping it.
@@ -66,21 +66,34 @@ function baselineOf(values) {
   return values.slice(0, 30);
 }
 
-// 0 to 100. 100 is always better, whichever way the raw number goes.
+// An index, not a rank. 100 is the person you were across your first
+// thirty readings. There is no ceiling and no floor, so you can always
+// keep improving, which a percentile never let you do.
 //
-// Ties count as half. Without that, a reading equal to every baseline
-// reading scores zero, and a metric that simply never changes would look
-// like your worst possible day, every day.
-function rankOf(value, baseline, lowerIsBetter) {
-  if (baseline.length === 0) return 50;
-  const below = baseline.filter(b => b < value).length;
-  const same = baseline.filter(b => b === value).length;
-  const r = Math.round(((below + same / 2) / baseline.length) * 100);
-  return lowerIsBetter ? 100 - r : r;
+// One point is a tenth of your own ordinary variation. So 137 does not
+// mean "better than 37 percent of my past", it means "well clear of my
+// normal", in the units of your own noise.
+function spreadOf(baseline) {
+  if (baseline.length < 2) return 0;
+  const m = mean(baseline);
+  const v = baseline.reduce((a, x) => a + (x - m) ** 2, 0) / (baseline.length - 1);
+  return Math.sqrt(v);
+}
+
+function indexOf(value, baseline, lowerIsBetter) {
+  if (!baseline.length) return 100;
+  const m = mean(baseline);
+  const sd = spreadOf(baseline);
+  // A stock that never moved has no ordinary variation to measure against.
+  // Fall back to one percent of its own size so it stays flat instead of
+  // exploding.
+  const unit = sd > 0 ? sd : Math.abs(m) * 0.01 || 1;
+  const away = (value - m) / unit;
+  return Math.round((100 + (lowerIsBetter ? -away : away) * 10) * 10) / 10;
 }
 
 // Returns { metric: [{ day, value, rank }] }
-// value is always the real reading. rank is the scored version.
+// value is always the real reading. rank is the index.
 function rankSeries(rows, rules) {
   const out = {};
   for (const metric of Object.keys(rules)) {
@@ -95,7 +108,7 @@ function rankSeries(rows, rules) {
     out[metric] = mine.map((r, i) => ({
       day: r.day,
       value: values[i],
-      rank: rankOf(scored[i], base, lower)
+      rank: indexOf(scored[i], base, lower)
     }));
   }
   return out;
@@ -103,7 +116,7 @@ function rankSeries(rows, rules) {
 
 const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 
-// YOU is not a row. It is the average of every rank you own, per day.
+// YOU is not a row. It is the average of every index you own, per day.
 //
 // A stock joins YOU on the day of its first reading. It cannot be stale
 // before it existed, so adding a new stock never erases your history.
@@ -133,7 +146,7 @@ function etfSeries(series, members) {
     if (!live.length || fresh.length !== live.length) continue;   // silence, not a guess
     out.push({
       day,
-      rank: Math.round(fresh.reduce((a, s) => a + s.rank, 0) / fresh.length)
+      rank: Math.round(fresh.reduce((a, s) => a + s.rank, 0) / fresh.length * 10) / 10
     });
   }
   return out;
@@ -185,14 +198,8 @@ async function readCommits(db) {
 // The numbers are always shown. Only the verdict is gated, by two rules:
 //   1. Fewer than MIN_DAYS on either side and it says too early.
 //   2. An effect smaller than two standard errors is noise wearing a number.
-//
-// The second one does the real work. With fewer days the noise estimate
-// grows, so the bar rises on its own and a weak result is still thrown
-// out. MIN_DAYS is only a floor under that.
 
 const MIN_DAYS = 10;
-
-const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 // Spread of the average, not of the readings.
 function standardError(xs) {
@@ -258,7 +265,7 @@ function testCommit(points, commit, commits, todayStr) {
   if (short > 0) {
     out.verdict = 'early';
     out.needs = short;
-    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points so far. ` +
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} points so far. ` +
               `That is real movement, but it is ${short} day${short > 1 ? 's' : ''} ` +
               `short of being worth a verdict. Keep going.`;
     return out;
@@ -266,14 +273,14 @@ function testCommit(points, commit, commits, todayStr) {
 
   if (Math.abs(effect) < 2 * se) {
     out.verdict = 'no finding';
-    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points. ` +
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} points. ` +
               `The bar was ${out.bar}. Too small to tell apart from an ordinary good week.`;
     return out;
   }
 
   if (clash.length) {
     out.verdict = 'tangled';
-    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points, ` +
+    out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} points, ` +
               `which clears the bar of ${out.bar}. But ` +
               `${clash.map(c => c.name).join(' and ')} ran at the same time, ` +
               `so this cannot be pulled apart.`;
@@ -281,7 +288,7 @@ function testCommit(points, commit, commits, todayStr) {
   }
 
   out.verdict = 'finding';
-  out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} rank points ` +
+  out.why = `${dir === 'up' ? 'Up' : 'Down'} ${Math.abs(out.effect)} points ` +
             `against a bar of ${out.bar}, with nothing else running.`;
   return out;
 }
