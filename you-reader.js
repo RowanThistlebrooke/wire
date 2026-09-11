@@ -67,10 +67,15 @@ function baselineOf(values) {
 }
 
 // 0 to 100. 100 is always better, whichever way the raw number goes.
+//
+// Ties count as half. Without that, a reading equal to every baseline
+// reading scores zero, and a metric that simply never changes would look
+// like your worst possible day, every day.
 function rankOf(value, baseline, lowerIsBetter) {
   if (baseline.length === 0) return 50;
   const below = baseline.filter(b => b < value).length;
-  const r = Math.round((below / baseline.length) * 100);
+  const same = baseline.filter(b => b === value).length;
+  const r = Math.round(((below + same / 2) / baseline.length) * 100);
   return lowerIsBetter ? 100 - r : r;
 }
 
@@ -170,4 +175,89 @@ async function readCommits(db) {
   return Object.values(byId)
     .map(c => ({ ...c, days: dayNum(c.to || today) - dayNum(c.from) + 1 }))
     .sort((a, b) => b.from.localeCompare(a.from));
+}
+
+// ---- the test: did it work? ----
+//
+// Compare the days a commit was running against the same number of days
+// straight before it. That is it. No model, no adjustment, no cleverness.
+//
+// Two gates, and both of them refuse rather than guess:
+//   1. Fewer than MIN_DAYS on either side and there is nothing to say.
+//   2. An effect smaller than two standard errors is noise wearing a number.
+
+const MIN_DAYS = 14;
+
+const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+// Spread of the average, not of the readings.
+function standardError(xs) {
+  if (xs.length < 2) return Infinity;
+  const m = mean(xs);
+  const v = xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1);
+  return Math.sqrt(v / xs.length);
+}
+
+function ranksBetween(points, fromDay, toDay) {
+  return points.filter(p => {
+    const t = dayNum(p.day);
+    return t >= fromDay && t <= toDay;
+  }).map(p => p.rank);
+}
+
+// Any other commit that was running at the same time cannot be separated
+// from this one. The system names the collision instead of picking a winner.
+function collisionsWith(commit, commits, today) {
+  const a0 = dayNum(commit.from), a1 = dayNum(commit.to || today);
+  return commits.filter(c => {
+    if (c.id === commit.id) return false;
+    const b0 = dayNum(c.from), b1 = dayNum(c.to || today);
+    return b0 <= a1 && b1 >= a0;
+  });
+}
+
+function testCommit(points, commit, commits, todayStr) {
+  const today = dayNum(todayStr);
+  const start = dayNum(commit.from);
+  const end = Math.min(dayNum(commit.to || todayStr), today);
+  const length = end - start;
+
+  const during = ranksBetween(points, start, end);
+  const before = ranksBetween(points, start - length - 1, start - 1);
+  const clash = collisionsWith(commit, commits, todayStr);
+
+  const out = { during: during.length, before: before.length, clash };
+
+  if (during.length < MIN_DAYS || before.length < MIN_DAYS) {
+    out.verdict = 'not enough';
+    out.why = `${during.length} days during, ${before.length} before. ` +
+              `Needs ${MIN_DAYS} of each.`;
+    return out;
+  }
+
+  const effect = mean(during) - mean(before);
+  const se = Math.sqrt(standardError(during) ** 2 + standardError(before) ** 2);
+  out.effect = Math.round(effect * 10) / 10;
+  out.se = Math.round(se * 10) / 10;
+  out.bar = Math.round(2 * se * 10) / 10;
+
+  if (Math.abs(effect) < 2 * se) {
+    out.verdict = 'no finding';
+    out.why = `Moved ${out.effect} rank points. The bar was ${out.bar}. ` +
+              `Too small to tell apart from noise.`;
+    return out;
+  }
+
+  if (clash.length) {
+    out.verdict = 'tangled';
+    out.why = `Moved ${out.effect} rank points, which clears the bar of ${out.bar}. ` +
+              `But ${clash.map(c => c.name).join(' and ')} ran at the same time, ` +
+              `so this cannot be pulled apart.`;
+    return out;
+  }
+
+  out.verdict = 'finding';
+  out.why = `Moved ${out.effect} rank points against a bar of ${out.bar}, ` +
+            `with nothing else running.`;
+  return out;
 }
