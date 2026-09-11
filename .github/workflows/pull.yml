@@ -1,0 +1,24 @@
+name: pull
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  github:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install @supabase/supabase-js
+      - run: node pull/github.mjs
+        env:
+          WIRE_URL:      ${{ secrets.WIRE_URL }}
+          WIRE_KEY:      ${{ secrets.WIRE_KEY }}
+          WIRE_EMAIL:    ${{ secrets.WIRE_EMAIL }}
+          WIRE_PASSWORD: ${{ secrets.WIRE_PASSWORD }}
+          GH_TOKEN:      ${{ secrets.GH_TOKEN }}
+          GH_USER:       ${{ github.repository_owner }}
