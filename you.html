@@ -151,7 +151,7 @@ go.onclick = async () => {
     });
 
   const rows = [];
-  for (const r of PLAN.body) {
+  for (const [ri, r] of PLAN.body.entries()) {
     const raw = r[PLAN.dateCol];
     if (!isDate(raw || '')) continue;
     const when = new Date(raw).toISOString();
@@ -163,7 +163,7 @@ go.onclick = async () => {
         metric: m.name,
         value: Number(v),
         source: 'csv',
-        source_id: `${PLAN.filename}:${raw}`
+        source_id: `${PLAN.filename}:${ri}:${raw}`
       });
     }
   }
