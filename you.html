@@ -14,6 +14,11 @@
   .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
   .name { font-weight:600; font-family:ui-monospace,Menlo,monospace; font-size:14px; }
   .rank { font-size:24px; font-variant-numeric:tabular-nums; }
+  .big { display:flex; align-items:baseline; gap:10px; }
+  .real { color:#69737a; font-size:13px; font-variant-numeric:tabular-nums;
+          font-family:ui-monospace,Menlo,monospace; }
+  .move { font-variant-numeric:tabular-nums; }
+  .move.up { color:#4bb5a6; } .move.dn { color:#d1584a; } .move.flat { color:#69737a; }
   .sub { color:#69737a; font-size:12px; display:flex; justify-content:space-between;
          align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; }
   .stale { color:#d9a441; }
@@ -44,6 +49,7 @@
 
 <h1>you</h1>
 <p class="n" id="note">reading...</p>
+<p class="n" style="margin-top:-16px">100 is the person you were across your first thirty readings. Ten points is one step of your own ordinary variation. There is no ceiling.</p>
 <div id="out"></div>
 <div id="rest"></div>
 
@@ -56,19 +62,35 @@
 const db = supabase.createClient(WIRE.url, WIRE.key);
 let OPEN = null;   // which metric has its band editor open
 
-function line(points, colour, key) {
+function line(points, colour, key, mark) {
   if (points.length < 2) return '<svg></svg>';
   const w = 520, h = 90, pad = 6;
   const vals = points.map(p => p[key]);
-  const lo = Math.min(...vals), hi = Math.max(...vals);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  // Keep the 100 line inside the drawing, so above and below always read.
+  if (mark !== undefined) { lo = Math.min(lo, mark); hi = Math.max(hi, mark); }
   const span = (hi - lo) || 1;
   const step = (w - pad * 2) / (points.length - 1);
   const y = v => h - pad - ((v - lo) / span) * (h - pad * 2);
   const d = points.map((p, i) => `${pad + i * step},${y(p[key])}`).join(' ');
+  const base = mark === undefined ? '' :
+    `<line x1="${pad}" y1="${y(mark)}" x2="${w - pad}" y2="${y(mark)}"
+           stroke="#2b3439" stroke-width="1" stroke-dasharray="3 4"/>`;
   return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="over time">
+    ${base}
     <polyline points="${d}" fill="none" stroke="${colour}" stroke-width="2"
               stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
+}
+
+// The move over the last seven readings. People read the change first.
+function moveOf(points) {
+  if (points.length < 8) return '';
+  const now = points[points.length - 1].rank;
+  const then = points[points.length - 8].rank;
+  const d = Math.round((now - then) * 10) / 10;
+  if (d === 0) return '<span class="move flat">flat this week</span>';
+  return `<span class="move ${d > 0 ? 'up' : 'dn'}">${d > 0 ? '↑' : '↓'}${Math.abs(d)} this week</span>`;
 }
 
 const label = r => !r ? '' :
@@ -109,17 +131,23 @@ function lanes(commits, you) {
     <div class="axis"><span>${you[0].day}</span><span>${you[you.length - 1].day}</span></div>`;
 }
 
-// Your number from day one. Your score from day fourteen.
+// Your real reading from day one. Your index from day fourteen.
 function card(name, points, colour, right, cls, note) {
   const n = points.length;
   const ready = n >= 14;
   const p = points[n - 1];
   const big = !p ? '—' : ready ? p.rank : (p.value !== undefined ? p.value : '—');
-  const foot = ready ? `${n} days` : `${n} / 14 days to a score`;
+  // The index is the comparison. The reading is the truth. Show both.
+  const real = ready && p && p.value !== undefined
+    ? `<span class="real">${p.value}</span>` : '';
+  const foot = ready ? `${n} days` : `${n} / 14 days to an index`;
   return `<div class="card ${cls || ''}">
-    <div class="top"><span class="name">${name}</span><span class="rank">${big}</span></div>
-    ${line(points, colour, ready ? 'rank' : 'value')}
-    <div class="sub"><span>${foot}${note ? ' · ' + note : ''}</span>${right || ''}</div>
+    <div class="top">
+      <span class="name">${name}</span>
+      <span class="big">${real}<span class="rank">${big}</span></span>
+    </div>
+    ${line(points, colour, ready ? 'rank' : 'value', ready ? 100 : undefined)}
+    <div class="sub"><span>${foot}${note ? ' · ' + note : ''} ${ready ? moveOf(points) : ''}</span>${right || ''}</div>
   </div>`;
 }
 
