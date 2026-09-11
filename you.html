@@ -6,29 +6,49 @@
   body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
          padding:24px; max-width:560px; margin-inline:auto; }
   h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+       color:#69737a; margin:28px 0 12px; font-weight:600; }
   .n { color:#69737a; font-size:13px; margin:0 0 24px; }
   .card { border:1px solid #252d33; border-radius:10px; padding:16px; margin-bottom:16px; }
+  .card.you { border-color:#3a4a47; }
   .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
-  .name { font-weight:600; }
+  .name { font-weight:600; font-family:ui-monospace,Menlo,monospace; font-size:14px; }
   .rank { font-size:24px; font-variant-numeric:tabular-nums; }
-  .sub { color:#69737a; font-size:12px; }
+  .sub { color:#69737a; font-size:12px; display:flex; justify-content:space-between;
+         align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; }
+  .stale { color:#d9a441; }
   svg { width:100%; height:90px; display:block; }
+  .rules { display:flex; gap:4px; flex-wrap:wrap; }
+  .rules button { font:inherit; font-size:11px; padding:4px 8px; border-radius:5px;
+                  border:1px solid #252d33; background:transparent; color:#69737a; cursor:pointer; }
+  .rules button:hover { color:#e8e4dc; border-color:#39434a; }
+  .rules button[aria-pressed="true"] { color:#4bb5a6; border-color:#1e3b37; background:#0f1f1d; }
+  .band { display:flex; gap:6px; align-items:center; margin-top:8px; }
+  .band input { width:70px; font:inherit; font-size:12px; padding:5px 7px; border-radius:5px;
+                background:#151a1d; color:#e8e4dc; border:1px solid #252d33; }
+  .band span { color:#69737a; font-size:12px; }
+  .row { padding:12px 0; border-bottom:1px solid #1b2227; }
+  .row .head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .row .name { flex:1; min-width:130px; }
+  .foot { margin-top:28px; display:flex; gap:16px; }
   a { color:#69737a; font-size:13px; }
-  p { color:#d1584a; }
+  .err { color:#d1584a; font-size:13px; }
 </style>
 
 <h1>you</h1>
-<p class="n" id="note"></p>
+<p class="n" id="note">reading...</p>
 <div id="out"></div>
-<a href="pad.html">pad</a>
+<div id="rest"></div>
+
+<div class="foot"><a href="pad.html">pad</a><a href="import.html">import</a></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
+let OPEN = null;   // which metric has its band editor open
 
-// Before day 14 we draw the raw number. After, we draw the rank.
 function line(points, colour, key) {
   if (points.length < 2) return '<svg></svg>';
   const w = 520, h = 90, pad = 6;
@@ -44,45 +64,114 @@ function line(points, colour, key) {
   </svg>`;
 }
 
+const label = r => !r ? '' :
+  r.kind === 'band' ? `best ${r.lo} to ${r.hi}` : r.kind;
+
+function ruleButtons(metric, rule) {
+  const k = rule && rule.kind;
+  const b = (kind, text) =>
+    `<button data-m="${metric}" data-k="${kind}" aria-pressed="${k === kind}">${text}</button>`;
+  let html = `<span class="rules">${b('up', 'up')}${b('down', 'down')}` +
+             `${b('band', 'best between')}${b('ignore', 'ignore')}</span>`;
+  if (OPEN === metric) {
+    html += `<div class="band">
+      <span>best between</span>
+      <input id="lo" type="number" step="any" value="${rule && rule.lo !== undefined ? rule.lo : ''}">
+      <span>and</span>
+      <input id="hi" type="number" step="any" value="${rule && rule.hi !== undefined ? rule.hi : ''}">
+      <button data-m="${metric}" data-k="save">set</button>
+    </div>`;
+  }
+  return html;
+}
+
 // Your number from day one. Your score from day fourteen.
-function card(name, points, colour, extra) {
+function card(name, points, colour, right, cls, note) {
   const n = points.length;
   const ready = n >= 14;
   const p = points[n - 1];
   const big = !p ? '—' : ready ? p.rank : (p.value !== undefined ? p.value : '—');
   const foot = ready ? `${n} days` : `${n} / 14 days to a score`;
-  return `<div class="card">
-    <div class="top">
-      <span class="name">${name}</span>
-      <span class="rank">${big}</span>
-    </div>
+  return `<div class="card ${cls || ''}">
+    <div class="top"><span class="name">${name}</span><span class="rank">${big}</span></div>
     ${line(points, colour, ready ? 'rank' : 'value')}
-    <div class="sub">${foot}${extra ? ' · ' + extra : ''}</div>
+    <div class="sub"><span>${foot}${note ? ' · ' + note : ''}</span>${right || ''}</div>
   </div>`;
 }
 
-(async () => {
-  const { data: s } = await db.auth.getSession();
-  if (!s.session) { location.href = 'index.html'; return; }
+async function set(metric, kind) {
+  if (kind === 'band' && OPEN !== metric) { OPEN = metric; render(); return; }
+  let rule = { kind };
+  if (kind === 'save') {
+    const lo = Number(document.getElementById('lo').value);
+    const hi = Number(document.getElementById('hi').value);
+    if (!isFinite(lo) || !isFinite(hi) || hi <= lo) {
+      note.className = 'err'; note.textContent = 'Give a low and a high, high bigger.'; return;
+    }
+    rule = { kind: 'band', lo, hi };
+  }
+  OPEN = null;
+  const { error } = await writeRule(db, metric, rule);
+  if (error) { note.className = 'err'; note.textContent = error.message; return; }
+  render();
+}
 
-  const t = await (await fetch('tickers.json')).json();
-  const metrics = Object.keys(t.stocks);
-  const rows = await readDays(db, metrics);
-  const series = rankSeries(rows, t.stocks);
+function wire(el) {
+  el.querySelectorAll('button[data-m]').forEach(b =>
+    b.onclick = () => set(b.dataset.m, b.dataset.k));
+}
 
-  const n = Math.max(...metrics.map(m => (series[m] || []).length), 0);
-  note.textContent = n >= 14
-    ? `${n} days of data.`
-    : `${n} days in. Scores start at 14.`;
+async function render() {
+  const [all, rules] = await Promise.all([readMetrics(db), readRules(db)]);
+  const rows = await readDays(db, all);
+  const series = rankSeries(rows, rules);
+  const owned = Object.keys(series);
+
+  const today = dayNum(new Date().toISOString().slice(0, 10));
+  const staleOf = m => {
+    const pts = series[m];
+    const age = today - dayNum(pts[pts.length - 1].day);
+    return age > STALE_DAYS ? `stale, ${age} days old` : '';
+  };
 
   let html = '';
-  for (const m of metrics) {
-    html += card(m, series[m], '#4bb5a6', t.stocks[m].direction);
-  }
-  for (const name of Object.keys(t.etfs || {})) {
-    html += card(name, etfSeries(series, t.etfs[name]), '#d9a441',
-                 t.etfs[name].join(' + '));
+  if (owned.length) {
+    const you = etfSeries(series, owned);
+    const cov = coverage(series, owned);
+    const skipped = cov.days - cov.drawn;
+    html += card('YOU', you, '#d9a441',
+      `<span>${owned.length} stocks</span>`, 'you',
+      skipped ? `${skipped} days not drawn, something was stale` : 'all days complete');
+    html += '<h2>your stocks</h2>';
+    for (const m of owned) {
+      html += card(m, series[m], '#4bb5a6', ruleButtons(m, rules[m]), '',
+                   `<span class="stale">${staleOf(m)}</span>`);
+    }
   }
   out.innerHTML = html;
-})();
+  wire(out);
+
+  const undecided = all.filter(m => !(m in rules));
+  const ignored = Object.keys(rules).filter(m => rules[m].kind === 'ignore');
+  const block = (title, list, rulesFor) => !list.length ? '' :
+    `<h2>${title}</h2>` + list.map(m => `<div class="row">
+       <div class="head"><span class="name">${m}</span></div>
+       ${ruleButtons(m, rulesFor ? rules[m] : null)}
+     </div>`).join('');
+
+  rest.innerHTML = block('not scored yet', undecided, false) +
+                   block('ignored', ignored, true);
+  wire(rest);
+
+  const n = Math.max(...owned.map(m => series[m].length), 0);
+  note.className = 'n';
+  note.textContent = owned.length
+    ? (n >= 14 ? `${n} days of data.` : `${n} days in. Scores start at 14.`)
+    : 'Nothing scored yet. Say what better means below.';
+}
+
+db.auth.getSession().then(({ data }) => {
+  if (!data.session) { location.href = 'index.html'; return; }
+  render();
+});
 </script>
