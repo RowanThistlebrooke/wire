@@ -100,15 +100,21 @@ const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 
 // YOU is not a row. It is the average of every rank you own, per day.
 //
-// A stock that has not been read for STALE_DAYS is stale, and on a stale
-// day YOU has no value at all. It never carries a number forward, because
-// that invents a reading you did not take, and it never quietly drops a
-// stock, because then skipping a bad one would raise your score.
+// A stock joins YOU on the day of its first reading. It cannot be stale
+// before it existed, so adding a new stock never erases your history.
+//
+// After that, a stock that has not been read for STALE_DAYS is stale, and
+// on a stale day YOU has no value at all. It never carries a number
+// forward, because that invents a reading you did not take, and it never
+// quietly drops a stock, because then skipping a bad one would raise
+// your score.
 function etfSeries(series, members) {
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))].sort();
-  const byMetric = {};
+  const byMetric = {}, born = {};
   for (const m of members) {
-    byMetric[m] = Object.fromEntries((series[m] || []).map(p => [p.day, p.rank]));
+    const pts = series[m] || [];
+    byMetric[m] = Object.fromEntries(pts.map(p => [p.day, p.rank]));
+    born[m] = pts.length ? dayNum(pts[0].day) : Infinity;
   }
   const last = {};
   const out = [];
@@ -117,8 +123,9 @@ function etfSeries(series, members) {
     for (const m of members) {
       if (byMetric[m][day] !== undefined) last[m] = { rank: byMetric[m][day], t };
     }
-    const fresh = members.map(m => last[m]).filter(s => s && t - s.t <= STALE_DAYS);
-    if (fresh.length !== members.length) continue;   // silence, not a guess
+    const live = members.filter(m => born[m] <= t);
+    const fresh = live.map(m => last[m]).filter(s => s && t - s.t <= STALE_DAYS);
+    if (!live.length || fresh.length !== live.length) continue;   // silence, not a guess
     out.push({
       day,
       rank: Math.round(fresh.reduce((a, s) => a + s.rank, 0) / fresh.length)
