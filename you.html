@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>you</title>
+<style>
+  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
+         padding:24px; max-width:560px; margin-inline:auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .n { color:#69737a; font-size:13px; margin:0 0 24px; }
+  .card { border:1px solid #252d33; border-radius:10px; padding:16px; margin-bottom:16px; }
+  .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .name { font-weight:600; }
+  .rank { font-size:24px; font-variant-numeric:tabular-nums; }
+  .sub { color:#69737a; font-size:12px; }
+  svg { width:100%; height:90px; display:block; }
+  a { color:#69737a; font-size:13px; }
+  p { color:#d1584a; }
+</style>
+
+<h1>you</h1>
+<p class="n" id="note"></p>
+<div id="out"></div>
+<a href="pad.html">pad</a>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="you-reader.js"></script>
+<script>
+const db = supabase.createClient(WIRE.url, WIRE.key);
+
+function line(points, colour) {
+  if (points.length < 2) return '<svg></svg>';
+  const w = 520, h = 90, pad = 6;
+  const step = (w - pad * 2) / (points.length - 1);
+  const y = r => h - pad - (r / 100) * (h - pad * 2);
+  const d = points.map((p, i) => `${pad + i * step},${y(p.rank)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="rank over time">
+    <line x1="${pad}" y1="${y(50)}" x2="${w - pad}" y2="${y(50)}"
+          stroke="#252d33" stroke-width="1"/>
+    <polyline points="${d}" fill="none" stroke="${colour}" stroke-width="2"
+              stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function card(name, points, colour, extra) {
+  const last = points.length ? points[points.length - 1].rank : 50;
+  return `<div class="card">
+    <div class="top">
+      <span class="name">${name}</span>
+      <span class="rank">${last}</span>
+    </div>
+    ${line(points, colour)}
+    <div class="sub">${points.length} days${extra ? ' · ' + extra : ''}</div>
+  </div>`;
+}
+
+(async () => {
+  const { data: s } = await db.auth.getSession();
+  if (!s.session) { location.href = 'index.html'; return; }
+
+  const t = await (await fetch('tickers.json')).json();
+  const metrics = Object.keys(t.stocks);
+  const rows = await readDays(db, metrics);
+  const series = rankSeries(rows, t.stocks);
+
+  const n = Math.max(...metrics.map(m => (series[m] || []).length), 0);
+  note.textContent = n < 14
+    ? `${n} days of data. Under 14 the rank means nothing yet.`
+    : `${n} days of data.`;
+
+  let html = '';
+  for (const m of metrics) {
+    html += card(m, series[m], '#4bb5a6', t.stocks[m].direction);
+  }
+  for (const name of Object.keys(t.etfs || {})) {
+    html += card(name, etfSeries(series, t.etfs[name]), '#d9a441',
+                 t.etfs[name].join(' + '));
+  }
+  out.innerHTML = html;
+})();
+</script>
