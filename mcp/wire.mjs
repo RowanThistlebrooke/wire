@@ -23,13 +23,23 @@ const R = new Function(src + `
            readCommits, testCommit, dayNum };`)();
 
 const db = createClient(WIRE_URL, WIRE_KEY);
-const { error: signInError } = await db.auth.signInWithPassword({
-  email: WIRE_EMAIL, password: WIRE_PASSWORD
-});
-if (signInError) throw new Error('sign in failed: ' + signInError.message);
+
+// Sign in on the first question, not at startup. Claude expects an answer
+// to its handshake within a couple of seconds, and a network round trip
+// before that is enough to make it give up on us.
+let authed = null;
+function signIn() {
+  authed = authed || db.auth.signInWithPassword({
+    email: WIRE_EMAIL, password: WIRE_PASSWORD
+  }).then(({ error }) => {
+    if (error) throw new Error('sign in failed: ' + error.message);
+  });
+  return authed;
+}
 
 // Everything below reads. Nothing below writes.
 async function load() {
+  await signIn();
   const [all, rules, commits] = await Promise.all(
     [R.readMetrics(db), R.readRules(db), R.readCommits(db)]);
   const rows = await R.readDays(db, all);
