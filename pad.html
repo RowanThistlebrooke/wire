@@ -2,79 +2,212 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>pad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
-         padding:24px; max-width:420px; margin-inline:auto; }
-  h1 { font-size:20px; margin:0 0 16px; }
-  form { display:grid; grid-template-columns:1fr auto; gap:8px; }
-  input, button { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33; }
-  input { background:#151a1d; color:#e8e4dc; }
-  button { background:#e8e4dc; color:#0e1113; border:0; font-weight:600; }
-  ul { list-style:none; padding:0; margin:24px 0 0; }
-  li { display:flex; justify-content:space-between; padding:10px 0;
-       border-bottom:1px solid #1b2227; font-variant-numeric:tabular-nums; }
-  li span { color:#69737a; font-size:13px; }
-  p { color:#d1584a; min-height:1.5em; }
-  a { color:#69737a; font-size:13px; }
-  .foot { display:flex; gap:16px; margin-top:24px; }
+/* the pad. one number, one row. same skin as the face. */
+:root{--ground:#070809;--surface:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
+ --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input{font-family:var(--mono)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+a{color:inherit;text-decoration:none}
+
+.main{max-width:640px;margin:0 auto;padding:30px 24px 130px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.eyebrow{font:11px/1 var(--mono);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;cursor:pointer;padding:0}
+.out:hover{color:var(--ink)}
+.lab{font:700 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+/* every name you have ever recorded */
+.names{display:flex;gap:6px;flex-wrap:wrap;margin-top:26px}
+.names button{background:none;border:1px solid var(--edge);color:var(--muted);font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:9px 11px;border-radius:5px;cursor:pointer}
+.names button:hover{color:var(--ink);border-color:var(--dim)}
+.names button.on{color:var(--ink);border-color:var(--ink)}
+.names button.new{color:var(--teal);border-color:var(--edge)}
+.names button.new.on{border-color:var(--teal)}
+
+/* the name */
+.sym{font:800 clamp(34px,7vw,60px)/.9 var(--ui);letter-spacing:-.04em;margin-top:34px;overflow-wrap:anywhere}
+.sym .u{font:700 14px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:12px;vertical-align:middle}
+.newbox{display:none;gap:10px;margin-top:30px}
+.newbox.on{display:grid;grid-template-columns:minmax(0,1fr) 120px}
+.newbox input{background:var(--surface);border:1px solid var(--edge);color:var(--ink);font:800 20px/1 var(--ui);padding:16px 14px;border-radius:7px;width:100%}
+.newbox input::placeholder{color:var(--muted);font-weight:400}
+
+/* the number */
+.entry{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px;margin-top:22px}
+.entry input{background:var(--surface);border:1px solid var(--edge);color:var(--ink);font:800 clamp(34px,7vw,52px)/1 var(--ui);letter-spacing:-.03em;padding:14px 16px;border-radius:7px;width:100%;min-width:0}
+.entry input::placeholder{color:var(--edge2);font-weight:800}
+.entry input::-webkit-outer-spin-button,.entry input::-webkit-inner-spin-button{-webkit-appearance:none}
+.entry input[type=number]{-moz-appearance:textfield}
+.entry button{background:var(--ink);color:var(--ground);border:0;border-radius:7px;font:800 16px/1 var(--ui);letter-spacing:.02em;text-transform:uppercase;cursor:pointer}
+.entry button:hover{background:#fff}
+.entry button[disabled]{opacity:.35;cursor:default}
+.msg{font:12px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em}
+.msg.bad{color:var(--leak)}
+.msg.good{color:var(--teal)}
+
+/* the last readings of this name */
+.last{margin-top:34px;border-top:1px solid var(--edge)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--edge)}
+.row .v{font:800 22px/1 var(--ui);letter-spacing:-.03em}
+.row .v span{font:700 11px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:8px}
+.row .t{font:11px/1.4 var(--mono);color:var(--muted);white-space:nowrap}
+.empty{font:12px/1.6 var(--mono);color:var(--muted);padding:16px 0}
+
+/* tabs: the other pages */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 28px;overflow-x:auto;scrollbar-width:none}
+.tabs a{display:block;border-top:2px solid transparent;color:var(--muted);font:800 15px/1 var(--ui);letter-spacing:-.02em;text-transform:uppercase;padding:18px 14px 19px;white-space:nowrap}
+.tabs a:hover{color:var(--dim)}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--ink)}
+@media (max-width:820px){.main{padding:20px 16px 120px}.tabs{padding:0 8px}.tabs a{font-size:13px;padding:16px 10px}}
+
+/* skin: thin type, hairlines, one accent. on a phone the pad is the whole app. */
+.eyebrow,.out{letter-spacing:.22em}
+.names button{border-radius:0;font-weight:400;letter-spacing:.12em;padding:9px 11px;border-color:var(--edge2)}
+.names button.on{color:var(--ink);border-color:var(--ink)}
+.names button.new{color:var(--teal)}
+.sym{font:300 clamp(30px,6vw,52px)/.95 var(--ui);letter-spacing:-.02em}
+.sym .u{font:400 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.newbox input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:300 20px/1.2 var(--ui);padding:10px 0}
+.newbox input:focus{border-bottom-color:var(--teal);outline:0}
+.entry input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:300 clamp(40px,8vw,64px)/1 var(--ui);letter-spacing:-.02em;padding:8px 0}
+.entry input::placeholder{color:var(--edge2);font-weight:300}
+.entry input:focus{border-bottom-color:var(--teal);outline:0}
+.entry button{background:none;border:1px solid var(--edge2);color:var(--ink);border-radius:0;font:400 11px/1 var(--mono);letter-spacing:.2em}
+.entry button:hover{background:none;border-color:var(--teal);color:var(--teal)}
+.row .v{font:300 20px/1 var(--ui)}
+.row .v span{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.tabs a{font:400 11px/1 var(--mono);letter-spacing:.2em;padding:13px 12px 14px;border-top-width:1px}
+.tabs a[aria-current="page"]{border-top-color:var(--teal);color:var(--ink)}
+@media (max-width:700px){.tabs{display:none}.main{padding-bottom:40px}}
 </style>
 
-<h1>weight</h1>
+<div class="main">
+  <div class="bar">
+    <p class="eyebrow">pad &#183; one row</p>
+    <button class="out" id="out" type="button">sign out</button>
+  </div>
 
-<form id="f">
-  <input id="v" type="number" step="0.1" placeholder="84.2" required>
-  <button>add</button>
-</form>
-<p id="msg"></p>
+  <div class="names" id="names"></div>
 
-<ul id="list"></ul>
+  <div class="sym" id="sym"></div>
+  <div class="newbox" id="newbox">
+    <input id="nname" placeholder="name" autocomplete="off" spellcheck="false">
+    <input id="nunit" placeholder="unit" autocomplete="off" spellcheck="false">
+  </div>
 
-<div class="foot"><a href="#" id="out">sign out</a></div>
+  <form class="entry" id="f">
+    <input id="v" type="number" step="any" inputmode="decimal" placeholder="0" required>
+    <button id="add" type="submit">add</button>
+  </form>
+  <p class="msg" id="msg"></p>
+
+  <div class="last" id="last"></div>
+</div>
+
+<nav class="tabs" aria-label="pages">
+  <a href="you.html">you</a>
+  <a href="pad.html" aria-current="page">pad</a>
+  <a href="import.html">import</a>
+  <a href="commit.html">commit</a>
+  <a href="test.html">test</a>
+  <a href="scan.html">scan</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="nav.js" defer></script>
+<script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
-async function guard() {
-  const { data } = await db.auth.getSession();
-  if (!data.session) location.href = 'index.html';
+let NAMES = [];        // every metric you have ever recorded, from the ledger
+let PICK = null;       // the one you are adding to. null means a new name
+let UNIT = null;       // the unit of the last reading of PICK, or null
+
+const $ = id => document.getElementById(id);
+function say(m, kind) { const el = $('msg'); el.textContent = m || ''; el.className = 'msg' + (kind ? ' ' + kind : ''); }
+
+function remember(m) { try { localStorage.setItem('wire.pad.metric', m); } catch (e) {} }
+function remembered() { try { return localStorage.getItem('wire.pad.metric'); } catch (e) { return null; } }
+
+async function loadNames() {
+  NAMES = await readMetrics(db);
+  if (PICK === null || (PICK && !NAMES.includes(PICK))) {
+    const r = remembered();
+    PICK = NAMES.includes(r) ? r : (NAMES[0] || '');
+  }
 }
 
-async function show() {
-  const { data, error } = await db
-    .from('events')
+function drawNames() {
+  const html = NAMES.map(m =>
+    `<button type="button" data-m="${esc(m)}" class="${m === PICK ? 'on' : ''}">${esc(m)}</button>`).join('');
+  $('names').innerHTML = html + `<button type="button" class="new ${PICK === '' ? 'on' : ''}" data-m="">+ new</button>`;
+  document.querySelectorAll('#names button').forEach(b => b.onclick = () => { PICK = b.dataset.m; remember(PICK); render(); });
+}
+
+async function drawLast() {
+  const box = $('last');
+  if (!PICK) { box.innerHTML = ''; UNIT = null; $('sym').innerHTML = ''; return; }
+  const { data, error } = await db.from('events')
     .select('value, unit, occurred_at')
-    .eq('metric', 'weight_kg')
-    .order('occurred_at', { ascending: false })
-    .limit(10);
-  if (error) { msg.textContent = error.message; return; }
-  list.innerHTML = data.map(r =>
-    `<li>${r.value} ${r.unit || ''}<span>${new Date(r.occurred_at).toLocaleString()}</span></li>`
-  ).join('');
+    .eq('metric', PICK).eq('event_type', 'measurement').not('value', 'is', null)
+    .order('occurred_at', { ascending: false }).limit(7);
+  if (error) { say(error.message, 'bad'); return; }
+  UNIT = (data.find(r => r.unit) || {}).unit || null;
+  $('sym').innerHTML = esc(PICK) + (UNIT ? `<span class="u">${esc(UNIT)}</span>` : '');
+  box.innerHTML = data.length ? data.map(r =>
+    `<div class="row"><div class="v">${esc(r.value)}${r.unit ? `<span>${esc(r.unit)}</span>` : ''}</div>` +
+    `<div class="t">${esc(new Date(r.occurred_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}</div></div>`
+  ).join('') : `<p class="empty">0 readings</p>`;
 }
 
-f.onsubmit = async (e) => {
+async function render() {
+  drawNames();
+  const fresh = PICK === '';
+  $('newbox').classList.toggle('on', fresh);
+  if (fresh) { $('sym').innerHTML = ''; $('last').innerHTML = ''; UNIT = null; $('nname').focus(); }
+  else { await drawLast(); $('v').focus(); }
+}
+
+$('f').addEventListener('submit', async e => {
   e.preventDefault();
-  msg.textContent = '';
+  const n = Number($('v').value);
+  if (!Number.isFinite(n)) { say('a number', 'bad'); return; }
+  let metric = PICK, unit = UNIT;
+  if (PICK === '') {
+    metric = slug($('nname').value);
+    if (!metric) { say('a name', 'bad'); $('nname').focus(); return; }
+    unit = $('nunit').value.trim() || null;
+  }
+  $('add').disabled = true; say('');
   const { error } = await db.from('events').insert({
     occurred_at: new Date().toISOString(),
-    metric: 'weight_kg',
-    value: Number(v.value),
-    unit: 'kg',
+    metric,
+    value: n,
+    unit,
     source: 'pad'
   });
-  if (error) { msg.textContent = error.message; return; }
-  v.value = '';
-  show();
-};
+  $('add').disabled = false;
+  if (error) { say(error.message, 'bad'); return; }
+  $('v').value = ''; $('nname').value = ''; $('nunit').value = '';
+  PICK = metric; remember(metric);
+  say(`${n}${unit ? ' ' + unit : ''} added to ${metric}`, 'good');
+  await loadNames(); await render();
+});
 
-out.onclick = async (e) => {
-  e.preventDefault();
-  await db.auth.signOut();
-  location.href = 'index.html';
-};
+$('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
 
-guard().then(show);
+db.auth.getSession().then(async ({ data }) => {
+  if (!data.session) { location.href = 'index.html'; return; }
+  try { await loadNames(); await render(); } catch (e) { say(e.message || String(e), 'bad'); }
+});
 </script>

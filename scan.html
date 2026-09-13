@@ -2,56 +2,93 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>the scan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
-         padding:24px; max-width:640px; margin-inline:auto; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase;
-       color:#69737a; margin:26px 0 10px; font-weight:600; }
-  .n { color:#69737a; font-size:13px; margin:0 0 18px; }
-  select { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33;
-           background:#151a1d; color:#e8e4dc; width:100%; margin-bottom:20px; }
-  .head { display:flex; gap:26px; flex-wrap:wrap; padding-bottom:16px;
-          border-bottom:1px solid #1b2227; margin-bottom:14px; }
-  .stat { display:flex; flex-direction:column; gap:3px; }
-  .stat b { font:700 20px/1 system-ui; font-variant-numeric:tabular-nums; }
-  .stat span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#69737a; }
-  .lead b { color:#d9a441; }
-  .r { display:grid; grid-template-columns:130px 1fr 62px; gap:12px;
-       align-items:center; padding:5px 0; }
-  .r .m { font:12px/1.3 ui-monospace,Menlo,monospace; color:#69737a;
-          text-align:right; overflow:hidden; text-overflow:ellipsis; }
-  .r.hit .m { color:#e8e4dc; font-weight:700; }
-  .r .v { font:700 12px/1 ui-monospace,Menlo,monospace; }
-  .track { position:relative; height:22px; }
-  .zero { position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:#252d33; }
-  .thr { position:absolute; top:0; bottom:0; width:1px; background:#39434a; }
-  .fill { position:absolute; top:3px; height:16px; border-radius:3px; }
-  .scale { display:grid; grid-template-columns:130px 1fr 62px; gap:12px;
-           margin-top:12px; padding-top:10px; border-top:1px solid #1b2227; }
-  .scale div:nth-child(2) { display:flex; justify-content:space-between;
-                            font-size:10px; color:#69737a; }
-  .note { color:#9ba4aa; font-size:13px; margin:18px 0 0; }
-  .foot { margin-top:28px; display:flex; gap:16px; flex-wrap:wrap; }
-  a { color:#69737a; font-size:13px; }
-  .err { color:#d1584a; font-size:13px; }
+/* one commit against everything you own, at the raised bar. leads, never findings. */
+:root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
+ --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font-family:var(--mono)}
+button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+a{color:inherit;text-decoration:none}
+
+.main{max-width:820px;margin:0 auto;padding:22px 24px 110px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.out:hover{color:var(--ink)}
+.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+/* which commit */
+.picks{display:flex;gap:6px;flex-wrap:wrap;margin-top:28px}
+.picks button{background:none;border:1px solid var(--edge2);color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:9px 11px;cursor:pointer}
+.picks button:hover{color:var(--ink)}
+.picks button.on{color:var(--ink);border-color:var(--ink)}
+
+/* the counts */
+.head{display:flex;gap:34px;flex-wrap:wrap;margin-top:30px;padding-bottom:16px;border-bottom:1px solid var(--edge)}
+.stat b{display:block;font:300 34px/1 var(--ui)}
+.stat.lead b{color:var(--amber)}
+.stat span{display:block;margin-top:6px;font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+/* one row per metric */
+.r{display:grid;grid-template-columns:140px minmax(0,1fr) 150px;gap:16px;align-items:center;padding:9px 0;border-bottom:1px solid var(--edge)}
+.r .m{font:400 13px/1.3 var(--ui);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r.hit .m{color:var(--ink)}
+.track{position:relative;height:18px}
+.zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--edge2)}
+.thr{position:absolute;top:4px;bottom:4px;width:1px;background:var(--amber);opacity:.7}
+.fill{position:absolute;top:7px;height:4px;background:var(--dim);opacity:.6}
+.r.hit .fill{opacity:1}
+.r .v{text-align:right}
+.r .v b{display:block;font:300 20px/1 var(--ui);color:var(--dim)}
+.r .v b.up{color:var(--teal)}.r .v b.down{color:var(--leak)}
+.r .v span{display:block;font:10px/1.5 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.r .v span.lead{color:var(--amber)}
+.scale{display:grid;grid-template-columns:140px minmax(0,1fr) 150px;gap:16px;margin-top:10px}
+.scale div:nth-child(2){display:flex;justify-content:space-between;font:400 9.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.empty{font:11px/1.6 var(--mono);color:var(--muted);padding:24px 0;letter-spacing:.04em}
+.empty a{color:var(--teal)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a:hover{color:var(--dim)}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
+@media (max-width:640px){.main{padding:18px 16px 110px}.r,.scale{grid-template-columns:90px minmax(0,1fr) 110px;gap:10px}.r .v b{font-size:17px}}
 </style>
 
-<h1>the scan</h1>
-<p class="n">One commit against every stock you own, at a higher bar. These are leads, not findings.</p>
+<div class="main">
+  <div class="bar">
+    <p class="eyebrow">scan &#183; one commit &#215; everything &#183; bar 3.3 se</p>
+    <button class="out" id="out" type="button">sign out</button>
+  </div>
 
-<select id="c"></select>
-<div id="out"></div>
+  <div class="picks" id="picks"></div>
+  <div id="res"></div>
+</div>
 
-<div class="foot"></div>
+<nav class="tabs" aria-label="pages">
+  <a href="you.html">you</a>
+  <a href="pad.html">pad</a>
+  <a href="import.html">import</a>
+  <a href="commit.html">commit</a>
+  <a href="test.html">test</a>
+  <a href="scan.html" aria-current="page">scan</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="nav.js" defer></script>
 <script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
-let COMMITS = [], SERIES = {};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sgn = v => (v >= 0 ? '+' : '') + (Math.round(v * 10) / 10);
+let COMMITS = [], SERIES = {}, PICK = null;
 
 // ---- the scan: one commit against everything ----
 //
@@ -81,74 +118,81 @@ function scanCommit(seriesByMetric, commit, commits, todayStr) {
   return rows.sort((a, b) => Math.abs(b.effect || 0) - Math.abs(a.effect || 0));
 }
 
+// under every number, how much to trust it
+function trust(r) {
+  if (r.lead) return ['lead', 'lead'];
+  if (r.verdict === 'early') return [`very unconfident · ${r.needs} more days`, ''];
+  if (r.verdict === 'tangled') return ['confident · tangled', ''];
+  if (r.verdict === 'finding') return ['confident', ''];
+  if (r.bar > 0 && Math.abs(r.effect) >= r.bar / 2) return ['unconfident', ''];
+  return ['very unconfident', ''];
+}
+
+function drawPicks() {
+  const box = document.getElementById('picks');
+  box.innerHTML = COMMITS.map(c => `<button type="button" data-id="${esc(c.id)}" class="${PICK && PICK.id === c.id ? 'on' : ''}">${esc(c.name)}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => { PICK = COMMITS.find(c => c.id === b.dataset.id); drawPicks(); show(); });
+}
+
 function show() {
-  const commit = COMMITS.find(x => x.id === c.value);
-  if (!commit) { out.innerHTML = ''; return; }
+  const out = document.getElementById('res');
+  if (!PICK) { out.innerHTML = ''; return; }
 
   const today = new Date().toISOString().slice(0, 10);
-  const withYou = { ...SERIES, YOU: etfSeries(SERIES, Object.keys(SERIES)) };
-  const rows = scanCommit(withYou, commit, COMMITS, today);
+  const withYou = { YOU: etfSeries(SERIES, Object.keys(SERIES)), ...SERIES };
+  const rows = scanCommit(withYou, PICK, COMMITS, today);
   const usable = rows.filter(r => r.effect !== undefined);
   const leads = usable.filter(r => r.lead);
 
   if (!usable.length) {
-    out.innerHTML = `<p class="err">Nothing to compare. ${rows[0] ? rows[0].why : ''}</p>`;
+    out.innerHTML = `<p class="empty">${esc(PICK.name)} &#183; ${rows[0] ? esc(rows[0].why) : '0 readings'}</p>`;
     return;
   }
 
-  const max = Math.max(...usable.map(r => Math.abs(r.effect)),
-                       ...usable.map(r => r.raised)) * 1.1;
+  const max = Math.max(...usable.map(r => Math.abs(r.effect)), ...usable.map(r => r.raised)) * 1.1;
   const bars = usable.map(r => {
     const w = Math.abs(r.effect) / max * 50;
     const left = r.effect > 0 ? 50 : 50 - w;
     const t = r.raised / max * 50;
-    const col = r.lead ? (r.effect > 0 ? '#4bb5a6' : '#d1584a') : '#39434a';
+    const [word, cls] = trust(r);
+    const vcls = r.lead ? (r.effect > 0 ? 'up' : 'down') : '';
     return `<div class="r ${r.lead ? 'hit' : ''}">
-      <div class="m">${r.metric}</div>
+      <div class="m">${esc(r.metric)}</div>
       <div class="track">
         <div class="zero"></div>
-        <div class="thr" style="left:${50 - t}%"></div>
-        <div class="thr" style="left:${50 + t}%"></div>
-        <div class="fill" style="left:${left}%;width:${w}%;background:${col};
-             opacity:${r.lead ? 1 : .55}"></div>
+        <div class="thr" style="left:${(50 - t).toFixed(2)}%"></div>
+        <div class="thr" style="left:${(50 + t).toFixed(2)}%"></div>
+        <div class="fill" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%${r.lead ? `;background:${r.effect > 0 ? 'var(--teal)' : 'var(--leak)'}` : ''}"></div>
       </div>
-      <div class="v" style="color:${col}">${r.effect > 0 ? '+' : ''}${r.effect}</div>
+      <div class="v"><b class="${vcls}">${sgn(r.effect)}</b><span class="${cls}">${word}</span></div>
     </div>`;
   }).join('');
 
   out.innerHTML = `
     <div class="head">
       <div class="stat lead"><b>${leads.length}</b><span>leads</span></div>
-      <div class="stat"><b>${usable.length}</b><span>stocks tested</span></div>
+      <div class="stat"><b>${usable.length}</b><span>tested</span></div>
       <div class="stat"><b>0</b><span>findings</span></div>
+      <div class="stat"><b>${PICK.days}</b><span>days &#183; ${PICK.from} &#8594; ${PICK.to || 'today'}</span></div>
     </div>
     ${bars}
-    <div class="scale"><div></div>
-      <div><span>worse</span><span>the raised bar</span><span>better</span></div>
-      <div></div></div>
-    <p class="note">Zero findings, always. A scan cannot produce one.
-      You did not ask these questions in advance, you asked all of them at once,
-      so anything that clears the bar is only worth declaring next time.
-      ${COMMITS.length > 1 ? 'Other commits were also running, which no bar can fix.' : ''}</p>`;
+    <div class="scale"><div></div><div><span>worse</span><span>the raised bar</span><span>better</span></div><div></div></div>`;
 }
+
+document.getElementById('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
 
 (async () => {
   const { data: s } = await db.auth.getSession();
   if (!s.session) { location.href = 'index.html'; return; }
 
-  const [all, rules, commits] = await Promise.all(
-    [readMetrics(db), readRules(db), readCommits(db)]);
+  const [all, rules, commits] = await Promise.all([readMetrics(db), readRules(db), readCommits(db)]);
   const rows = await readDays(db, all);
 
   COMMITS = commits;
   SERIES = rankSeries(rows, rules);
 
-  if (!COMMITS.length) {
-    out.innerHTML = '<p class="err">No commits yet.</p>';
-    return;
-  }
-  c.innerHTML = COMMITS.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
-  c.onchange = show;
-  show();
+  if (!COMMITS.length) { document.getElementById('res').innerHTML = `<p class="empty">0 commits &#183; <a href="commit.html">log one</a></p>`; return; }
+  PICK = COMMITS[0];
+  drawPicks(); show();
 })();
 </script>
