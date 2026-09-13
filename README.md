@@ -1,75 +1,74 @@
-# Working on The Wire
+# The Wire
 
-You are helping someone build or extend a personal ledger called The Wire.
-Read this before you touch anything. The rules below are not preferences,
-they are the reason the system is worth trusting.
+A personal ledger that scores you against your own past, records what you
+actually did, and tells you whether the two are connected. Built from
+scratch across eleven short episodes, with no framework, no build step,
+and nothing to pay.
 
-## What this is
+It runs on GitHub, Vercel and Supabase. All three are free at this size
+and will stay that way.
 
-One Postgres table called `events`, a handful of plain HTML pages, and one
-file of maths. No framework, no build step, no npm in the website. Every
-page is loaded with a script tag and every file is short enough to read
-out loud. Keep it that way.
+## What it does
 
-## Laws you must never break
+- **One table.** Everything you ever measure goes in `events`. Not a sleep
+  table and a weight table and a spending table. One.
+- **Append only.** There is no update policy and no delete policy. You can
+  add to your history. You cannot edit it or erase it.
+- **An index, not a rank.** 100 is the person you were across your first
+  thirty readings. Ten points is one step of your own ordinary variation,
+  and there is no ceiling, so improving always shows.
+- **You say what better means.** Up, down, or best between two numbers.
+  That is the one thing a machine cannot work out, and you decide it once.
+- **Two columns.** What happened to you, and what you did. A stock has a
+  value every day. A commit has a start and an end.
+- **It refuses.** Under ten days either side of a commit, or an effect
+  smaller than two standard errors, it says so instead of guessing. If
+  two commits overlapped it names the collision rather than picking a
+  winner.
 
-1. **Append only.** `events` has a select policy and an insert policy and
-   nothing else. Never add an update policy, a delete policy, or a tool
-   that edits or removes a row. If the user asks for one, say plainly why
-   the system does not have it and offer to record a correction as a new
-   row instead.
-2. **Never invent data.** Do not seed demo rows, sample data, fixtures, or
-   filler to make a page look alive. The table cannot be cleaned
-   afterwards, and a fake reading sits in the frozen baseline forever.
-   An empty page is the correct output for an empty ledger.
-3. **Never carry a number forward and never quietly drop a stock.** If a
-   reading is missing, the answer is silence. Carrying yesterday forward
-   invents a reading. Dropping the stock means skipping a bad number
-   raises the score.
-4. **Secrets.** The publishable key is safe in the browser because row
-   level security protects the rows. The service_role key is not, and must
-   never appear in this repo, in a page, in a log, or in a chat. Secrets
-   go in GitHub repository secrets or in a config file on the user's own
-   machine.
-5. **The gates stay.** Under `MIN_DAYS` on either side, or an effect
-   smaller than two standard errors, the test says so. A scan across many
-   stocks uses the raised bar and returns leads, never findings. Do not
-   soften either one to make a page feel more useful.
-6. **The maths lives in one file.** `you-reader.js` is loaded by the
-   website and read by the MCP server. Do not copy a formula into a second
-   place. If a number needs changing, change it there.
+## The pages
 
-## The shape of the data
+| file | what it is |
+|---|---|
+| `index.html` | sign in |
+| `pad.html` | type one reading |
+| `import.html` | drop a CSV, every numeric column becomes a metric |
+| `you.html` | your stocks, your index, your commits underneath |
+| `commit.html` | start and stop the things you do |
+| `test.html` | did one commit move one stock |
+| `scan.html` | that commit against everything, at a raised bar |
+| `you-reader.js` | all the maths, in one file |
+| `nav.js` | the links between pages |
+| `config.js` | your two Supabase values, and the only personal file |
+| `pull/github.mjs` | pulls your commit count every morning |
+| `mcp/wire.mjs` | lets your AI read the ledger, and only read it |
 
-- A **stock** is something measured. It has a value every day. It is born
-  by its first row and cannot be created or deleted by hand.
-- A **rule** says which way is better: `up`, `down`, `band` with a `lo`
-  and a `hi`, or `ignore`. Rules are events with `event_type = 'rule'`,
-  so the latest one wins and the old ones stay on the record.
-- A **commit** is something done. It has a start and an end, not a value.
-  `event_type = 'commit'`, ended by a `commit_end`.
-- **YOU** is not a row. It is the average of every index you own, per day,
-  drawn only on days where every live stock is fresh.
-- The **index** is 100 at the frozen baseline, which is the first thirty
-  readings, and ten points is one standard deviation of that baseline.
+## Set it up
 
-## How to help someone build it
+1. Make a Supabase project. Run `sql/01_the_table.sql` in the SQL editor.
+2. Authentication, Users, Add user. Tick auto confirm.
+3. Copy `config.example.js` to `config.js` and paste your Project URL and
+   your **publishable** key. Never the service_role key.
+4. Import this repo on Vercel. No framework preset, no build command.
+5. Open the site, sign in, and add a reading.
 
-Work one file at a time and always hand over the **whole file**, never a
-patch or a "find this line and change it". They are pasting into a browser
-editor, not running a diff.
+For the automatic puller, add five repository secrets under Settings,
+Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`, `WIRE_EMAIL`,
+`WIRE_PASSWORD`, `GH_TOKEN`.
 
-The order is: the table, then the door, then the chart, then the import,
-then the rules, then commits, then the test, then the puller, then the
-scan, then the MCP. Do not jump ahead. Each step has something they can
-look at when it works.
+## Rules this project does not break
 
-If something is broken, ask for the console output or the error text
-before guessing. Do not propose three possible causes. Find the one.
+- No delete and no update on `events`, ever.
+- No invented data. Not for demos, not for tests, not to make a chart
+  look better. The table cannot be cleaned afterwards.
+- The service_role key never appears in this repo, in a page, or in a
+  chat. Secrets live in GitHub Settings or in a config file on your own
+  machine.
+- When it cannot know, it says nothing. Silence is a feature and it is
+  the reason any of the numbers are worth reading.
 
-## What not to add
+## The course
 
-No React, no Next, no Tailwind, no bundler, no TypeScript, no ORM, no
-state library. If a change needs one of those, the change is wrong for
-this project. No analytics, no tracking, no telemetry. No AI that writes
-rows. No "smart" defaults that guess what a metric means.
+Eleven episodes, in order. The build is the point: a system you assembled
+yourself is one you can change, and every file here is short enough to
+read out loud.
