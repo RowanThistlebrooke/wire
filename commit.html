@@ -1,110 +1,160 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>commits</title>
+<title>commit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
-         padding:24px; max-width:560px; margin-inline:auto; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase;
-       color:#69737a; margin:28px 0 12px; font-weight:600; }
-  .n { color:#69737a; font-size:13px; margin:0 0 20px; }
-  form { display:grid; gap:8px; }
-  .line { display:flex; gap:8px; }
-  input, button { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33; }
-  input { background:#151a1d; color:#e8e4dc; flex:1; min-width:0; }
-  button { background:#e8e4dc; color:#0e1113; border:0; font-weight:600; cursor:pointer; }
-  .row { display:flex; align-items:center; gap:10px; padding:12px 0;
-         border-bottom:1px solid #1b2227; flex-wrap:wrap; }
-  .row .name { flex:1; min-width:140px; font-family:ui-monospace,Menlo,monospace;
-               font-size:14px; }
-  .row .when { color:#69737a; font-size:12px; }
-  .row button { font-size:11px; padding:5px 10px; background:transparent;
-                border:1px solid #252d33; color:#69737a; }
-  .row button:hover { color:#e8e4dc; border-color:#39434a; }
-  .live { color:#4bb5a6; }
-  .msg { font-size:13px; min-height:1.5em; margin-top:12px; }
-  .msg.bad { color:#d1584a; }
-  .foot { margin-top:28px; display:flex; gap:16px; flex-wrap:wrap; }
-  a { color:#69737a; font-size:13px; }
+/* what you did. a name, a start, an end. past dates welcome. nothing is edited. */
+:root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
+ --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input{font-family:var(--mono)}
+button:focus-visible,input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+a{color:inherit;text-decoration:none}
+
+.main{max-width:760px;margin:0 auto;padding:22px 24px 110px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.out:hover{color:var(--ink)}
+.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+/* the form: one row */
+.f{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px 90px;gap:10px;margin-top:34px;align-items:end}
+.f label{display:grid;gap:8px}
+.f input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
+.f input[type=date]{font:400 14px/1.6 var(--mono);color-scheme:dark}
+.f input::placeholder{color:var(--muted);font-weight:300}
+.f input:focus{border-bottom-color:var(--teal);outline:0}
+.f button{background:none;border:1px solid var(--edge2);color:var(--ink);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 0;cursor:pointer;height:44px}
+.f button:hover{border-color:var(--teal);color:var(--teal)}
+.f button[disabled]{opacity:.35;cursor:default}
+.msg{font:11px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em;letter-spacing:.04em}
+.msg.bad{color:var(--leak)}
+.msg.good{color:var(--teal)}
+
+/* the list */
+.list{margin-top:36px;border-top:1px solid var(--edge)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:18px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--edge)}
+.row .nm{font:400 16px/1.2 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm.open{color:var(--ink)}
+.row .nm.done{color:var(--dim)}
+.row .when{font:11px/1.4 var(--mono);color:var(--muted);white-space:nowrap;letter-spacing:.04em}
+.row .when b{color:var(--dim);font-weight:400}
+.row .end{background:none;border:1px solid var(--edge2);color:var(--dim);font:400 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:7px 10px;cursor:pointer}
+.row .end:hover{border-color:var(--teal);color:var(--teal)}
+.row .go{font:10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.row .go:hover{color:var(--teal)}
+.empty{font:11px/1.6 var(--mono);color:var(--muted);padding:16px 0;letter-spacing:.04em}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a:hover{color:var(--dim)}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
+@media (max-width:640px){.f{grid-template-columns:1fr 1fr}.f label:first-child{grid-column:1/-1}.main{padding:18px 16px 110px}.row{grid-template-columns:1fr;gap:6px}}
 </style>
 
-<h1>commits</h1>
-<p class="n">A stock is something you measure. A commit is something you did. It has a start and an end, not a value.</p>
-
-<form id="f">
-  <input id="what" type="text" placeholder="two coffees a day" required>
-  <div class="line">
-    <input id="what_from" type="date" required>
-    <button>start</button>
+<div class="main">
+  <div class="bar">
+    <p class="eyebrow">commit &#183; what you did</p>
+    <button class="out" id="out" type="button">sign out</button>
   </div>
-</form>
-<p class="msg" id="msg"></p>
 
-<div id="list"></div>
+  <form class="f" id="f">
+    <label><span class="lab">what</span><input id="what" type="text" placeholder="creatine" autocomplete="off" spellcheck="false" required></label>
+    <label><span class="lab">started</span><input id="from" type="date" required></label>
+    <label><span class="lab">ended</span><input id="to" type="date"></label>
+    <button id="add" type="submit">add</button>
+  </form>
+  <p class="msg" id="msg"></p>
 
-<div class="foot"></div>
+  <div class="list" id="list"></div>
+</div>
+
+<nav class="tabs" aria-label="pages">
+  <a href="you.html">you</a>
+  <a href="pad.html">pad</a>
+  <a href="import.html">import</a>
+  <a href="commit.html" aria-current="page">commit</a>
+  <a href="test.html">test</a>
+  <a href="scan.html">scan</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="nav.js" defer></script>
 <script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TODAY = new Date().toISOString().slice(0, 10);
+const $ = id => document.getElementById(id);
+function say(m, kind) { const el = $('msg'); el.textContent = m || ''; el.className = 'msg' + (kind ? ' ' + kind : ''); }
 
-const fmt = d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined,
-  { day: 'numeric', month: 'short', year: 'numeric' });
+let COMMITS = [];
 
-function draw(commits) {
-  const live = commits.filter(c => !c.to);
-  const done = commits.filter(c => c.to);
-  const row = c => `<div class="row">
-      <span class="name">${c.name}</span>
-      <span class="when">${fmt(c.from)}${c.to ? ' to ' + fmt(c.to) : ''} · ${c.days} days</span>
-      ${c.to ? '' : `<button data-id="${c.id}">stop</button>`}
-    </div>`;
-  list.innerHTML =
-    (live.length ? '<h2 class="live">running</h2>' + live.map(row).join('') : '') +
-    (done.length ? '<h2>ended</h2>' + done.map(row).join('') : '');
-  list.querySelectorAll('button[data-id]').forEach(b =>
-    b.onclick = () => stop(b.dataset.id));
+function draw() {
+  const box = $('list');
+  if (!COMMITS.length) { box.innerHTML = `<p class="empty">0 commits</p>`; return; }
+  box.innerHTML = COMMITS.map(c =>
+    `<div class="row"><div class="nm ${c.to ? 'done' : 'open'}">${esc(c.name)}</div>` +
+    `<div class="when"><b>${c.from}</b> &#8594; <b>${c.to || 'today'}</b> &#183; ${c.days} days${c.to ? '' : ' &#183; running'}</div>` +
+    (c.to ? `<a class="go" href="test.html">test</a>` : `<button class="end" data-id="${esc(c.id)}" type="button">end</button>`) +
+    `</div>`).join('');
+  box.querySelectorAll('.end').forEach(b => b.onclick = () => endCommit(b.dataset.id));
 }
 
-async function stop(id) {
-  const today = new Date().toISOString().slice(0, 10);
+async function load() { COMMITS = await readCommits(db); draw(); }
+
+// The end is a second row. The start is never touched.
+async function endCommit(id, to) {
+  const day = to || TODAY;
   const { error } = await db.from('events').insert({
-    occurred_at: new Date().toISOString(),
+    occurred_at: new Date(day + 'T12:00:00Z').toISOString(),
     metric: id,
     event_type: 'commit_end',
     source: 'you',
-    context: { to: today }
+    context: { to: day }
   });
-  if (error) { msg.className = 'msg bad'; msg.textContent = error.message; return; }
-  show();
+  if (error) { say(error.message, 'bad'); return false; }
+  await load(); return true;
 }
 
-f.onsubmit = async (e) => {
+$('f').addEventListener('submit', async e => {
   e.preventDefault();
-  msg.textContent = '';
+  const name = $('what').value.trim(), from = $('from').value, to = $('to').value;
+  if (!name) { say('a name', 'bad'); return; }
+  if (!from) { say('a start date', 'bad'); return; }
+  if (from > TODAY) { say('the start is in the future', 'bad'); return; }
+  if (to && to < from) { say('the end is before the start', 'bad'); return; }
+  const id = slugCommit(name);
+  if (COMMITS.some(c => c.id === id)) { say(`${id} exists · use a different name`, 'bad'); return; }
+  $('add').disabled = true; say('');
   const { error } = await db.from('events').insert({
-    occurred_at: new Date(what_from.value + 'T12:00:00Z').toISOString(),
-    metric: slugCommit(what.value),
+    occurred_at: new Date(from + 'T12:00:00Z').toISOString(),
+    metric: id,
     event_type: 'commit',
     source: 'you',
-    context: { name: what.value.trim(), from: what_from.value }
+    context: { name, from }
   });
-  if (error) { msg.className = 'msg bad'; msg.textContent = error.message; return; }
-  what.value = '';
-  show();
-};
+  if (error) { $('add').disabled = false; say(error.message, 'bad'); return; }
+  if (to) { const ok = await endCommit(id, to); if (!ok) { $('add').disabled = false; return; } } else { await load(); }
+  $('add').disabled = false;
+  $('what').value = ''; $('to').value = ''; $('from').value = TODAY;
+  say(`${name} · ${from} → ${to || 'today'} · added`, 'good');
+  $('what').focus();
+});
 
-async function show() {
-  draw(await readCommits(db));
-}
+$('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
 
-db.auth.getSession().then(({ data }) => {
+db.auth.getSession().then(async ({ data }) => {
   if (!data.session) { location.href = 'index.html'; return; }
-  what_from.value = new Date().toISOString().slice(0, 10);
-  show();
+  $('from').value = TODAY;
+  try { await load(); } catch (e) { say(e.message || String(e), 'bad'); }
 });
 </script>
