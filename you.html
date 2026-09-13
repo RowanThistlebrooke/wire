@@ -57,4 +57,409 @@ a{color:inherit;text-decoration:none}
 .tickmeta b{color:var(--dim);font-weight:400}
 .rules{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
 .rules button{background:none;border:1px solid var(--edge);color:var(--muted);font:700 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:9px 11px;border-radius:5px;cursor:pointer}
-.rule
+.rules button:hover{color:var(--ink);border-color:var(--dim)}
+.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
+.band{display:flex;gap:10px;align-items:baseline;margin-top:12px;flex-wrap:wrap}
+.band input{width:96px;background:none;border:0;border-bottom:2px solid var(--edge);color:var(--ink);font:800 20px/1.3 var(--ui);letter-spacing:-.02em;padding:4px 0;outline:0;min-width:0}
+.band input:focus{border-bottom-color:var(--teal)}
+.bt{background:none;border:1px solid var(--edge);color:var(--dim);font:700 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:10px 14px;border-radius:5px;cursor:pointer}
+.bt:hover{border-color:var(--teal);color:var(--teal)}
+.bt.go{color:var(--ink)}
+
+/* now: what needs a look */
+.nowcol .lanehead{margin-top:0;border-top:0;padding-top:0}
+.notices{margin-top:0}
+.nt{display:grid;grid-template-columns:1fr;gap:3px;padding:10px 0;border-bottom:1px solid #141a1e}
+.nt .nl{font:800 15px/1.1 var(--ui);letter-spacing:-.03em}
+.nt .nv{font:12px/1.5 var(--mono);color:var(--dim)}.nt .nv b{color:var(--ink)}
+.nt .nv b.pos{color:var(--teal)}.nt .nv b.neg{color:var(--leak)}
+.nt .nn{font:11px/1 var(--mono);color:var(--muted);display:inline;margin-left:8px}
+.nt.go{cursor:pointer}.nt.go:hover .nl{color:var(--teal)}
+.nowcol .notices:empty::after{content:"0";display:block;font:12px/1 var(--mono);color:var(--muted);padding:10px 0}
+
+/* the day read */
+.db{margin-top:26px;border-top:1px solid var(--edge);padding-top:14px}
+.dbh{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.dbd{font:800 20px/1 var(--ui);letter-spacing:-.04em}
+.dbv{font:12px/1.4 var(--mono);color:var(--muted);margin-left:auto}.dbv b{color:var(--ink)}
+.dbm{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:0 14px;margin-top:30px}
+.mt{border:0;border-top:2px solid var(--edge);padding:12px 0 0;position:relative;min-width:0}
+.mt .r{font:800 34px/1 var(--ui);letter-spacing:-.04em}
+.mt .n{font:10.5px/1.4 var(--mono);color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt .raw{font:10.5px/1.4 var(--mono);color:var(--muted)}
+.mt .lab{position:absolute;top:-16px;left:0}
+.mt.na{border-top-style:dashed}.mt.na .r{color:var(--muted)}
+.dbr{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap;align-items:baseline}
+.dbr b{font:800 13px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
+
+/* the line */
+.panel{margin-top:24px;border-top:1px solid var(--edge);padding-top:16px}
+.keyrow{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center;min-height:26px}
+.key{display:flex;gap:20px;font:11.5px/1 var(--mono);color:var(--muted);flex-wrap:wrap;align-items:center}
+.key b{font-weight:400}
+.sw{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:7px}
+.chip{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:7px}
+.pickline{display:flex;gap:14px;align-items:center;font:12px/1 var(--mono);color:var(--dim)}
+.pickline:empty{display:none}
+.pickline .pn{font:800 16px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
+.pickline .pw{font:800 16px/1 var(--ui);letter-spacing:-.02em}.pw.up{color:var(--teal)}.pw.down{color:var(--leak)}.pw.mute{color:var(--dim)}
+.pickline .px{background:none;border:1px solid var(--edge);color:var(--dim);width:26px;height:26px;border-radius:5px;cursor:pointer;font:700 14px/1 var(--mono)}
+.stage svg{display:block;width:100%;height:auto}
+.stage svg .clip{cursor:pointer}
+.stage svg .clip[aria-pressed="true"] rect:first-child{stroke:var(--ink);stroke-width:1.8}
+.rd{font:12px/1.6 var(--mono);color:var(--dim);text-align:right;min-height:20px;pointer-events:none;margin-top:6px}
+.rd b{color:var(--ink);font-weight:700}
+.empty{font:13px/1.8 var(--mono);color:var(--muted);border:1px dashed var(--edge);border-radius:6px;padding:26px 22px;margin-top:14px}
+.dstrip{outline:0}
+.dstrip.axis{margin-top:6px;padding:0 1.2% 0 4%}
+.cells{display:flex;gap:1px;height:9px;margin-bottom:8px;opacity:.85}
+.cells i{flex:1;min-width:0;border-radius:1px;cursor:pointer;position:relative}
+.cells i.e{border:1px dashed var(--edge)}
+.cells i.on{outline:1.5px solid var(--ink);outline-offset:1px;z-index:1}
+.months{position:relative;height:14px;margin-top:8px;font:10px/1 var(--mono);letter-spacing:1px;color:var(--muted)}
+.months span{position:absolute;top:0}
+.pickmet{display:flex;gap:28px;flex-wrap:wrap;margin-top:12px;padding-top:14px;border-top:1px solid var(--edge)}
+.pickmet:empty{display:none}
+.pm{display:flex;flex-direction:column;gap:3px}
+.pm b{font:800 28px/1 var(--ui);letter-spacing:-.04em}.pm b.pos{color:var(--teal)}.pm b.neg{color:var(--leak)}.pm b.flat{color:var(--dim)}.pm b.wait{color:var(--muted)}
+.pm .n{font:11px/1.3 var(--mono);color:var(--dim)}.pm .r{font:10.5px/1.3 var(--mono);color:var(--muted)}
+.pm .r.lead{color:var(--amber)}
+
+/* commits under the line */
+.lanehead{display:flex;justify-content:space-between;align-items:center;margin-top:30px;border-top:1px solid var(--edge);padding-top:14px}
+.clips .stage{margin-top:12px}
+
+/* focus: one commit, nothing else */
+.fhead{display:none}
+.app.focus+.tabs{display:none}
+.main.focus{padding-top:30px}
+.main.focus>.bar,.main.focus .head2,.main.focus .lanehead,.main.focus .clips,.main.focus .pickline{display:none}
+.main.focus .fhead{display:block;position:relative;padding-right:60px}
+.main.focus .panel{border-top:0;padding-top:24px;margin-top:10px}
+.fhead .fx{position:absolute;top:0;right:0;background:none;border:1px solid var(--edge);color:var(--dim);width:44px;height:44px;border-radius:8px;cursor:pointer;font:700 22px/1 var(--mono)}
+.fhead .fx:hover{border-color:var(--ink);color:var(--ink)}
+.fhead .fname{font:800 clamp(28px,3.4vw,44px)/1 var(--ui);letter-spacing:-.04em;color:var(--dim)}
+.fhead .fwhen{font:12px/1.6 var(--mono);color:var(--muted);margin-top:10px}
+.fhead .fstat{font:800 clamp(40px,4.5vw,64px)/.9 var(--ui);letter-spacing:-.04em;margin-top:8px}
+.fhead .fstat.up{color:var(--teal)}.fhead .fstat.down{color:var(--leak)}
+.fhead .fsub{font:13px/1.7 var(--mono);color:var(--dim);margin-top:10px;max-width:70ch}.fhead .fsub b{color:var(--ink)}
+.fhead .fword{font:800 clamp(22px,2.6vw,32px)/1 var(--ui);letter-spacing:-.03em;margin-top:14px}
+.fhead .fword.up{color:var(--teal)}.fhead .fword.down{color:var(--leak)}.fhead .fword.mute{color:var(--dim)}
+.fhead .fwhy{font:13px/1.7 var(--mono);color:var(--dim);margin-top:12px;max-width:70ch}
+.fl{display:none}
+.main.focus .fl{display:block;margin-top:14px;padding:0 1.2% 0 4%}
+.fl .ln{position:relative;height:24px;margin-top:4px}
+.fl .ln .bar{position:absolute;top:0;height:22px;border-radius:3px;border:1px solid;font:11px/20px var(--mono);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);cursor:pointer;opacity:.4}
+.fl .ln .bar.open{border-right-style:none;border-top-right-radius:0;border-bottom-right-radius:0}
+.fl .ln .bar:hover{opacity:.8}
+.fl .ln .bar.on{opacity:1;border-color:var(--ink)!important;border-width:1.5px}
+.fact{display:none}
+.main.focus .fact{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px;padding-top:16px;border-top:1px solid var(--edge)}
+.coll{margin:0;flex:1;min-width:240px;border:1px solid var(--amber);border-radius:6px;padding:12px 14px;font:12.5px/1.7 var(--mono);color:var(--amber)}
+
+/* tabs: the other pages */
+.tabs{position:fixed;left:288px;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 28px;overflow-x:auto;scrollbar-width:none}
+.app.closed+.tabs{left:0}
+.tabs a{display:block;border-top:2px solid transparent;color:var(--muted);font:800 15px/1 var(--ui);letter-spacing:-.02em;text-transform:uppercase;padding:18px 14px 19px;white-space:nowrap}
+.tabs a:hover{color:var(--dim)}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--ink)}
+@media (max-width:980px){.head2{grid-template-columns:1fr;gap:18px}}
+@media (max-width:820px){.app{grid-template-columns:0 minmax(0,1fr)}.app.open{grid-template-columns:288px minmax(0,1fr)}.main{padding:20px 16px 120px}.tabs{left:0;padding:0 8px}.tabs a{font-size:13px;padding:16px 10px}.sym{max-width:100%}.mt .r{font-size:24px}}
+</style>
+
+<div class="app" id="app">
+<aside class="side"><div class="sideIn"><div id="list"></div></div></aside>
+
+<div class="main" id="main">
+<div class="bar">
+  <button class="tog" id="tog" aria-label="sidebar"><svg width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x=".65" y=".65" width="12.7" height="10.7" rx="2"/><line x1="5" y1=".65" x2="5" y2="11.35"/></svg></button>
+  <p class="eyebrow" id="eyebrow"></p>
+</div>
+
+<div class="head2">
+  <div>
+    <div class="tick"><div class="sym" id="sym">YOU</div><div class="now" id="now">&#183;&#183;</div><div class="delta" id="delta"></div></div>
+    <div class="tickmeta" id="tickmeta"></div>
+    <div id="rulebox"></div>
+    <div id="dayboard"></div>
+  </div>
+  <div class="nowcol">
+    <div class="lanehead"><span class="lab">now</span><span class="lab" id="nowcount"></span></div>
+    <div class="notices" id="notices"></div>
+  </div>
+</div>
+
+<div class="fhead" id="fhead"></div>
+<div class="panel" id="panel">
+  <div class="keyrow"><div class="key" id="lkey"></div><div class="pickline" id="pickline"></div></div>
+  <div class="stage"><svg id="c" viewBox="0 0 1000 300" role="img" aria-label="the index across every day, 100 at your baseline, ten points one standard deviation"></svg></div>
+  <div class="dstrip axis" id="dstrip" tabindex="0" aria-label="every day"></div>
+  <div class="fl" id="flanes"></div>
+  <div class="rd" id="rd">&nbsp;</div>
+  <div class="pickmet" id="pickmet"></div>
+  <div class="fact" id="fact"></div>
+  <div id="emptyBox"></div>
+</div>
+
+<div class="lanehead"><span class="lab">commits</span><span class="lab" id="ccount"></span></div>
+<div class="clips"><div class="stage"><svg id="t" viewBox="0 0 1000 90" role="img" aria-label="commits as clips under the line, grey until ten days each side, then coloured by the verdict"></svg></div>
+<div class="key" style="margin-top:12px">
+  <span><i class="chip" style="border:1px dashed #3a4247"></i><b>no before</b></span>
+  <span><i class="chip" style="background:#2a3338"></i><b>early</b></span>
+  <span><i class="chip" style="background:#3a4247"></i><b>no finding</b></span>
+  <span><i class="chip" style="background:#4bb5a6"></i><b>up</b></span>
+  <span><i class="chip" style="background:#c05a4c"></i><b>down</b></span>
+  <span><i class="chip" style="border:1px solid #e3a33f"></i><b>cannot be separated</b></span>
+</div></div>
+<div id="msg"></div>
+</div>
+</div>
+
+<nav class="tabs" aria-label="pages">
+  <a href="you.html" aria-current="page">you</a>
+  <a href="pad.html">pad</a>
+  <a href="import.html">import</a>
+  <a href="commit.html">commit</a>
+  <a href="test.html">test</a>
+  <a href="scan.html">scan</a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="you-reader.js"></script>
+<script>
+const db = supabase.createClient(WIRE.url, WIRE.key);
+const esc=s=>String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const MON=['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const WD=['sun','mon','tue','wed','thu','fri','sat'], wd=d=>WD[new Date(d+'T00:00:00Z').getUTCDay()];
+const TODAY=new Date().toISOString().slice(0,10);
+const SCAN_BAR=3.3;
+const fmt=v=>v==null?'&#183;&#183;':(Math.round(v*10)/10).toString();
+const sgn=v=>(v>=0?'+':'')+(Math.round(v*10)/10);
+
+/* ---------- what the ledger says ---------- */
+let ALL=[], RULES={}, COMMITS=[], SERIES={}, OWNED=[], YOU=[], DAYS=[], DI={}, N=0;
+let sel='you', PICK=null, DAYPIN=0, OPEN=null;
+const cur=()=>sel==='you'?{id:'you',s:'YOU',pts:YOU}:{id:sel,s:sel,pts:SERIES[sel]||[]};
+const colour=v=>v==null?null:v<90?'#c05a4c':v<110?'#e3a33f':'#4bb5a6';
+const addDays=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
+/* every calendar day from the first reading to the last, so a gap is a gap */
+function buildDays(){ const all=[...new Set(OWNED.flatMap(m=>SERIES[m].map(p=>p.day)))].sort(); DAYS=[]; DI={};
+  if(!all.length) return; let d=all[0]; const last=all[all.length-1]>TODAY?all[all.length-1]:TODAY;
+  while(d<=last){ DI[d]=DAYS.length; DAYS.push(d); d=addDays(d,1); } N=DAYS.length; }
+const arrOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.rank; }); return a; };
+const valOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.value; }); return a; };
+const lastPt=pts=>pts.length?pts[pts.length-1]:null;
+/* the move over the last seven readings, the same as the page you had */
+function moveOf(pts){ if(pts.length<8) return null; return Math.round((pts[pts.length-1].rank-pts[pts.length-8].rank)*10)/10; }
+
+/* ---------- pages ---------- */
+document.getElementById('tog').onclick=()=>{ const a=document.getElementById('app'); a.classList.toggle('closed'); a.classList.toggle('open'); };
+function focusOn(){ return !!PICK&&COMMITS.includes(PICK); }
+function render(){ const t=cur(); drawSide(); drawFocus(t); head(t); drawRules(t); drawStrip(t); drawDayBoard(t,DAYPIN); drawChart(t); drawPickMet(t); drawNotices(t); drawTimeline(t); hookup(t); }
+
+/* ---------- sidebar ---------- */
+function spark(pts){ const a=pts.slice(-45); if(a.length<3) return '<svg viewBox="0 0 60 28"></svg>';
+  const v=a.map(p=>p.rank); let lo=Math.min(...v,100),hi=Math.max(...v,100); const span=(hi-lo)||1; const w=60,h=28;
+  const d=a.map((p,i)=>(i?'L':'M')+(i*w/(a.length-1)).toFixed(1)+' '+(2+(hi-p.rank)*(h-4)/span).toFixed(1)).join(' ');
+  const m=moveOf(pts); const col=(m!=null&&m<0)?'#c05a4c':'#4bb5a6';
+  return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${(2+(hi-100)*(h-4)/span).toFixed(1)}" x2="${w}" y2="${(2+(hi-100)*(h-4)/span).toFixed(1)}" stroke="#2c363d" stroke-dasharray="2 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
+function drawSide(){
+  const item=(id,s,n,pts,off)=>{ const p=lastPt(pts), m=moveOf(pts);
+    const chip=m==null?`<span class="c na">&#183;&#183;</span>`:`<span class="c ${m<0?'dn':'up'}">${m<0?'':'+'}${m.toFixed(1)}</span>`;
+    return `<div class="tk ${id===sel?'on':''} ${off?'off':''}" data-id="${esc(id)}" role="button" tabindex="0"><div><div class="s">${esc(s)}</div><div class="n">${n}</div></div>${spark(pts)}<div class="p"><div class="val">${p?p.rank:'&#183;&#183;'}</div>${chip}</div></div>`; };
+  const undecided=ALL.filter(m=>!(m in RULES)), ignored=Object.keys(RULES).filter(m=>RULES[m].kind==='ignore');
+  document.getElementById('list').innerHTML=item('you','YOU',`${OWNED.length} scored`,YOU)+OWNED.map(m=>item(m,m,`${SERIES[m].length} readings &#183; ${RULES[m].kind}`,SERIES[m])).join('')+
+    (undecided.length?`<div class="lab sidelab">not scored</div>`+undecided.map(m=>item(m,m,'0 &#183; needs a rule',[],true)).join(''):'')+
+    (ignored.length?`<div class="lab sidelab">ignored</div>`+ignored.map(m=>item(m,m,'ignore',[],true)).join(''):'');
+  document.querySelectorAll('.tk').forEach(el=>{ const go=()=>{ sel=el.dataset.id; PICK=null; OPEN=null; render(); window.scrollTo({top:0}); };
+    el.onclick=go; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
+}
+
+/* ---------- the number ---------- */
+function head(t){
+  const p=lastPt(t.pts), m=moveOf(t.pts);
+  document.getElementById('sym').textContent=t.s;
+  document.getElementById('now').innerHTML=p?p.rank:'&#183;&#183;';
+  const el=document.getElementById('delta');
+  if(m==null){ el.textContent=''; } else { el.innerHTML=(m<0?'&#8595; ':'&#8593; ')+Math.abs(m).toFixed(1)+' over 7 readings'; el.style.color=m<0?'var(--leak)':m>0?'var(--teal)':'var(--muted)'; }
+  const meta=document.getElementById('tickmeta');
+  if(t.id==='you'){ const cov=coverage(SERIES,OWNED); meta.innerHTML=`index &#183; <b>100</b> at your baseline &#183; <b>10</b> points is one sd &#183; ${OWNED.length} metrics &#183; ${cov.drawn} of ${cov.days} days drawn`; }
+  else { const r=RULES[t.id], real=p&&p.value!=null?`<b>${fmt(p.value)}</b> real &#183; `:''; meta.innerHTML=`${real}${t.pts.length} readings &#183; rule <b>${r?(r.kind==='band'?`best ${r.lo} to ${r.hi}`:r.kind):'none'}</b>`; }
+}
+/* rules: the same four, the same writeRule */
+function drawRules(t){
+  const box=document.getElementById('rulebox'); if(t.id==='you'){ box.innerHTML=''; return; }
+  const r=RULES[t.id], k=r&&r.kind, b=(kind,text)=>`<button data-k="${kind}" aria-pressed="${k===kind}">${text}</button>`;
+  let h=`<div class="rules">${b('up','up')}${b('down','down')}${b('band','best between')}${b('ignore','ignore')}</div>`;
+  if(OPEN===t.id) h+=`<div class="band"><input id="lo" type="number" step="any" placeholder="low" value="${r&&r.lo!==undefined?r.lo:''}"><span class="lab">to</span><input id="hi" type="number" step="any" placeholder="high" value="${r&&r.hi!==undefined?r.hi:''}"><button class="bt go" data-k="save">set</button></div>`;
+  box.innerHTML=h;
+  box.querySelectorAll('button[data-k]').forEach(bt=>bt.onclick=()=>setRule(t.id,bt.dataset.k));
+}
+async function setRule(metric,kind){
+  if(kind==='band'&&OPEN!==metric){ OPEN=metric; drawRules(cur()); document.getElementById('lo').focus(); return; }
+  let rule={kind};
+  if(kind==='save'){ const lo=Number(document.getElementById('lo').value), hi=Number(document.getElementById('hi').value);
+    if(!isFinite(lo)||!isFinite(hi)||hi<=lo){ say('low, then high'); return; } rule={kind:'band',lo,hi}; }
+  OPEN=null; const {error}=await writeRule(db,metric,rule); if(error){ say(error.message); return; }
+  await load(); render();
+}
+function say(m){ document.getElementById('msg').innerHTML=`<p class="err">${esc(m)}</p>`; }
+
+/* ---------- the day strip and the day read ---------- */
+function drawStrip(t){
+  const box=document.getElementById('dstrip'), arr=arrOf(t.pts); const seen={}; let lastM=-99, cells='', months='';
+  DAYS.forEach((d,i)=>{ const col=colour(arr[i]);
+    cells+=`<i data-i="${i}" class="${col?'':'e'}${i===DAYPIN?' on':''}" style="${col?`background:${col}`:''}" title="${d}"></i>`;
+    const m=d.slice(0,7); if(!(m in seen)){ seen[m]=1; if(i===0||i-lastM>=N*0.06){ months+=`<span style="left:${(i/N*100).toFixed(2)}%">${MON[+m.slice(5)]}</span>`; lastM=i; } } });
+  box.innerHTML=`<div class="cells">${cells}</div><div class="months">${months}</div>`;
+  const cs=box.querySelector('.cells');
+  cs.querySelectorAll('i').forEach(el=>{ el.onclick=()=>{ DAYPIN=+el.dataset.i; drawDayBoard(t,DAYPIN); }; el.onpointerenter=()=>drawDayBoard(t,+el.dataset.i); });
+  cs.onpointerleave=()=>drawDayBoard(t,DAYPIN);
+  box.onkeydown=e=>{ if(e.key==='ArrowLeft'){ e.preventDefault(); DAYPIN=Math.max(0,DAYPIN-1); drawDayBoard(t,DAYPIN); } if(e.key==='ArrowRight'){ e.preventDefault(); DAYPIN=Math.min(N-1,DAYPIN+1); drawDayBoard(t,DAYPIN); } };
+}
+function runningOn(d){ const x=dayNum(d); return COMMITS.filter(c=>dayNum(c.from)<=x&&dayNum(c.to||TODAY)>=x); }
+function drawDayBoard(t,i){
+  if(!N) return; const d=DAYS[i], yv=arrOf(YOU)[i];
+  const ks=OWNED.map(m=>{ const p=SERIES[m].find(q=>q.day===d); return {k:m,v:p?p.rank:null,raw:p?p.value:null}; });
+  const have=ks.filter(x=>x.v!=null).sort((a,b)=>b.v-a.v), miss=ks.filter(x=>x.v==null);
+  const tile=(x,j)=>{ const col=colour(x.v); const lastp=x.v==null?lastPt(SERIES[x.k].filter(q=>q.day<d)):null;
+    return `<div class="mt${x.v==null?' na':''}" style="${col?`border-top-color:${col}`:''}">${have.length>1&&j===0?'<span class="lab" style="color:var(--teal)">top</span>':have.length>1&&j===have.length-1?'<span class="lab" style="color:var(--leak)">bottom</span>':''}<div class="r" style="${col?`color:${col}`:''}">${x.v==null?'&#183;&#183;':Math.round(x.v)}</div><div class="n">${esc(x.k)}</div><div class="raw">${x.raw!=null?fmt(x.raw)+' real':(lastp?'last '+lastp.day.slice(5):'0 rows')}</div></div>`; };
+  const run=runningOn(d);
+  document.getElementById('dayboard').innerHTML=`<div class="db">
+    <div class="dbh"><span class="dbd">${d}</span><span class="lab">${wd(d)}</span><span class="dbv">YOU <b>${yv==null?'&#183;&#183;':yv}</b> &#183; ${have.length} of ${ks.length} rows</span></div>
+    <div class="dbm">${have.map(tile).join('')}${miss.map(x=>tile(x,-1)).join('')}</div>
+    <div class="dbr"><span class="lab">running &#183; ${run.length}</span>${run.map(c=>`<b>${esc(c.name)}</b>`).join('')}</div></div>`;
+  document.querySelectorAll('#dstrip .cells i').forEach(el=>el.classList.toggle('on',+el.dataset.i===i));
+}
+
+/* ---------- the line ---------- */
+const W=1000,L=40,R=12,T=14,B=16; let H=300,AX=H-B; const px=i=>L+i*(W-L-R)/Math.max(N-1,1);
+function fitChart(){ const w=document.getElementById('panel').getBoundingClientRect().width||1000; H=Math.round(1000*Math.max(.17,Math.min(.3,420/w))); AX=H-B; document.getElementById('c').setAttribute('viewBox',`0 0 ${W} ${H}`); }
+let YLO=80,YHI=120; const y=v=>T+(YHI-v)*(AX-T)/(YHI-YLO);
+const pathOf=v=>{let o='',pen=false;v.forEach((x,i)=>{if(x==null){pen=false;return;}o+=(pen?'L':'M')+px(i).toFixed(1)+' '+y(x).toFixed(1)+' ';pen=true;});return o;};
+function drawChart(t){
+  fitChart(); const arr=arrOf(t.pts), vals=arr.filter(v=>v!=null);
+  YLO=Math.floor((Math.min(...vals,100)-5)/10)*10; YHI=Math.ceil((Math.max(...vals,100)+5)/10)*10; if(!vals.length){YLO=80;YHI=120;}
+  const ticks=[]; for(let v=YLO;v<=YHI;v+=10) ticks.push(v);
+  const grid=ticks.map(v=>`<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W-R}" y2="${y(v).toFixed(1)}" stroke="${v===100?'#2c363d':'#141a1e'}" ${v===100?'stroke-dasharray="4 4"':''}/><text x="4" y="${(y(v)+3.5).toFixed(1)}" font-family="JetBrains Mono, monospace" font-size="10.5" fill="${v===100?'#9ba4a7':'#6e777b'}">${v}</text>`).join('');
+  const marks=COMMITS.map(c=>{ const i=DI[c.from]; if(i==null) return ''; return `<line x1="${px(i).toFixed(1)}" y1="${T}" x2="${px(i).toFixed(1)}" y2="${AX}" stroke="#e3a33f" stroke-width="1" opacity=".35" stroke-dasharray="2 3"/>`; }).join('');
+  let ov=''; const pl=document.getElementById('pickline'); pl.innerHTML='';
+  if(focusOn()){ const c=PICK, r=testCommit(t.pts,c,COMMITS,TODAY), i0=DI[c.from]??0, i1=DI[c.to||TODAY]??N-1;
+    (r.clash||[]).forEach(o=>{ const a=px(DI[o.from]??0), b=px(DI[o.to||TODAY]??N-1); ov+=`<rect x="${a.toFixed(1)}" y="${T}" width="${Math.max(b-a,2).toFixed(1)}" height="${AX-T}" fill="#e3a33f" opacity=".06"/>`; });
+    ov+=`<rect x="${px(i0).toFixed(1)}" y="${T}" width="${Math.max(px(i1)-px(i0),2).toFixed(1)}" height="${AX-T}" fill="#e8e4dc" opacity=".06"/>`;
+    ov+=`<line x1="${px(i0).toFixed(1)}" y1="${T}" x2="${px(i0).toFixed(1)}" y2="${AX}" stroke="#e8e4dc" stroke-width="1" opacity=".6"/>`;
+    if(r.beforeMean!=null&&r.duringMean!=null){ const len=dayNum(c.to||TODAY)-dayNum(c.from), b0=Math.max(0,i0-len-1), col=r.verdict==='finding'?(r.effect>0?'#4bb5a6':'#c05a4c'):'#9ba4a7';
+      ov+=`<line x1="${px(b0).toFixed(1)}" y1="${y(r.beforeMean).toFixed(1)}" x2="${px(i0).toFixed(1)}" y2="${y(r.beforeMean).toFixed(1)}" stroke="#e8e4dc" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+      ov+=`<line x1="${px(i0).toFixed(1)}" y1="${y(r.duringMean).toFixed(1)}" x2="${px(i1).toFixed(1)}" y2="${y(r.duringMean).toFixed(1)}" stroke="${col}" stroke-width="2.2"/>`;
+      if(r.effect!=null) ov+=`<text x="${px(i1).toFixed(1)}" y="${(y(r.duringMean)-7).toFixed(1)}" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="${col}">${sgn(r.effect)}</text>`; }
+    const v=wordOf(r);
+    pl.innerHTML=`<b class="pn">${esc(c.name)}</b><span class="pw ${v.cls}">${v.word}</span><button class="px" aria-label="clear">&#215;</button>`;
+    pl.querySelector('.px').onclick=()=>{ PICK=null; render(); }; }
+  document.getElementById('c').innerHTML=grid+marks+ov+
+    `<path d="${pathOf(arr)}" fill="none" stroke="#e8e4dc" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`+
+    `<line id="cur" x1="0" y1="${T}" x2="0" y2="${AX}" stroke="#4bb5a6" stroke-width="1" opacity="0"/>`;
+  document.getElementById('lkey').innerHTML=`<span><i class="sw" style="background:#e8e4dc"></i><b>${esc(t.s)} &#183; index &#183; ${t.pts.length} readings</b></span><span><i class="sw" style="height:0;border-top:1px dashed #2c363d;width:12px"></i><b>100 &#183; baseline</b></span><span><i class="sw" style="height:0;border-top:1px dashed #e3a33f;width:12px"></i><b>commit start</b></span>`;
+  document.getElementById('emptyBox').innerHTML=vals.length?'':`<div class="empty">0 readings</div>`;
+}
+function hookup(t){
+  const svg=document.getElementById('c'), rd=document.getElementById('rd'), arr=arrOf(t.pts), val=valOf(t.pts);
+  svg.onpointermove=e=>{ const b=svg.getBoundingClientRect(); let i=Math.round(((e.clientX-b.left)/b.width*W-L)/((W-L-R)/Math.max(N-1,1))); i=Math.max(0,Math.min(N-1,i));
+    const cl=document.getElementById('cur'); if(cl){ cl.setAttribute('x1',px(i)); cl.setAttribute('x2',px(i)); cl.setAttribute('opacity','.5'); }
+    rd.innerHTML=`${DAYS[i]} &#8195; ${esc(t.s)} <b>${arr[i]==null?'&#183;&#183;':arr[i]}</b>${val[i]!=null?' &#8195; '+fmt(val[i])+' real':''}`; drawDayBoard(t,i); };
+  svg.onpointerleave=()=>{ const cl=document.getElementById('cur'); if(cl) cl.setAttribute('opacity','0'); rd.innerHTML='&nbsp;'; drawDayBoard(t,DAYPIN); };
+}
+
+/* ---------- the verdict, in the Wire's words ---------- */
+function wordOf(r){
+  if(r.verdict==='finding') return {word:r.effect>0?'went up':'went down',cls:r.effect>0?'up':'down'};
+  if(r.verdict==='tangled') return {word:'cannot be separated',cls:'mute'};
+  return {word:r.verdict,cls:'mute'};
+}
+const FILL={'no before':'#232a2e',early:'#2a3338','no finding':'#3a4247',tangled:'#3a4247'};
+function drawTimeline(t){
+  const rowH=26,top=8,svg=document.getElementById('t'), list=COMMITS.slice().sort((a,b)=>a.from.localeCompare(b.from)); let out='';
+  list.forEach((c,ri)=>{ const i0=DI[c.from]; if(i0==null) return; const i1=DI[c.to||TODAY]??N-1, open=!c.to, r=testCommit(t.pts,c,COMMITS,TODAY);
+    const col=r.verdict==='finding'?(r.effect>0?'#4bb5a6':'#c05a4c'):FILL[r.verdict]||'#3a4247', yy=top+ri*rowH, x0=px(i0), wdt=Math.max(px(i1)-x0-(open?6:0),3);
+    out+=`<g class="clip" data-id="${esc(c.id)}" aria-pressed="${PICK===c?'true':'false'}">`;
+    out+=`<rect x="${x0.toFixed(1)}" y="${yy}" width="${wdt.toFixed(1)}" height="18" rx="3" fill="${col}" fill-opacity="${r.verdict==='early'?.5:r.verdict==='no before'?.6:.22}" stroke="${r.verdict==='tangled'?'#e3a33f':col}" stroke-width="1.1" ${r.verdict==='no before'?'stroke-dasharray="3 3"':''}/>`;
+    out+=`<rect x="${x0.toFixed(1)}" y="${yy}" width="2.4" height="18" fill="${col}"/>`;
+    if(r.verdict==='early'&&r.needs){ const a=px(Math.min(i0+ (dayNum(c.to||TODAY)-dayNum(c.from))+r.needs,N-1)); out+=`<line x1="${a.toFixed(1)}" y1="${yy}" x2="${a.toFixed(1)}" y2="${yy+18}" stroke="#e8e4dc" stroke-width="1" opacity=".28" stroke-dasharray="2 2"/>`; }
+    if(open) out+=`<path d="M${(x0+wdt).toFixed(1)} ${yy} l 5 9 l -5 9 z" fill="${col}" fill-opacity=".5"/>`;
+    const inside=wdt>c.name.length*6.2+14;
+    out+=`<text x="${(inside?x0+8:x0+wdt+9).toFixed(1)}" y="${yy+12.5}" font-family="JetBrains Mono, monospace" font-size="11" fill="${inside?'#e8e4dc':col}">${esc(c.name)}</text></g>`; });
+  svg.setAttribute('viewBox',`0 0 ${W} ${top+Math.max(list.length,1)*rowH+6}`);
+  svg.innerHTML=out||`<text x="${L}" y="24" font-family="JetBrains Mono, monospace" font-size="12" fill="#6e777b">0 commits</text>`;
+  document.getElementById('ccount').textContent=COMMITS.length;
+  svg.querySelectorAll('.clip').forEach(g=>{ g.onclick=()=>{ const c=COMMITS.find(z=>z.id===g.dataset.id); if(!c) return; PICK=(PICK===c)?null:c; render(); window.scrollTo({top:0}); }; });
+}
+
+/* ---------- focus: one commit, read in full ---------- */
+function drawFocus(t){
+  const on=focusOn(); document.getElementById('app').classList.toggle('focus',on); document.getElementById('main').classList.toggle('focus',on);
+  const fh=document.getElementById('fhead'), fa=document.getElementById('fact'), fl=document.getElementById('flanes');
+  if(!on){ fh.innerHTML=''; fa.innerHTML=''; fl.innerHTML=''; return; }
+  const c=PICK, r=testCommit(t.pts,c,COMMITS,TODAY), v=wordOf(r), sc=v.cls==='up'||v.cls==='down'?v.cls:'';
+  const stat=r.effect!=null?sgn(r.effect):'&#183;&#183;'; const flat=r.bar===0&&r.effect===0;
+  const sub=r.beforeMean!=null?`${esc(t.s)} averaged <b>${r.beforeMean}</b> in the <b>${r.before}</b> days before and <b>${r.duringMean}</b> in the <b>${r.during}</b> days since${r.bar!=null?` &#183; needs more than <b>${r.bar}</b> to count`:''}${r.needs?` &#183; <b>${r.needs}</b> more days to judge`:''}`:`<b>${r.during}</b> days while it ran &#183; nothing before it to compare against`;
+  fh.innerHTML=`<button class="fx" aria-label="back">&#215;</button><div class="fname">${esc(c.name)}</div><div class="fwhen">${c.from} &#8594; ${c.to||'today'} &#183; ${c.days} days &#183; ${esc(t.s)}</div><div class="lab" style="margin-top:16px">index &#183; since minus before</div><div class="fstat ${sc}">${stat}</div><div class="fsub">${flat?`every reading the same &#183; `:''}${sub}</div><div class="fword ${v.cls}">${v.word}</div><div class="fwhy">${esc(r.why||'')}</div>`;
+  fh.querySelector('.fx').onclick=()=>{ PICK=null; render(); };
+  const arr=t.pts;
+  fl.innerHTML=COMMITS.slice().sort((a,b)=>a.from.localeCompare(b.from)).map(o=>{ const i0=DI[o.from]??0, i1=DI[o.to||TODAY]??N-1, x=testCommit(arr,o,COMMITS,TODAY);
+    const col=x.verdict==='finding'?(x.effect>0?'#4bb5a6':'#c05a4c'):FILL[x.verdict]||'#3a4247', l=i0/N*100, w=Math.max((i1-i0+1)/N*100,1.2);
+    return `<div class="ln"><div class="bar${o.to?'':' open'}${o===c?' on':''}" data-id="${esc(o.id)}" style="left:${l.toFixed(2)}%;width:${w.toFixed(2)}%;border-color:${x.verdict==='tangled'?'#e3a33f':col};background:${col}${x.verdict==='early'?'80':x.verdict==='no before'?'99':'38'};${x.verdict==='no before'?'border-style:dashed':''}">${esc(o.name)}</div></div>`; }).join('');
+  fl.querySelectorAll('.bar').forEach(b=>b.onclick=()=>{ const o=COMMITS.find(z=>z.id===b.dataset.id); if(o){ PICK=o; render(); window.scrollTo({top:0}); } });
+  fa.innerHTML=`${r.clash&&r.clash.length?`<div class="coll"><b>collision</b> &#183; ${r.clash.map(o=>esc(o.name)).join(', ')}</div>`:''}${c.to?'':`<button class="bt" data-fend>end</button>`}`;
+  const fe=fa.querySelector('[data-fend]'); if(fe) fe.onclick=()=>endCommit(c);
+}
+/* every metric under this commit, and whether it clears the raised bar */
+function drawPickMet(t){
+  const box=document.getElementById('pickmet'); if(!focusOn()){ box.innerHTML=''; return; } const c=PICK;
+  box.innerHTML=OWNED.map(m=>{ const r=testCommit(SERIES[m],c,COMMITS,TODAY);
+    if(r.effect==null) return `<span class="pm"><b class="wait">&#183;&#183;</b><span class="n">${esc(m)}</span><span class="r">${r.during} during &#183; 0 before</span></span>`;
+    const raised=Math.round(SCAN_BAR*(r.bar/2)*10)/10, lead=r.verdict!=='early'&&raised>0&&Math.abs(r.effect)>0&&Math.abs(r.effect)>=raised;
+    const cls=r.verdict==='early'?'wait':r.verdict==='finding'?(r.effect>0?'pos':'neg'):(Math.abs(r.effect)>=r.bar?(r.effect>0?'pos':'neg'):'flat');
+    return `<span class="pm"><b class="${cls}">${sgn(r.effect)}</b><span class="n">${esc(m)}</span><span class="r ${lead?'lead':''}">${r.verdict==='early'?`${r.needs} more days`:lead?`lead &#183; bar ${raised}`:`${r.beforeMean} &#8594; ${r.duringMean} &#183; bar ${r.bar}`}</span></span>`; }).join('');
+}
+async function endCommit(c){
+  const {error}=await db.from('events').insert({ occurred_at:new Date().toISOString(), metric:c.id, event_type:'commit_end', source:'you', context:{to:TODAY} });
+  if(error){ say(error.message); return; } await load(); PICK=COMMITS.find(z=>z.id===c.id)||null; render();
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&focusOn()){ PICK=null; render(); } });
+let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(N) render(); },150); });
+
+/* ---------- now: only what is true today ---------- */
+function drawNotices(t){
+  const out=[], arr=arrOf(t.pts), pts=t.pts;
+  if(pts.length>=14){ const now=pts[pts.length-1].rank, above=pts.filter(p=>p.rank>now).length, pct=above/pts.length*100;
+    if(pct>=90) out.push(['index',`<b class="neg">${now}</b> &#183; lowest <b>${Math.round(100-pct)||1}%</b> of your readings`,`n ${pts.length}`]);
+    else if(pct<=10) out.push(['index',`<b class="pos">${now}</b> &#183; highest <b>${Math.round(pct)||1}%</b> of your readings`,`n ${pts.length}`]); }
+  if(pts.length){ const ter=v=>v<90?'under 90':v<110?'near 100':'over 110'; let k=pts.length-1, run=1; while(k>0&&ter(pts[k-1].rank)===ter(pts[k].rank)){run++;k--;}
+    const tt=ter(pts[pts.length-1].rank); if(run>=3&&tt!=='near 100') out.push(['streak',`<b class="${tt==='over 110'?'pos':'neg'}">${tt}</b> &#183; <b>${run}</b> readings running`,`since ${pts[k].day}`]); }
+  const today=dayNum(TODAY);
+  OWNED.forEach(m=>{ const p=lastPt(SERIES[m]); if(!p) return; const age=today-dayNum(p.day); if(age>STALE_DAYS) out.push([esc(m),`last row <b>${p.day}</b> &#183; <b class="neg">${age}</b> days &#183; stale`,`YOU not drawn`]); });
+  for(let i=1;i<N;i++){ if(arr[i]!=null&&arr[i-1]==null){ let j=i-1; while(j>=0&&arr[j]==null) j--; const g=i-j-1; if(g>=3&&(N-1-i)<=14&&j>=0) out.push(['quiet',`<b>${g}</b> days &#183; ${DAYS[j]} &#8594; ${DAYS[i]}`,'']); } }
+  let leads=0; const earning=[];
+  COMMITS.forEach(c=>{ const r=testCommit(t.pts,c,COMMITS,TODAY); if(r.verdict==='early') earning.push([c,r]);
+    OWNED.forEach(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY); if(x.effect==null) return; const raised=Math.round(SCAN_BAR*(x.bar/2)*10)/10; if(x.verdict!=='early'&&raised>0&&Math.abs(x.effect)>0&&Math.abs(x.effect)>=raised) leads++; }); });
+  if(leads) out.push(['scan',`<b class="pos">${leads}</b> lead${leads===1?'':'s'} &#183; bar ${SCAN_BAR} se`,`${COMMITS.length} commits`,'scan.html']);
+  earning.forEach(([c,r])=>out.push([esc(c.name),`<b>${r.during}</b> during &#183; <b>${r.before}</b> before &#183; min ${MIN_DAYS}`,`${r.needs} more days`,c]));
+  document.getElementById('nowcount').textContent=out.length;
+  document.getElementById('notices').innerHTML=out.map(([l,v,n,go],i)=>`<div class="nt${go?' go':''}" data-i="${i}"><span class="nl">${l}</span><span class="nv">${v}<span class="nn">${n}</span></span></div>`).join('');
+  document.querySelectorAll('#notices .nt.go').forEach(el=>el.onclick=()=>{ const go=out[+el.dataset.i][3]; if(typeof go==='string') location.href=go; else { PICK=go; render(); window.scrollTo({top:0}); } });
+}
+
+/* ---------- load ---------- */
+async function load(){
+  const [all,rules,commits]=await Promise.all([readMetrics(db),readRules(db),readCommits(db)]);
+  const rows=await readDays(db,all);
+  ALL=all; RULES=rules; COMMITS=commits; SERIES=rankSeries(rows,rules); OWNED=Object.keys(SERIES);
+  buildDays(); YOU=etfSeries(SERIES,OWNED); const lastRead=Math.max(0,...OWNED.map(m=>DI[lastPt(SERIES[m]).day]??0)); DAYPIN=lastRead;
+  if(!(sel==='you'||SERIES[sel]||ALL.includes(sel))) sel='you';
+  document.getElementById('eyebrow').innerHTML=N?`${N} days &#183; ${DAYS[0]} to ${DAYS[N-1]} &#183; ${rows.length} rows`:`0 rows`;
+}
+db.auth.getSession().then(async ({data})=>{
+  if(!data.session){ location.href='index.html'; return; }
+  try{ await load(); render(); }catch(e){ say(e.message||String(e)); }
+});
+</script>
