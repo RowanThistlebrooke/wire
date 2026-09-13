@@ -4,57 +4,57 @@
 <title>commit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
 <style>
 /* what you did. a name, a start, an end. past dates welcome. nothing is edited. */
 :root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
- --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
- --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+ --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
-body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ground);color:var(--ink);font:600 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button,input{font-family:var(--mono)}
 button:focus-visible,input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 a{color:inherit;text-decoration:none}
 
 .main{max-width:760px;margin:0 auto;padding:22px 24px 110px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
-.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
 .out:hover{color:var(--ink)}
-.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.lab{font:600 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
 /* the form: one row */
 .f{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px 90px;gap:10px;margin-top:34px;align-items:end}
 .f label{display:grid;gap:8px}
-.f input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
-.f input[type=date]{font:400 14px/1.6 var(--mono);color-scheme:dark}
-.f input::placeholder{color:var(--muted);font-weight:300}
+.f input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:500 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
+.f input[type=date]{font:600 14px/1.6 var(--mono);color-scheme:dark}
+.f input::placeholder{color:var(--muted);font-weight:500}
 .f input:focus{border-bottom-color:var(--teal);outline:0}
-.f button{background:none;border:1px solid var(--edge2);color:var(--ink);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 0;cursor:pointer;height:44px}
+.f button{background:none;border:1px solid var(--edge2);color:var(--ink);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 0;cursor:pointer;height:44px}
 .f button:hover{border-color:var(--teal);color:var(--teal)}
 .f button[disabled]{opacity:.35;cursor:default}
-.msg{font:11px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em;letter-spacing:.04em}
+.msg{font:600 11px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em;letter-spacing:.04em}
 .msg.bad{color:var(--leak)}
 .msg.good{color:var(--teal)}
 
 /* the list */
 .list{margin-top:36px;border-top:1px solid var(--edge)}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:18px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--edge)}
-.row .nm{font:400 16px/1.2 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm{font:600 16px/1.2 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .nm.open{color:var(--ink)}
 .row .nm.done{color:var(--dim)}
-.row .when{font:11px/1.4 var(--mono);color:var(--muted);white-space:nowrap;letter-spacing:.04em}
-.row .when b{color:var(--dim);font-weight:400}
-.row .end{background:none;border:1px solid var(--edge2);color:var(--dim);font:400 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:7px 10px;cursor:pointer}
+.row .when{font:600 11px/1.4 var(--mono);color:var(--muted);white-space:nowrap;letter-spacing:.04em}
+.row .when b{color:var(--dim);font-weight:600}
+.row .end{background:none;border:1px solid var(--edge2);color:var(--dim);font:600 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:7px 10px;cursor:pointer}
 .row .end:hover{border-color:var(--teal);color:var(--teal)}
-.row .go{font:10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.row .go{font:600 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
 .row .go:hover{color:var(--teal)}
-.empty{font:11px/1.6 var(--mono);color:var(--muted);padding:16px 0;letter-spacing:.04em}
+.empty{font:600 11px/1.6 var(--mono);color:var(--muted);padding:16px 0;letter-spacing:.04em}
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
-.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
 .tabs a:hover{color:var(--dim)}
 .tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
 @media (max-width:640px){.f{grid-template-columns:1fr 1fr}.f label:first-child{grid-column:1/-1}.main{padding:18px 16px 110px}.row{grid-template-columns:1fr;gap:6px}}

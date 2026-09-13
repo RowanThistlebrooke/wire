@@ -4,49 +4,49 @@
 <title>import</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
 <style>
 /* the file door. drop a csv, every number column becomes a metric. the same file twice lands once. */
 :root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
- --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
- --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+ --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
-body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ground);color:var(--ink);font:600 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button,input{font-family:var(--mono)}
 button:focus-visible,input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 a{color:inherit;text-decoration:none}
 
 .main{max-width:640px;margin:0 auto;padding:22px 24px 110px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
-.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
 .out:hover{color:var(--ink)}
-.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.lab{font:600 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
-#drop{margin-top:34px;border:1px solid var(--edge2);padding:44px 16px;text-align:center;color:var(--muted);font:300 18px/1.4 var(--ui);cursor:pointer}
+#drop{margin-top:34px;border:1px solid var(--edge2);padding:44px 16px;text-align:center;color:var(--muted);font:500 18px/1.4 var(--ui);cursor:pointer}
 #drop.over{border-color:var(--teal);color:var(--ink)}
-#drop b{display:block;font:400 10px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;margin-top:10px}
+#drop b{display:block;font:600 10px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;margin-top:10px}
 
-.n{font:11px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;margin:26px 0 0}
-.n b{color:var(--dim);font-weight:400}
+.n{font:600 11px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;margin:26px 0 0}
+.n b{color:var(--dim);font-weight:600}
 .pre{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:end;margin-top:22px}
-.pre input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
+.pre input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:500 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
 .pre input:focus{border-bottom-color:var(--teal);outline:0}
 #names{margin-top:18px;border-top:1px solid var(--edge)}
 .row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--edge);cursor:pointer}
 .row input{accent-color:var(--teal);margin:0;width:14px;height:14px}
-.row .nm{font:400 15px/1.2 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .k{font:11px/1 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap}
-#go{margin-top:22px;width:100%;background:none;border:1px solid var(--edge2);color:var(--ink);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:15px 0;cursor:pointer}
+.row .nm{font:600 15px/1.2 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .k{font:600 11px/1 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+#go{margin-top:22px;width:100%;background:none;border:1px solid var(--edge2);color:var(--ink);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:15px 0;cursor:pointer}
 #go:hover{border-color:var(--teal);color:var(--teal)}
 #go[disabled]{opacity:.35;cursor:default}
-.msg{font:11px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em;letter-spacing:.04em}
+.msg{font:600 11px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em;letter-spacing:.04em}
 .msg.bad{color:var(--leak)}
 .msg.good{color:var(--teal)}
 
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
-.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
 .tabs a:hover{color:var(--dim)}
 .tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
 @media (max-width:640px){.main{padding:18px 16px 110px}}

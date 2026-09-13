@@ -4,12 +4,12 @@
 <title>pad</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
 <style>
 /* the pad. one number, one row. same skin as the face. */
 :root{--ground:#070809;--surface:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
- --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
- --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+ --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
@@ -19,14 +19,14 @@ a{color:inherit;text-decoration:none}
 
 .main{max-width:640px;margin:0 auto;padding:30px 24px 130px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.eyebrow{font:11px/1 var(--mono);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
-.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;cursor:pointer;padding:0}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;cursor:pointer;padding:0}
 .out:hover{color:var(--ink)}
-.lab{font:700 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.lab{font:800 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
 
 /* every name you have ever recorded */
 .names{display:flex;gap:6px;flex-wrap:wrap;margin-top:26px}
-.names button{background:none;border:1px solid var(--edge);color:var(--muted);font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:9px 11px;border-radius:5px;cursor:pointer}
+.names button{background:none;border:1px solid var(--edge);color:var(--muted);font:800 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:9px 11px;border-radius:5px;cursor:pointer}
 .names button:hover{color:var(--ink);border-color:var(--dim)}
 .names button.on{color:var(--ink);border-color:var(--ink)}
 .names button.new{color:var(--teal);border-color:var(--edge)}
@@ -34,11 +34,11 @@ a{color:inherit;text-decoration:none}
 
 /* the name */
 .sym{font:800 clamp(34px,7vw,60px)/.9 var(--ui);letter-spacing:-.04em;margin-top:34px;overflow-wrap:anywhere}
-.sym .u{font:700 14px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:12px;vertical-align:middle}
+.sym .u{font:800 14px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:12px;vertical-align:middle}
 .newbox{display:none;gap:10px;margin-top:30px}
 .newbox.on{display:grid;grid-template-columns:minmax(0,1fr) 120px}
 .newbox input{background:var(--surface);border:1px solid var(--edge);color:var(--ink);font:800 20px/1 var(--ui);padding:16px 14px;border-radius:7px;width:100%}
-.newbox input::placeholder{color:var(--muted);font-weight:400}
+.newbox input::placeholder{color:var(--muted);font-weight:600}
 
 /* the number */
 .entry{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px;margin-top:22px}
@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
 .entry button{background:var(--ink);color:var(--ground);border:0;border-radius:7px;font:800 16px/1 var(--ui);letter-spacing:.02em;text-transform:uppercase;cursor:pointer}
 .entry button:hover{background:#fff}
 .entry button[disabled]{opacity:.35;cursor:default}
-.msg{font:12px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em}
+.msg{font:600 12px/1.6 var(--mono);color:var(--muted);margin:12px 0 0;min-height:1.6em}
 .msg.bad{color:var(--leak)}
 .msg.good{color:var(--teal)}
 
@@ -57,9 +57,9 @@ a{color:inherit;text-decoration:none}
 .last{margin-top:34px;border-top:1px solid var(--edge)}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--edge)}
 .row .v{font:800 22px/1 var(--ui);letter-spacing:-.03em}
-.row .v span{font:700 11px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:8px}
-.row .t{font:11px/1.4 var(--mono);color:var(--muted);white-space:nowrap}
-.empty{font:12px/1.6 var(--mono);color:var(--muted);padding:16px 0}
+.row .v span{font:800 11px/1 var(--mono);color:var(--muted);letter-spacing:.1em;margin-left:8px}
+.row .t{font:600 11px/1.4 var(--mono);color:var(--muted);white-space:nowrap}
+.empty{font:600 12px/1.6 var(--mono);color:var(--muted);padding:16px 0}
 
 /* tabs: the other pages */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 28px;overflow-x:auto;scrollbar-width:none}
@@ -70,21 +70,21 @@ a{color:inherit;text-decoration:none}
 
 /* skin: thin type, hairlines, one accent. on a phone the pad is the whole app. */
 .eyebrow,.out{letter-spacing:.22em}
-.names button{border-radius:0;font-weight:400;letter-spacing:.12em;padding:9px 11px;border-color:var(--edge2)}
+.names button{border-radius:0;font-weight:600;letter-spacing:.12em;padding:9px 11px;border-color:var(--edge2)}
 .names button.on{color:var(--ink);border-color:var(--ink)}
 .names button.new{color:var(--teal)}
-.sym{font:300 clamp(30px,6vw,52px)/.95 var(--ui);letter-spacing:-.02em}
-.sym .u{font:400 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
-.newbox input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:300 20px/1.2 var(--ui);padding:10px 0}
+.sym{font:500 clamp(30px,6vw,52px)/.95 var(--ui);letter-spacing:-.02em}
+.sym .u{font:600 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.newbox input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:500 20px/1.2 var(--ui);padding:10px 0}
 .newbox input:focus{border-bottom-color:var(--teal);outline:0}
-.entry input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:300 clamp(40px,8vw,64px)/1 var(--ui);letter-spacing:-.02em;padding:8px 0}
-.entry input::placeholder{color:var(--edge2);font-weight:300}
+.entry input{border:0;border-bottom:1px solid var(--edge2);border-radius:0;background:none;font:500 clamp(40px,8vw,64px)/1 var(--ui);letter-spacing:-.02em;padding:8px 0}
+.entry input::placeholder{color:var(--edge2);font-weight:500}
 .entry input:focus{border-bottom-color:var(--teal);outline:0}
-.entry button{background:none;border:1px solid var(--edge2);color:var(--ink);border-radius:0;font:400 11px/1 var(--mono);letter-spacing:.2em}
+.entry button{background:none;border:1px solid var(--edge2);color:var(--ink);border-radius:0;font:600 11px/1 var(--mono);letter-spacing:.2em}
 .entry button:hover{background:none;border-color:var(--teal);color:var(--teal)}
-.row .v{font:300 20px/1 var(--ui)}
-.row .v span{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
-.tabs a{font:400 11px/1 var(--mono);letter-spacing:.2em;padding:13px 12px 14px;border-top-width:1px}
+.row .v{font:500 20px/1 var(--ui)}
+.row .v span{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.tabs a{font:600 11px/1 var(--mono);letter-spacing:.2em;padding:13px 12px 14px;border-top-width:1px}
 .tabs a[aria-current="page"]{border-top-color:var(--teal);color:var(--ink)}
 @media (max-width:700px){.tabs{display:none}.main{padding-bottom:40px}}
 </style>
@@ -104,7 +104,7 @@ a{color:inherit;text-decoration:none}
   </div>
 
   <form class="entry" id="f">
-    <input id="v" type="number" step="any" inputmode="decimal" placeholder="0" required>
+    <input id="v" type="text" autocomplete="off" spellcheck="false" placeholder="0" required>
     <button id="add" type="submit">add</button>
   </form>
   <p class="msg" id="msg"></p>
@@ -178,10 +178,15 @@ async function render() {
   else { await drawLast(); $('v').focus(); }
 }
 
+// A number is a reading. Anything else is a note: event_type 'note',
+// value null, the text kept in context. Notes never show on a page and
+// never enter the maths.
 $('f').addEventListener('submit', async e => {
   e.preventDefault();
-  const n = Number($('v').value);
-  if (!Number.isFinite(n)) { say('a number', 'bad'); return; }
+  const raw = $('v').value.trim();
+  if (!raw) { say('a number or a note', 'bad'); return; }
+  const n = Number(raw);
+  const isNumber = Number.isFinite(n);
   let metric = PICK, unit = UNIT;
   if (PICK === '') {
     metric = slug($('nname').value);
@@ -189,18 +194,16 @@ $('f').addEventListener('submit', async e => {
     unit = $('nunit').value.trim() || null;
   }
   $('add').disabled = true; say('');
-  const { error } = await db.from('events').insert({
-    occurred_at: new Date().toISOString(),
-    metric,
-    value: n,
-    unit,
-    source: 'pad'
-  });
+  const row = isNumber
+    ? { occurred_at: new Date().toISOString(), metric, value: n, unit, source: 'pad' }
+    : { occurred_at: new Date().toISOString(), metric, event_type: 'note', value: null,
+        source: 'you', context: { text: raw } };
+  const { error } = await db.from('events').insert(row);
   $('add').disabled = false;
   if (error) { say(error.message, 'bad'); return; }
   $('v').value = ''; $('nname').value = ''; $('nunit').value = '';
   PICK = metric; remember(metric);
-  say(`${n}${unit ? ' ' + unit : ''} added to ${metric}`, 'good');
+  say(isNumber ? `${n}${unit ? ' ' + unit : ''} added to ${metric}` : `note added to ${metric}`, 'good');
   await loadNames(); await render();
 });
 

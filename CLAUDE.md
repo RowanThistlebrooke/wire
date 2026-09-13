@@ -38,6 +38,10 @@ out loud. Keep it that way.
 6. **The maths lives in one file.** `you-reader.js` is loaded by the
    website and read by the MCP server. Do not copy a formula into a second
    place. If a number needs changing, change it there.
+7. **No AI writes measurements, commits or rules.** It may write a note:
+   `event_type = 'note'`, `value` null, `source = 'claude'`, and the user
+   approves each one. Notes never appear on a page and never enter the
+   maths.
 
 ## The shape of the data
 

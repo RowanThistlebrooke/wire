@@ -4,60 +4,60 @@
 <title>did it work</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
 <style>
 /* the grid. rows are what you did, columns are what happened. one testCommit per cell, the same maths as every other page. */
 :root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
- --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
- --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+ --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
-body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ground);color:var(--ink);font:600 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button{font-family:var(--mono)}
 button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 a{color:inherit;text-decoration:none}
 
 .main{padding:22px 28px 110px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
-.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
 .out:hover{color:var(--ink)}
-.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.lab{font:600 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
 /* the grid */
 .wrap{overflow-x:auto;margin-top:28px;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;min-width:100%}
 th,td{border-bottom:1px solid var(--edge);padding:0;vertical-align:top;text-align:left}
-th{font:400 10px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 16px 10px 0;white-space:nowrap}
+th{font:600 10px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 16px 10px 0;white-space:nowrap}
 th.you{color:var(--dim)}
 td.what{padding:12px 24px 12px 0;white-space:nowrap;min-width:180px}
-td.what .nm{font:400 15px/1.2 var(--ui);color:var(--ink)}
+td.what .nm{font:600 15px/1.2 var(--ui);color:var(--ink)}
 td.what .nm.done{color:var(--dim)}
-td.what .when{font:10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em}
+td.what .when{font:600 10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em}
 td.cell{padding:12px 16px 12px 0;min-width:96px;cursor:pointer}
 td.cell:hover .v{color:var(--ink)}
 td.cell.on .v{text-decoration:underline;text-underline-offset:5px;text-decoration-color:var(--edge2)}
-.v{font:300 22px/1 var(--ui);letter-spacing:-.01em;color:var(--dim);white-space:nowrap}
+.v{font:500 22px/1 var(--ui);letter-spacing:-.01em;color:var(--dim);white-space:nowrap}
 .v.up{color:var(--teal)}.v.down{color:var(--leak)}.v.tangled{color:var(--amber)}.v.wait{color:var(--dim)}
-.w{font:10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap;margin-top:3px}
+.w{font:600 10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap;margin-top:3px}
 .w.lead{color:var(--amber)}
-.empty{font:11px/1.6 var(--mono);color:var(--muted);padding:24px 0;letter-spacing:.04em}
+.empty{font:600 11px/1.6 var(--mono);color:var(--muted);padding:24px 0;letter-spacing:.04em}
 
 /* the cell, read in full */
 .read{margin-top:26px;border-top:1px solid var(--edge);padding-top:16px;display:none}
 .read.on{display:block}
 .read .h{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
-.read .h b{font:400 16px/1.2 var(--ui)}
-.read .h .x{font:11px/1 var(--mono);color:var(--muted);letter-spacing:.1em}
-.read .big{font:300 clamp(32px,4vw,52px)/.9 var(--ui);margin-top:12px}
+.read .h b{font:600 16px/1.2 var(--ui)}
+.read .h .x{font:600 11px/1 var(--mono);color:var(--muted);letter-spacing:.1em}
+.read .big{font:500 clamp(32px,4vw,52px)/.9 var(--ui);margin-top:12px}
 .read .big.up{color:var(--teal)}.read .big.down{color:var(--leak)}.read .big.tangled{color:var(--amber)}
-.read .nums{font:11px/1.8 var(--mono);color:var(--muted);margin-top:10px;letter-spacing:.04em}.read .nums b{color:var(--ink);font-weight:400}
-.read .why{font:12px/1.7 var(--mono);color:var(--dim);margin-top:8px;max-width:72ch}
-.read .px{background:none;border:1px solid var(--edge2);color:var(--dim);width:24px;height:24px;cursor:pointer;font:400 13px/1 var(--mono);margin-left:auto}
+.read .nums{font:600 11px/1.8 var(--mono);color:var(--muted);margin-top:10px;letter-spacing:.04em}.read .nums b{color:var(--ink);font-weight:600}
+.read .why{font:600 12px/1.7 var(--mono);color:var(--dim);margin-top:8px;max-width:72ch}
+.read .px{background:none;border:1px solid var(--edge2);color:var(--dim);width:24px;height:24px;cursor:pointer;font:600 13px/1 var(--mono);margin-left:auto}
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
-.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
 .tabs a:hover{color:var(--dim)}
 .tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
 @media (max-width:640px){.main{padding:18px 16px 110px}td.what{min-width:130px}.v{font-size:18px}}
