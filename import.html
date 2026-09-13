@@ -174,26 +174,6 @@ drop.ondrop = e => {
   if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);
 };
 
-// Ask the database what this file already put in, so the same file twice lands once.
-// It reads page by page, because one read stops at the project's row cap and a
-// row it never saw would land a second time. A _ or % in the filename only
-// widens the match, and the exact check is the Set.
-async function already(filename) {
-  const seen = new Set();
-  for (let from = 0; ;) {
-    const { data, error } = await db.from('events')
-      .select('source_id, metric')
-      .eq('source', 'csv')
-      .like('source_id', filename + ':%')
-      .order('source_id').order('metric')
-      .range(from, from + 999);
-    if (error) throw error;
-    if (!data.length) return seen;
-    data.forEach(h => seen.add(h.source_id + '|' + h.metric));
-    from += data.length;
-  }
-}
-
 go.onclick = async () => {
   go.disabled = true;
   msg.className = 'msg'; msg.textContent = 'reading';
@@ -224,10 +204,10 @@ go.onclick = async () => {
     }
   }
 
-  // If the check fails, nothing is written. A guess here would double the file.
-  let seen;
-  try { seen = await already(PLAN.filename); }
-  catch (e) { msg.className = 'msg bad'; msg.textContent = e.message || String(e); go.disabled = false; return; }
+  // Ask the database what it already has, so the same file twice lands once.
+  const { data: have } = await db.from('events')
+    .select('source_id, metric').eq('source', 'csv');
+  const seen = new Set((have || []).map(h => h.source_id + '|' + h.metric));
   const fresh = rows.filter(r => !seen.has(r.source_id + '|' + r.metric));
 
   if (!fresh.length) {
