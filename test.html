@@ -2,103 +2,156 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>did it work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  body { background:#0e1113; color:#e8e4dc; font:16px/1.5 system-ui; margin:0;
-         padding:24px; max-width:560px; margin-inline:auto; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  .n { color:#69737a; font-size:13px; margin:0 0 20px; }
-  .pick { display:grid; gap:8px; margin-bottom:20px; }
-  select { font:inherit; padding:12px; border-radius:8px; border:1px solid #252d33;
-           background:#151a1d; color:#e8e4dc; width:100%; }
-  .card { border:1px solid #252d33; border-radius:10px; padding:18px; }
-  .verdict { font:700 22px/1.2 system-ui; margin-bottom:10px; letter-spacing:-.01em; }
-  .finding { color:#4bb5a6; } .tangled { color:#d9a441; }
-  .none, .thin { color:#69737a; }
-  .why { color:#9ba4aa; font-size:14px; margin:0 0 14px; }
-  .nums { display:flex; gap:22px; flex-wrap:wrap; border-top:1px solid #1b2227;
-          padding-top:14px; }
-  .num { display:flex; flex-direction:column; gap:3px; }
-  .num b { font:700 17px/1 system-ui; font-variant-numeric:tabular-nums; }
-  .num span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#69737a; }
-  .foot { margin-top:28px; display:flex; gap:16px; }
-  a { color:#69737a; font-size:13px; }
-  .err { color:#d1584a; font-size:13px; }
+/* the grid. rows are what you did, columns are what happened. one testCommit per cell, the same maths as every other page. */
+:root{--ground:#070809;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
+ --teal:#5fc4b4;--amber:#c9a25a;--leak:#c9695c;
+ --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font-family:var(--mono)}
+button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+a{color:inherit;text-decoration:none}
+
+.main{padding:22px 28px 110px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.out:hover{color:var(--ink)}
+.lab{font:400 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+/* the grid */
+.wrap{overflow-x:auto;margin-top:28px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;min-width:100%}
+th,td{border-bottom:1px solid var(--edge);padding:0;vertical-align:top;text-align:left}
+th{font:400 10px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 16px 10px 0;white-space:nowrap}
+th.you{color:var(--dim)}
+td.what{padding:12px 24px 12px 0;white-space:nowrap;min-width:180px}
+td.what .nm{font:400 15px/1.2 var(--ui);color:var(--ink)}
+td.what .nm.done{color:var(--dim)}
+td.what .when{font:10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em}
+td.cell{padding:12px 16px 12px 0;min-width:96px;cursor:pointer}
+td.cell:hover .v{color:var(--ink)}
+td.cell.on .v{text-decoration:underline;text-underline-offset:5px;text-decoration-color:var(--edge2)}
+.v{font:300 22px/1 var(--ui);letter-spacing:-.01em;color:var(--dim);white-space:nowrap}
+.v.up{color:var(--teal)}.v.down{color:var(--leak)}.v.tangled{color:var(--amber)}.v.wait{color:var(--muted);font-size:16px}
+.w{font:10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap;margin-top:3px}
+.w.lead{color:var(--amber)}
+.empty{font:11px/1.6 var(--mono);color:var(--muted);padding:24px 0;letter-spacing:.04em}
+
+/* the cell, read in full */
+.read{margin-top:26px;border-top:1px solid var(--edge);padding-top:16px;display:none}
+.read.on{display:block}
+.read .h{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+.read .h b{font:400 16px/1.2 var(--ui)}
+.read .h .x{font:11px/1 var(--mono);color:var(--muted);letter-spacing:.1em}
+.read .big{font:300 clamp(32px,4vw,52px)/.9 var(--ui);margin-top:12px}
+.read .big.up{color:var(--teal)}.read .big.down{color:var(--leak)}.read .big.tangled{color:var(--amber)}
+.read .nums{font:11px/1.8 var(--mono);color:var(--muted);margin-top:10px;letter-spacing:.04em}.read .nums b{color:var(--ink);font-weight:400}
+.read .why{font:12px/1.7 var(--mono);color:var(--dim);margin-top:8px;max-width:72ch}
+.read .px{background:none;border:1px solid var(--edge2);color:var(--dim);width:24px;height:24px;cursor:pointer;font:400 13px/1 var(--mono);margin-left:auto}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 24px;overflow-x:auto;scrollbar-width:none}
+.tabs a{display:block;border-top:1px solid transparent;color:var(--muted);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 12px 14px;white-space:nowrap}
+.tabs a:hover{color:var(--dim)}
+.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--teal)}
+@media (max-width:640px){.main{padding:18px 16px 110px}td.what{min-width:130px}.v{font-size:18px}}
 </style>
 
-<h1>did it work</h1>
-<p class="n">Pick one thing you did and one thing you measure. It compares the days it ran against the same number of days straight before.</p>
+<div class="main">
+  <div class="bar">
+    <p class="eyebrow">did it work &#183; what you did &#215; what happened</p>
+    <button class="out" id="out" type="button">sign out</button>
+  </div>
 
-<div class="pick">
-  <select id="c"></select>
-  <select id="m"></select>
+  <div class="wrap"><table id="grid"></table></div>
+  <div class="read" id="read"></div>
+  <div id="msg"></div>
 </div>
 
-<div id="out"></div>
-
-<div class="foot"></div>
+<nav class="tabs" aria-label="pages">
+  <a href="you.html">you</a>
+  <a href="pad.html">pad</a>
+  <a href="import.html">import</a>
+  <a href="commit.html">commit</a>
+  <a href="test.html" aria-current="page">test</a>
+  <a href="scan.html">scan</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="nav.js" defer></script>
 <script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
-let COMMITS = [], SERIES = {}, YOU = [];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TODAY = new Date().toISOString().slice(0, 10);
+const SCAN_BAR = 3.3;
+const sgn = v => (v >= 0 ? '+' : '') + (Math.round(v * 10) / 10);
+const $ = id => document.getElementById(id);
+function say(m) { $('msg').innerHTML = `<p class="empty" style="color:var(--leak)">${esc(m)}</p>`; }
 
-const TITLE = {
-  finding:      'It worked',
-  tangled:      'Cannot say',
-  'no finding': 'No finding',
-  early:        'Too early to call',
-  'no before':  'Nothing to compare'
-};
-const CLASS = {
-  finding: 'finding', tangled: 'tangled',
-  'no finding': 'none', early: 'thin', 'no before': 'thin'
-};
+let COMMITS = [], SERIES = {}, YOU = [], COLS = [], PICK = null;
+const pointsOf = k => k === 'YOU' ? YOU : (SERIES[k] || []);
 
-function show() {
-  const commit = COMMITS.find(x => x.id === c.value);
-  const points = m.value === 'YOU' ? YOU : (SERIES[m.value] || []);
-  if (!commit || !points.length) { out.innerHTML = ''; return; }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const r = testCommit(points, commit, COMMITS, today);
-
-  const num = (v, l) => `<div class="num"><b>${v}</b><span>${l}</span></div>`;
-  out.innerHTML = `<div class="card">
-    <div class="verdict ${CLASS[r.verdict]}">${TITLE[r.verdict]}</div>
-    <p class="why">${r.why}</p>
-    <div class="nums">
-      ${r.beforeMean !== null ? num(r.beforeMean, `before · ${r.before} days`) : ''}
-      ${r.duringMean !== null ? num(r.duringMean, `during · ${r.during} days`) : ''}
-      ${r.effect !== undefined ? num((r.effect > 0 ? '+' : '') + r.effect, 'change') : ''}
-      ${r.bar !== undefined ? num(r.bar, 'the bar') : ''}
-    </div>
-  </div>`;
+// One cell. The verdict is the Wire's, the colour is just the verdict.
+function cell(c, k) {
+  const r = testCommit(pointsOf(k), c, COMMITS, TODAY);
+  const raised = r.bar != null ? Math.round(SCAN_BAR * (r.bar / 2) * 10) / 10 : null;
+  const lead = r.effect != null && r.verdict !== 'early' && raised > 0 && Math.abs(r.effect) > 0 && Math.abs(r.effect) >= raised;
+  let cls = 'wait', word = '';
+  if (r.verdict === 'finding') { cls = r.effect > 0 ? 'up' : 'down'; word = r.effect > 0 ? 'went up' : 'went down'; }
+  else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'cannot be separated'; }
+  else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead' : 'no finding'; }
+  else if (r.verdict === 'early') { cls = 'wait'; word = `${r.needs} more days`; }
+  else { cls = 'wait'; word = '0 before'; }
+  return { r, cls, word, lead };
 }
 
-(async () => {
-  const { data: s } = await db.auth.getSession();
-  if (!s.session) { location.href = 'index.html'; return; }
+function draw() {
+  const g = $('grid');
+  if (!COMMITS.length) { g.innerHTML = ''; $('msg').innerHTML = `<p class="empty">0 commits &#183; <a href="commit.html" style="color:var(--teal)">log one</a></p>`; return; }
+  const head = `<tr><th></th>${COLS.map(k => `<th class="${k === 'YOU' ? 'you' : ''}">${esc(k)}</th>`).join('')}</tr>`;
+  const rows = COMMITS.map(c =>
+    `<tr><td class="what"><div class="nm ${c.to ? 'done' : ''}">${esc(c.name)}</div><div class="when">${c.from} &#8594; ${c.to || 'today'} &#183; ${c.days} d</div></td>` +
+    COLS.map(k => { const x = cell(c, k), on = PICK && PICK.c === c.id && PICK.k === k;
+      return `<td class="cell ${on ? 'on' : ''}" data-c="${esc(c.id)}" data-k="${esc(k)}"><div class="v ${x.cls}">${x.r.effect != null ? sgn(x.r.effect) : '&#183;&#183;'}</div><div class="w ${x.lead ? 'lead' : ''}">${x.word}</div></td>`; }).join('') +
+    `</tr>`).join('');
+  g.innerHTML = head + rows;
+  g.querySelectorAll('td.cell').forEach(td => td.onclick = () => { const same = PICK && PICK.c === td.dataset.c && PICK.k === td.dataset.k; PICK = same ? null : { c: td.dataset.c, k: td.dataset.k }; draw(); });
+  drawRead();
+}
 
-  const [all, rules, commits] = await Promise.all(
-    [readMetrics(db), readRules(db), readCommits(db)]);
+function drawRead() {
+  const box = $('read'); if (!PICK) { box.className = 'read'; box.innerHTML = ''; return; }
+  const c = COMMITS.find(z => z.id === PICK.c); if (!c) { PICK = null; box.className = 'read'; return; }
+  const x = cell(c, PICK.k), r = x.r;
+  const nums = r.beforeMean != null
+    ? `before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean}</b> &#183; needs more than <b>${r.bar}</b> &#183; <b>${r.before}</b> days before &#183; <b>${r.during}</b> days since${r.needs ? ` &#183; <b>${r.needs}</b> more days` : ''}`
+    : `<b>${r.during}</b> days since &#183; nothing before it`;
+  box.className = 'read on';
+  box.innerHTML = `<div class="h"><b>${esc(c.name)}</b><span class="x">${c.from} &#8594; ${c.to || 'today'} &#183; on ${esc(PICK.k)}</span><button class="px" aria-label="close">&#215;</button></div>` +
+    `<div class="big ${x.cls}">${r.effect != null ? sgn(r.effect) : '&#183;&#183;'} <span style="font-size:.45em;color:var(--dim)">${x.word}</span></div>` +
+    `<div class="nums">${nums}</div><div class="why">${esc(r.why || '')}</div>`;
+  box.querySelector('.px').onclick = () => { PICK = null; draw(); };
+}
+
+async function load() {
+  const [all, rules, commits] = await Promise.all([readMetrics(db), readRules(db), readCommits(db)]);
   const rows = await readDays(db, all);
+  COMMITS = commits; SERIES = rankSeries(rows, rules); YOU = etfSeries(SERIES, Object.keys(SERIES));
+  COLS = ['YOU', ...Object.keys(SERIES)];
+}
 
-  COMMITS = commits;
-  SERIES = rankSeries(rows, rules);
-  YOU = etfSeries(SERIES, Object.keys(SERIES));
+$('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && PICK) { PICK = null; draw(); } });
 
-  if (!COMMITS.length) {
-    out.innerHTML = '<p class="err">No commits yet. Log one first.</p>';
-    return;
-  }
-
-  c.innerHTML = COMMITS.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
-  m.innerHTML = ['YOU', ...Object.keys(SERIES)]
-    .map(k => `<option value="${k}">${k}</option>`).join('');
-  c.onchange = show; m.onchange = show;
-  show();
-})();
+db.auth.getSession().then(async ({ data }) => {
+  if (!data.session) { location.href = 'index.html'; return; }
+  try { await load(); draw(); } catch (e) { say(e.message || String(e)); }
+});
 </script>
