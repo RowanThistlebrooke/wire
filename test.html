@@ -38,7 +38,7 @@ td.cell{padding:12px 16px 12px 0;min-width:96px;cursor:pointer}
 td.cell:hover .v{color:var(--ink)}
 td.cell.on .v{text-decoration:underline;text-underline-offset:5px;text-decoration-color:var(--edge2)}
 .v{font:300 22px/1 var(--ui);letter-spacing:-.01em;color:var(--dim);white-space:nowrap}
-.v.up{color:var(--teal)}.v.down{color:var(--leak)}.v.tangled{color:var(--amber)}.v.wait{color:var(--muted);font-size:16px}
+.v.up{color:var(--teal)}.v.down{color:var(--leak)}.v.tangled{color:var(--amber)}.v.wait{color:var(--dim)}
 .w{font:10px/1.6 var(--mono);color:var(--muted);letter-spacing:.04em;white-space:nowrap;margin-top:3px}
 .w.lead{color:var(--amber)}
 .empty{font:11px/1.6 var(--mono);color:var(--muted);padding:24px 0;letter-spacing:.04em}
@@ -98,18 +98,20 @@ function say(m) { $('msg').innerHTML = `<p class="empty" style="color:var(--leak
 let COMMITS = [], SERIES = {}, YOU = [], COLS = [], PICK = null;
 const pointsOf = k => k === 'YOU' ? YOU : (SERIES[k] || []);
 
-// One cell. The verdict is the Wire's, the colour is just the verdict.
+// One cell. A number always, and under it how much to trust it.
+// The verdict is the Wire's. The number is never hidden, only the confidence changes.
 function cell(c, k) {
   const r = testCommit(pointsOf(k), c, COMMITS, TODAY);
   const raised = r.bar != null ? Math.round(SCAN_BAR * (r.bar / 2) * 10) / 10 : null;
   const lead = r.effect != null && r.verdict !== 'early' && raised > 0 && Math.abs(r.effect) > 0 && Math.abs(r.effect) >= raised;
-  let cls = 'wait', word = '';
-  if (r.verdict === 'finding') { cls = r.effect > 0 ? 'up' : 'down'; word = r.effect > 0 ? 'went up' : 'went down'; }
-  else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'cannot be separated'; }
-  else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead' : 'no finding'; }
-  else if (r.verdict === 'early') { cls = 'wait'; word = `${r.needs} more days`; }
-  else { cls = 'wait'; word = '0 before'; }
-  return { r, cls, word, lead };
+  let cls = 'wait', word = '', n = r.effect;
+  if (r.verdict === 'finding') { cls = r.effect > 0 ? 'up' : 'down'; word = 'confident'; }
+  else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'confident · tangled'; }
+  else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead · unconfident' : (r.bar > 0 && Math.abs(r.effect) >= r.bar / 2 ? 'unconfident' : 'very unconfident'); }
+  else if (r.verdict === 'early') { cls = 'wait'; word = `very unconfident · ${r.needs} more days`; }
+  else if (r.duringMean != null) { n = Math.round((r.duringMean - 100) * 10) / 10; cls = 'wait'; word = 'vs your usual · 0 before'; }
+  else { cls = 'wait'; word = '0 readings'; }
+  return { r, cls, word, lead, n };
 }
 
 function draw() {
@@ -119,7 +121,7 @@ function draw() {
   const rows = COMMITS.map(c =>
     `<tr><td class="what"><div class="nm ${c.to ? 'done' : ''}">${esc(c.name)}</div><div class="when">${c.from} &#8594; ${c.to || 'today'} &#183; ${c.days} d</div></td>` +
     COLS.map(k => { const x = cell(c, k), on = PICK && PICK.c === c.id && PICK.k === k;
-      return `<td class="cell ${on ? 'on' : ''}" data-c="${esc(c.id)}" data-k="${esc(k)}"><div class="v ${x.cls}">${x.r.effect != null ? sgn(x.r.effect) : '&#183;&#183;'}</div><div class="w ${x.lead ? 'lead' : ''}">${x.word}</div></td>`; }).join('') +
+      return `<td class="cell ${on ? 'on' : ''}" data-c="${esc(c.id)}" data-k="${esc(k)}"><div class="v ${x.cls}">${x.n != null ? sgn(x.n) : '&#183;&#183;'}</div><div class="w ${x.lead ? 'lead' : ''}">${x.word}</div></td>`; }).join('') +
     `</tr>`).join('');
   g.innerHTML = head + rows;
   g.querySelectorAll('td.cell').forEach(td => td.onclick = () => { const same = PICK && PICK.c === td.dataset.c && PICK.k === td.dataset.k; PICK = same ? null : { c: td.dataset.c, k: td.dataset.k }; draw(); });
@@ -132,10 +134,10 @@ function drawRead() {
   const x = cell(c, PICK.k), r = x.r;
   const nums = r.beforeMean != null
     ? `before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean}</b> &#183; needs more than <b>${r.bar}</b> &#183; <b>${r.before}</b> days before &#183; <b>${r.during}</b> days since${r.needs ? ` &#183; <b>${r.needs}</b> more days` : ''}`
-    : `<b>${r.during}</b> days since &#183; nothing before it`;
+    : `since <b>${r.duringMean != null ? r.duringMean : '··'}</b> &#183; your usual is <b>100</b> &#183; <b>${r.during}</b> days since &#183; nothing before it`;
   box.className = 'read on';
   box.innerHTML = `<div class="h"><b>${esc(c.name)}</b><span class="x">${c.from} &#8594; ${c.to || 'today'} &#183; on ${esc(PICK.k)}</span><button class="px" aria-label="close">&#215;</button></div>` +
-    `<div class="big ${x.cls}">${r.effect != null ? sgn(r.effect) : '&#183;&#183;'} <span style="font-size:.45em;color:var(--dim)">${x.word}</span></div>` +
+    `<div class="big ${x.cls}">${x.n != null ? sgn(x.n) : '&#183;&#183;'} <span style="font-size:.45em;color:var(--dim)">${x.word}</span></div>` +
     `<div class="nums">${nums}</div><div class="why">${esc(r.why || '')}</div>`;
   box.querySelector('.px').onclick = () => { PICK = null; draw(); };
 }
