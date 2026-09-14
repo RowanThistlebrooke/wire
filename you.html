@@ -475,6 +475,10 @@ async function load(){
 $('out').onclick=async()=>{ await db.auth.signOut(); location.href='index.html'; };
 db.auth.getSession().then(async ({data})=>{
   if(!data.session){ location.href='index.html'; return; }
-  try{ await load(); fillGoalLine(cur()); render(); }catch(e){ say(e.message||String(e)); }
+  try{
+    /* right after sign in the database can see a fresh token a second early and refuse it. once more, a moment later. */
+    try{ await load(); }catch(e){ if(!/jwt/i.test(e.message||'')) throw e; await new Promise(r=>setTimeout(r,1500)); await load(); }
+    fillGoalLine(cur()); render();
+  }catch(e){ say(e.message||String(e)); }
 });
 </script>
