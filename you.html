@@ -6,443 +6,306 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
 <style>
-/* The Wire: a quiet reading surface. All scoring stays in you-reader.js. */
+/* The Wire: goals on the left, one goal in the middle, what you did on the right,
+   and three lines at the bottom that write to the ledger. All scoring stays in you-reader.js. */
 :root{--ground:#0b0d0f;--surface:#111518;--edge:#252b30;--edge2:#343d44;--ink:#eeece6;--dim:#a4adb3;--muted:#879198;
  --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
  --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
-button{font-family:var(--mono)}
-a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+button,input,select{font-family:var(--mono)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 a{color:inherit;text-decoration:none}
-
-/* frame */
-.app{min-height:100vh}
-.main{padding:18px 28px 90px;max-width:1400px;margin:0 auto}
-.bar{display:flex;align-items:center;gap:14px}
-.bar .tog{background:none;border:1px solid var(--edge);color:var(--dim);width:32px;height:28px;border-radius:6px;cursor:pointer;padding:0;display:grid;place-items:center}
-.bar .tog:hover{color:var(--ink)}
-.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
-.lab{font:800 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-.pos{color:var(--teal)}.neg{color:var(--leak)}.mu{color:var(--muted)}
-.err{font:600 12px/1.6 var(--mono);color:var(--leak);margin-top:14px}
-
-/* the table: YOU and every stock, one row each. click a row to put it on the chart */
-.tw{overflow-x:auto;margin-top:14px}
-.tbl{width:100%;border-collapse:collapse;font:600 12px/1.4 var(--mono)}
-.tbl th{font:600 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 12px 8px 0;border-bottom:1px solid var(--edge);white-space:nowrap}
-.tbl td{padding:8px 12px 8px 0;border-bottom:1px solid var(--edge);vertical-align:middle;white-space:nowrap}
-.tbl th:last-child,.tbl td:last-child{padding-right:0}
-.tbl th.r,.tbl td.r{text-align:right}
-.tbl td.nm{font:700 13px/1.2 var(--ui);max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.tbl td.k{color:var(--muted)}
-.tbl td svg{display:block;width:72px;height:22px;margin-left:auto}
-.tbl tr.row{cursor:pointer;outline:0}
-.tbl tr.row:hover td.nm,.tbl tr.row:focus-visible td.nm{color:var(--teal)}
-.tbl tr.on td{background:#0f1316}
-.tbl tr.on td.nm{color:var(--teal)}
-.tbl tr.off td{color:var(--muted)}
-.tbl tr.grp td{padding:18px 0 6px;border-bottom:1px solid var(--edge)}
-
-/* the number */
-.head2{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:36px;align-items:start;margin-top:4px}
-.tick{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.sym{font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.now{font:700 20px/1 var(--ui);letter-spacing:-.01em}
-.delta{font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
-.rules{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.rules .rl{margin-right:6px}
-.rules button{background:none;border:1px solid var(--edge);color:var(--muted);font:800 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:7px 9px;border-radius:5px;cursor:pointer}
-.rules button:hover{color:var(--ink);border-color:var(--dim)}
-.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
-.band{display:flex;gap:10px;align-items:baseline;margin-top:12px;flex-wrap:wrap}
-.band input{width:96px;background:none;border:0;border-bottom:2px solid var(--edge);color:var(--ink);font:800 20px/1.3 var(--ui);letter-spacing:-.02em;padding:4px 0;outline:0;min-width:0}
-.band input:focus{border-bottom-color:var(--teal)}
-.bt{background:none;border:1px solid var(--edge);color:var(--dim);font:800 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:10px 14px;border-radius:5px;cursor:pointer}
-.bt:hover{border-color:var(--teal);color:var(--teal)}
-.bt.go{color:var(--ink)}
-
-/* now: what needs a look */
-.nowcol{max-height:250px;overflow:auto;scrollbar-width:thin}
-.notices{margin-top:0}
-.nt{display:grid;grid-template-columns:1fr;gap:2px;padding:7px 0;border-bottom:1px solid #141a1e}
-.nt .nl{font:800 13px/1.1 var(--ui);letter-spacing:-.02em}
-.nt .nv{font:600 11px/1.5 var(--mono);color:var(--dim)}.nt .nv b{color:var(--ink)}
-.nt .nv b.pos{color:var(--teal)}.nt .nv b.neg{color:var(--leak)}
-.nt .nn{font:600 11px/1 var(--mono);color:var(--muted);display:inline;margin-left:8px}
-.nt.go{cursor:pointer}.nt.go:hover .nl{color:var(--teal)}
-.nowcol .notices:empty::after{content:"0";display:block;font:600 12px/1 var(--mono);color:var(--muted);padding:10px 0}
-
-/* the day read */
-.db{margin-top:16px;border-top:1px solid var(--edge);padding-top:10px}
-.dbh{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.dbd{font:800 15px/1 var(--ui);letter-spacing:-.03em}
-.dbv{font:600 12px/1.4 var(--mono);color:var(--muted);margin-left:auto}.dbv b{color:var(--ink)}
-.dbm{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:0 12px;margin-top:22px}
-.mt{border:0;border-top:2px solid var(--edge);padding:8px 0 0;position:relative;min-width:0}
-.mt .r{font:800 20px/1 var(--ui);letter-spacing:-.03em}
-.mt .n{font:600 10.5px/1.4 var(--mono);color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mt .raw{font:600 10.5px/1.4 var(--mono);color:var(--muted)}
-.mt .lab{position:absolute;top:-16px;left:0}
-.mt.na{border-top-style:dashed}.mt.na .r{color:var(--muted)}
-.dbr{margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:baseline}
-.dbr b{font:800 13px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
-
-/* the line */
-.panel{margin-top:14px;border-top:1px solid var(--edge);padding-top:10px}
-.keyrow{display:flex;gap:20px;flex-wrap:wrap;align-items:center;min-height:0}
-.key{display:flex;gap:20px;font:600 11.5px/1 var(--mono);color:var(--muted);flex-wrap:wrap;align-items:center}
-.key b{font-weight:600}
-.sw{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:7px}
-.chip{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:7px}
-.pickline{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font:600 11px/1.4 var(--mono);color:var(--dim);margin-bottom:8px}
-.pickline:empty{display:none}
-.pickline .pk{color:var(--muted)}.pickline .pk b{color:var(--ink);font-weight:800}
-.pickline .pe{background:none;border:1px solid var(--edge);color:var(--dim);font:800 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 9px;border-radius:5px;cursor:pointer}
-.pickline .pe:hover{border-color:var(--teal);color:var(--teal)}
-.pickline .coll{color:var(--amber)}
-.pickline .pn{font:800 14px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
-.pickline .pw{font:800 14px/1 var(--ui);letter-spacing:-.02em}.pw.up{color:var(--teal)}.pw.down{color:var(--leak)}.pw.mute{color:var(--dim)}
-.pickline .px{background:none;border:1px solid var(--edge);color:var(--dim);width:24px;height:24px;border-radius:5px;cursor:pointer;font:800 13px/1 var(--mono)}
-.stage svg{display:block;width:100%;height:auto}
-.stage svg .clip{cursor:pointer}
-.stage svg .clip[aria-pressed="true"] rect:first-child{stroke:var(--ink);stroke-width:1.8}
-.rd{font:600 11px/1.6 var(--mono);color:var(--dim);text-align:right;min-height:18px;pointer-events:none;margin-top:4px}
-.rd b{color:var(--ink);font-weight:800}
-.empty{font:600 13px/1.8 var(--mono);color:var(--muted);border:1px dashed var(--edge);border-radius:6px;padding:26px 22px;margin-top:14px}
-.dstrip{outline:0}
-.dstrip.axis{margin-top:6px;padding:0 1.2% 0 4%}
-.cells{display:flex;gap:1px;height:9px;margin-bottom:8px;opacity:.85}
-.cells i{flex:1;min-width:0;border-radius:1px;cursor:pointer;position:relative}
-.cells i.e{border:1px dashed var(--edge)}
-.cells i.on{outline:1.5px solid var(--ink);outline-offset:1px;z-index:1}
-.months{position:relative;height:14px;margin-top:8px;font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--muted)}
-.months span{position:absolute;top:0}
-.pickmet{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid var(--edge)}
-.pickmet:empty{display:none}
-.pm{display:flex;flex-direction:column;gap:3px}
-.pm b{font:800 17px/1 var(--ui);letter-spacing:-.03em}.pm b.pos{color:var(--teal)}.pm b.neg{color:var(--leak)}.pm b.flat{color:var(--dim)}.pm b.wait{color:var(--muted)}
-.pm .n{font:600 11px/1.3 var(--mono);color:var(--dim)}.pm .r{font:600 10.5px/1.3 var(--mono);color:var(--muted)}
-.pm .r.lead{color:var(--amber)}
-
-/* commits: thin lanes under the days, aligned to the chart, coloured by the verdict */
-.lanehead{display:flex;justify-content:space-between;align-items:center}
-.lanes{padding:0 1.2% 0 4%;margin-top:2px}
-.lanes .ln{position:relative;height:18px;margin-top:3px}
-.lanes .ln .bar{position:absolute;top:0;height:16px;border-radius:3px;border:1px solid;font:600 10.5px/14px var(--mono);padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);cursor:pointer;opacity:.55}
-.lanes .ln .bar.open{border-right-style:none;border-top-right-radius:0;border-bottom-right-radius:0}
-.lanes .ln .bar:hover{opacity:.9}
-.lanes .ln .bar.on{opacity:1;border-color:var(--ink)!important;border-width:1.5px}
-.lanes .ln .bar.out{background:none!important;border:0;padding:0;color:var(--dim);opacity:1;overflow:visible}
-.lanes:empty{display:none}
-
-/* the ledger: every metric, every day, in one grid */
-.ledger{display:none;margin-top:20px}
-.main.lg .head2,.main.lg .panel{display:none}
-.main.lg .ledger{display:block}
-.lg-t{font:800 clamp(24px,2.6vw,32px)/1 var(--ui);letter-spacing:-.04em}
-.lg-m{font:600 12px/1.7 var(--mono);color:var(--muted);margin-top:10px}.lg-m b{color:var(--dim);font-weight:600}
-.lg-axis{display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:14px;font:600 10px/1 var(--mono);letter-spacing:.1em;color:var(--muted);margin-top:24px;padding-bottom:8px;border-bottom:1px solid var(--edge)}
-.lg-axis .ax{display:flex;justify-content:space-between}
-.lg-axis .rl{text-align:right}
-.lg-g{margin-top:26px}
-.lg-gh{display:flex;align-items:center;gap:14px;padding-bottom:8px}
-.lg-gh .gn{font:800 22px/1 var(--ui);letter-spacing:-.03em}
-.lg-gh .gk{font:800 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase}
-.lg-gh .gc{font:600 11px/1 var(--mono);color:var(--muted)}
-.lg-gh .plus{margin-left:auto;width:36px;height:36px;border:1px solid var(--edge);border-radius:7px;color:var(--dim);display:grid;place-items:center;font:800 18px/1 var(--mono)}
-.lg-gh .plus:hover{color:var(--ink);border-color:var(--dim)}
-.lg-r{display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:14px;align-items:center;padding:9px 0;border-top:1px solid var(--edge);cursor:pointer}
-.lg-r:hover .nm{color:var(--teal)}
-.lg-r .nm{font:800 14px/1.2 var(--ui);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lg-r.off .nm{color:var(--muted)}
-.lg-cells{display:flex;gap:2px}
-.lg-cells i{flex:1;min-width:0;height:14px;border-radius:2px;background:var(--edge2)}
-.lg-cells i.e{background:none;border:1px dashed var(--edge)}
-.lg-r .rt{display:flex;justify-content:flex-end;gap:12px;align-items:center;font:600 11px/1 var(--mono);color:var(--muted);white-space:nowrap}
-.lg-r .rt b{color:var(--ink);font-weight:800}
-@media (max-width:820px){.lg-axis,.lg-r{grid-template-columns:90px minmax(0,1fr) 110px;gap:8px}.lg-cells{gap:1px}.lg-cells i{height:10px}}
-
-/* tabs: the other pages */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:4px;background:var(--ground);border-top:1px solid var(--edge);padding:0 28px;overflow-x:auto;scrollbar-width:none}
-.tabs a{display:block;border-top:2px solid transparent;color:var(--muted);font:800 11px/1 var(--ui);letter-spacing:.02em;text-transform:uppercase;padding:12px 11px 13px;white-space:nowrap}
-.tabs a:hover{color:var(--dim)}
-.tabs a[aria-current="page"]{color:var(--ink);border-top-color:var(--ink)}
-@media (max-width:980px){.head2{grid-template-columns:1fr;gap:18px}}
-@media (max-width:820px){.main{padding:20px 16px 120px}.tabs{padding:0 8px}.tabs a{font-size:11px;padding:14px 9px}.sym{max-width:100%}.mt .r{font-size:20px}}
-
-/* reading hierarchy */
-.main{max-width:1240px;padding:30px 36px 100px}
-.main > .bar{padding-bottom:24px;border-bottom:1px solid var(--edge);margin-bottom:24px}
+.main{max-width:1320px;margin:0 auto;padding:30px 36px 60px}
+.bar{display:flex;align-items:center;gap:14px;padding-bottom:24px;border-bottom:1px solid var(--edge);margin-bottom:24px}
 .brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:800;letter-spacing:-.03em}
 .brand-mark{width:21px;height:21px;display:grid;place-items:center;color:var(--amber)}
 .bar-title{font:500 12px/1 var(--mono);color:var(--muted);padding-left:18px;border-left:1px solid var(--edge)}
-.bar .tog{margin-left:auto;width:auto;height:34px;padding:0 11px;gap:8px;display:flex;font:600 11px/1 var(--mono);border-color:var(--edge2);border-radius:6px}
-.bar .tog[aria-pressed="true"]{background:var(--surface);border-color:var(--amber)}
-.head2{grid-template-columns:minmax(0,1fr) 210px;gap:28px;margin:0 0 26px}
-.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:17px}
-.sectionhead h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.04em}
+.out{margin-left:auto;background:none;border:1px solid var(--edge2);color:var(--muted);font:600 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:9px 11px;border-radius:6px;cursor:pointer}
+.out:hover{color:var(--ink)}
+.lab{font:600 10px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.pos{color:var(--teal)}.neg{color:var(--leak)}.k{color:var(--muted)}.up{color:var(--teal)}.down{color:var(--leak)}.mute{color:var(--dim)}
+.hint{font:600 11px/1.6 var(--mono);color:var(--muted);padding:12px 0}
+.err{font:600 12px/1.6 var(--mono);color:var(--leak);margin-top:14px}
+.hide{display:none!important}
+
+/* three columns: goals, the goal, commits */
+.grid{display:grid;grid-template-columns:290px minmax(0,1fr) 320px;gap:24px;align-items:start}
+.side{padding:16px;border:1px solid var(--edge);border-radius:8px;background:var(--surface);min-width:0}
+.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.sectionhead h1{margin:0;font-size:17px;font-weight:700;letter-spacing:-.04em}
 .sectionhead span{font:500 10px/1.5 var(--mono);color:var(--muted)}
-.tw{margin-top:0}
-.tbl{font-size:11px;font-weight:600}
-.tbl th{font-size:9px;letter-spacing:.1em;padding:0 10px 12px 8px}
-.tbl td{height:48px;padding:11px 10px 11px 8px}
-.tbl td.nm{font-size:13px;min-width:105px}
-.tbl td.k{color:var(--dim)}
-.tbl td svg{width:58px;height:26px}
+
+/* the goals: YOU first, then one row each */
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font:600 11px/1.4 var(--mono)}
+.tbl th{font:600 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 8px 10px 6px;border-bottom:1px solid var(--edge);white-space:nowrap}
+.tbl td{padding:10px 8px 10px 6px;border-bottom:1px solid var(--edge);vertical-align:middle;white-space:nowrap}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl td.nm{font:700 13px/1.2 var(--ui);max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.tbl td.nm .sub{display:block;font:500 9.5px/1.5 var(--mono);color:var(--muted);letter-spacing:.04em}
+.tbl td.g{font-size:14px;text-align:center}
+.tbl td svg{display:block;width:58px;height:24px;margin-left:auto}
+.tbl tr.row{cursor:pointer;outline:0}
+.tbl tr.row:hover td{background:#171c1f}
 .tbl tr.on td{background:#1b201f}
 .tbl tr.on td:first-child{box-shadow:inset 2px 0 var(--amber)}
-.tbl tr.row:hover td{background:#171c1f}
+.tbl tr.on td.nm{color:var(--teal)}
 .tbl tr.row:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
-.tbl tr.grp td{padding:20px 8px 8px;height:auto;border-bottom:0}
-.tbl tr.off td{color:var(--muted);height:42px}
-.lab,.eyebrow{letter-spacing:.13em;font-weight:600}
-.nowcol{align-self:start;margin-top:4px;padding:16px;border:1px solid var(--edge);border-radius:8px;background:var(--surface);max-height:280px}
-.nowcol .lanehead{margin-bottom:8px}
-.nt{padding:12px 0;gap:6px;border-color:var(--edge)}
-.nt:last-child{border-bottom:0;padding-bottom:0}
-.nt .nl{font-size:13px;font-weight:700}
-.nt .nv{font-size:10px;line-height:1.7}
-.nt .nn{display:block;margin:3px 0 0;line-height:1.5}
-.panel{margin-top:0;padding:24px 24px 20px;background:var(--surface);border:1px solid var(--edge);border-radius:12px}
-.tick{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin-bottom:24px}
-.sym{grid-column:1 / -1;font-size:11px;color:var(--dim);letter-spacing:.12em}
-.now{font-size:44px;font-weight:600;letter-spacing:-.055em}
-.delta{align-self:end;justify-self:start;font-size:10px;letter-spacing:.04em;padding-bottom:6px}
-.stage{margin-top:10px}
-.stage svg{overflow:visible}
-.cells{height:7px;gap:2px;opacity:1;margin-bottom:10px}
-.cells i{border-radius:2px}
-.cells i.e{background:transparent;border:1px solid var(--edge2)}
-.months{color:var(--dim);font-size:10px;letter-spacing:.09em;height:20px}
-.lanes{margin-top:6px}
-.lanes .ln{height:42px;margin-top:4px;border-bottom:1px solid var(--edge)}
-.lanes .ln .bar{top:24px;height:5px;border-radius:2px;padding:0;opacity:.9;min-width:4px}
-.lanes .ln .bar.on{outline:1px solid var(--ink);outline-offset:2px}
-.lanes .ln .lane-name{position:absolute;top:1px;left:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:none;border:0;padding:0;color:var(--dim);font:500 10px/18px var(--mono);cursor:pointer;text-align:left}
-.lanes .ln .lane-name:hover,.lanes .ln .lane-name.on{color:var(--ink)}
-.rd{font-size:10px;margin-top:10px}
-.db{margin-top:14px;padding-top:20px}
-.dbd{font:600 13px/1 var(--mono);letter-spacing:.01em}
-.dbv{font-size:11px}
-.dbm{gap:18px;margin-top:30px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
-.mt{padding:13px 0 0;border-top-width:1px}
-.mt .r{font-weight:600;font-size:26px;color:var(--ink)!important;letter-spacing:-.04em}
-.mt .n{font-size:11px;margin-top:8px;color:var(--dim)}
-.mt .raw{font-size:10px;margin-top:4px}
-.mt.na .r{color:var(--muted)!important}
-.dbr{padding-top:12px;gap:10px 16px}
-.dbr b{font-size:12px;font-weight:600;line-height:1.5}
-.rules{margin-top:16px}
-.rules button{padding:9px 11px;font-weight:600}
-.pickline{line-height:1.7;margin-bottom:16px}
-.tabs{background:var(--ground);padding:0 max(24px,calc((100vw - 1168px)/2));gap:12px}
-.tabs a{font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:none;padding:18px 12px}
-.tabs a[aria-current="page"]{border-top-color:var(--amber);color:var(--amber)}
-@media (max-width:1100px){
- .head2{grid-template-columns:minmax(0,1fr);gap:18px}
- .nowcol{margin:0;padding:12px 16px;max-height:200px;display:grid;grid-template-columns:85px minmax(0,1fr);gap:14px}
- .nowcol .lanehead{align-self:start;margin:4px 0 0}
- .nt{padding:10px 0}.nt:first-child{padding-top:0}
- .tbl{font-size:12px}.tbl td svg{width:64px}
-}
-@media (max-width:820px){
- .main{padding:22px 20px 94px}.main > .bar{padding-bottom:18px;margin-bottom:20px}
- .panel{padding:20px 16px 16px}.tbl{font-size:11px}.tbl th,.tbl td{padding-right:8px}
- .tbl td svg{width:48px}.tbl td.nm{font-size:12px}.now{font-size:38px}
- .sectionhead span{font-size:9px}.tabs{padding:0 12px;gap:6px}
-}
+
+/* the number, the target, the measures, the line */
+.panel{padding:24px 24px 20px;background:var(--surface);border:1px solid var(--edge);border-radius:12px;min-width:0}
+.tick{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin-bottom:6px;align-items:end}
+.sym{grid-column:1/-1;font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.now{font:600 44px/1 var(--ui);letter-spacing:-.055em}
+.delta{font:600 10px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding-bottom:6px}
+.target{font:600 11px/1.7 var(--mono);color:var(--dim);min-height:1.7em}.target b{color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:18px;margin:28px 0 4px}
+.mt{text-align:left;background:none;border:0;border-top:1px solid var(--edge);padding:13px 0 0;position:relative;min-width:0;color:inherit;cursor:pointer;font-family:var(--ui)}
+.mt .r{font:600 26px/1 var(--ui);letter-spacing:-.04em}
+.mt .n{font:600 11px/1.4 var(--mono);color:var(--dim);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt .raw{font:600 10px/1.4 var(--mono);color:var(--muted);margin-top:4px}
+.mt .rule{font:600 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.mt .lab{position:absolute;top:-16px;left:0}.mt .lab.weak{color:var(--leak)}
+.mt.na{border-top-style:dashed}.mt.na .r{color:var(--muted)}
+.mt:hover .n,.mt.open .n{color:var(--teal)}
+.rules{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.rules .rl{margin-right:6px}
+.rules button{background:none;border:1px solid var(--edge);color:var(--muted);font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:9px 11px;border-radius:5px;cursor:pointer}
+.rules button:hover{color:var(--ink);border-color:var(--dim)}
+.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
+.rules .px{width:30px;padding:0;height:30px;font-size:13px}
+.band{display:flex;gap:10px;align-items:baseline;margin-top:12px;flex-wrap:wrap}
+.band input{width:96px;background:none;border:0;border-bottom:2px solid var(--edge);color:var(--ink);font:800 20px/1.3 var(--ui);letter-spacing:-.02em;padding:4px 0;outline:0;min-width:0}
+.band input:focus{border-bottom-color:var(--teal)}
+.bt{background:none;border:1px solid var(--edge);color:var(--ink);font:800 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:10px 14px;border-radius:5px;cursor:pointer}
+.bt:hover{border-color:var(--teal);color:var(--teal)}
+.stage{margin-top:22px}.stage svg{display:block;width:100%;height:auto;overflow:visible}
+.rd{font:600 10px/1.6 var(--mono);color:var(--dim);text-align:right;min-height:18px;pointer-events:none;margin-top:10px}.rd b{color:var(--ink);font-weight:800}
+.empty{font:600 13px/1.8 var(--mono);color:var(--muted);border:1px dashed var(--edge);border-radius:6px;padding:26px 22px;margin-top:14px}
+
+/* what you did, against this goal */
+.lanehead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.weak{font:600 11px/1.7 var(--mono);color:var(--dim);padding-bottom:12px;border-bottom:1px solid var(--edge);margin-bottom:4px}.weak b{color:var(--ink)}
+.cm{padding:12px 0;border-bottom:1px solid var(--edge)}
+.cm .cmh{display:block;width:100%;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer;font-family:var(--ui)}
+.cm .cmh .nm{display:block;font:700 13px/1.2 var(--ui);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm.on .cmh .nm,.cm .cmh:hover .nm{color:var(--teal)}
+.cm .when{display:block;font:600 10px/1.6 var(--mono);color:var(--muted)}
+.cm .cmv{display:flex;align-items:center;gap:10px;font:600 11px/1.6 var(--mono);margin-top:4px}
+.cm .cmv b{font-weight:600}
+.cm .end{margin-left:auto;background:none;border:1px solid var(--edge2);color:var(--dim);font:600 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:6px 9px;cursor:pointer}
+.cm .end:hover{border-color:var(--teal);color:var(--teal)}
+.cmm{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 10px;font:600 10.5px/1.6 var(--mono);color:var(--muted);padding-left:10px;border-left:1px solid var(--edge);margin-top:6px}
+.cmm .n{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cmm b{font-weight:600;text-align:right}.cmm .w{white-space:nowrap}
+.leads{margin-top:22px}
+.ld{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--edge);font:600 10.5px/1.5 var(--mono)}
+.ld .nm{font:700 12px/1.3 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ld .n{color:var(--dim)}.ld b{text-align:right;font-weight:600}.ld .k{text-align:right}
+
+/* the three lines: a reading, a commit, a goal. each writes one row */
+.lines{margin-top:28px;border-top:1px solid var(--edge)}
+.line{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;padding:22px 0 6px;border-bottom:1px solid var(--edge)}
+.line label{display:grid;gap:8px;flex:1 1 150px;min-width:0}
+.line label.big{flex:2 1 220px}
+.line label.small{flex:0 1 120px}
+.line input,.line select{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:500 18px/1.3 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
+.line select,.line input[type=date]{font:600 13px/1.6 var(--mono);color-scheme:dark;background:var(--surface)}
+.line input::placeholder{color:var(--muted);font-weight:500}
+.line input:focus,.line select:focus{border-bottom-color:var(--teal);outline:0}
+.line button[type=submit]{flex:0 0 100px;background:none;border:1px solid var(--edge2);color:var(--ink);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:13px 0;cursor:pointer;height:44px}
+.line button[type=submit]:hover{border-color:var(--teal);color:var(--teal)}
+.line button[disabled]{opacity:.35;cursor:default}
+.line .picks{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}
+.picks button{background:none;border:1px solid var(--edge2);color:var(--muted);font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:8px 10px;cursor:pointer}
+.picks button:hover{color:var(--ink);border-color:var(--dim)}
+.picks button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
+.picks button.off{border-style:dashed}
+.msg{font:600 11px/1.6 var(--mono);color:var(--muted);margin:8px 0 0;min-height:1.6em;letter-spacing:.04em}
+.msg.bad{color:var(--leak)}.msg.good{color:var(--teal)}
+@media (max-width:1180px){.grid{grid-template-columns:1fr}}
+@media (max-width:820px){.main{padding:22px 16px 40px}.bar{padding-bottom:18px;margin-bottom:20px}.bar-title{display:none}.panel{padding:20px 16px 16px}.now{font-size:38px}.tiles{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}}
 </style>
 
-<div class="app">
-<div class="main" id="main">
+<div class="main">
 <div class="bar">
   <a class="brand" href="you.html"><span class="brand-mark" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M2 13h5l3-8 4 14 3-6h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>The Wire</a>
-  <span class="bar-title">Overview</span>
-  <button class="tog" id="ldg" aria-label="Toggle ledger view" aria-pressed="false"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="3" height="3"/><rect x="4.5" y="0" width="3" height="3"/><rect x="9" y="0" width="3" height="3"/><rect x="0" y="4.5" width="3" height="3"/><rect x="4.5" y="4.5" width="3" height="3"/><rect x="9" y="4.5" width="3" height="3"/><rect x="0" y="9" width="3" height="3"/><rect x="4.5" y="9" width="3" height="3"/><rect x="9" y="9" width="3" height="3"/></svg><span>Ledger</span></button>
+  <span class="bar-title">Goals</span>
+  <button class="out" id="out" type="button">sign out</button>
 </div>
 
-<div class="ledger" id="ledger"></div>
+<div class="grid">
+  <aside class="side">
+    <div class="sectionhead"><h1>Goals</h1><span>select one</span></div>
+    <div class="tw"><table class="tbl" id="tbl" aria-label="every goal"></table></div>
+  </aside>
 
-<div class="head2">
-  <div>
-    <div class="sectionhead"><h1>Your stocks</h1><span>Select a stock to explore</span></div>
-    <div class="tw"><table class="tbl" id="tbl" aria-label="every stock"></table></div>
+  <section class="panel">
+    <div class="tick"><span class="sym" id="sym">YOU</span><span class="now" id="now">&#183;&#183;</span><span class="delta" id="delta"></span></div>
+    <div class="target" id="target"></div>
+    <div class="tiles" id="tiles"></div>
     <div id="rulebox"></div>
-  </div>
-  <div class="nowcol">
-    <div class="lanehead"><span class="lab">now</span><span class="lab" id="nowcount"></span></div>
-    <div class="notices" id="notices"></div>
-  </div>
+    <div class="stage"><svg id="c" viewBox="0 0 1000 300" role="img" aria-label="the index across every day, 100 at your usual, ten points one step"></svg></div>
+    <div class="rd" id="rd">&nbsp;</div>
+    <div id="emptyBox"></div>
+  </section>
+
+  <aside class="side">
+    <div class="lanehead"><span class="lab">commits</span><span class="lab" id="ccount"></span></div>
+    <div class="weak" id="weak"></div>
+    <div id="clist"></div>
+    <div class="leads">
+      <div class="lanehead"><span class="lab">leads &#183; bar 3.3 se</span><span class="lab" id="lcount"></span></div>
+      <div id="leads"></div>
+    </div>
+  </aside>
 </div>
 
-<div class="panel" id="panel">
-  <div class="tick"><span class="sym" id="sym">YOU</span><span class="now" id="now">&#183;&#183;</span><span class="delta" id="delta"></span></div>
-  <div class="keyrow"><div class="pickline" id="pickline"></div></div>
-  <div class="stage"><svg id="c" viewBox="0 0 1000 300" role="img" aria-label="the index across every day, 100 at your usual, ten points one step"></svg></div>
-  <div class="dstrip axis" id="dstrip" tabindex="0" aria-label="every day"></div>
-  <div class="lanes" id="lanes"></div>
-  <div class="rd" id="rd">&nbsp;</div>
-  <div class="pickmet" id="pickmet"></div>
-  <div id="emptyBox"></div>
-  <div id="dayboard"></div>
+<div class="lines">
+  <form class="line" id="padf">
+    <label><span class="lab">stock</span><select id="pstock"></select></label>
+    <label id="pnew1" class="hide"><span class="lab">name</span><input id="pname" placeholder="name" autocomplete="off" spellcheck="false"></label>
+    <label id="pnew2" class="small hide"><span class="lab">unit</span><input id="punit" placeholder="unit" autocomplete="off" spellcheck="false"></label>
+    <label class="big"><span class="lab">reading, or a note</span><input id="pval" placeholder="0" autocomplete="off" spellcheck="false" required></label>
+    <button id="padd" type="submit">add</button>
+  </form>
+  <p class="msg" id="padmsg"></p>
+
+  <form class="line" id="cmf">
+    <label class="big"><span class="lab">what you did</span><input id="cwhat" placeholder="creatine" autocomplete="off" spellcheck="false" required></label>
+    <label class="small"><span class="lab">started</span><input id="cfrom" type="date" required></label>
+    <label class="small"><span class="lab">ended</span><input id="cto" type="date"></label>
+    <button id="cadd" type="submit">add</button>
+  </form>
+  <p class="msg" id="cmmsg"></p>
+
+  <form class="line" id="goalf">
+    <label><span class="lab">goal</span><input id="gname" placeholder="body" autocomplete="off" spellcheck="false" required></label>
+    <label><span class="lab">target on</span><select id="gtm"></select></label>
+    <label><span class="lab">target</span><input id="gtv" placeholder="84, or 80 to 85" autocomplete="off" spellcheck="false"></label>
+    <button id="gadd" type="submit">declare</button>
+    <div class="picks" id="gpicks"></div>
+  </form>
+  <p class="msg" id="goalmsg"></p>
 </div>
 <div id="msg"></div>
 </div>
-</div>
-
-<nav class="tabs" aria-label="pages">
-  <a href="you.html" aria-current="page">you</a>
-  <a href="pad.html">pad</a>
-  <a href="import.html">import</a>
-  <a href="commit.html">commit</a>
-  <a href="test.html">test</a>
-  <a href="scan.html">scan</a>
-</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="you-reader.js"></script>
 <script>
-if (matchMedia('(max-width:700px)').matches) location.replace('pad.html');
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const esc=s=>String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-const MON=['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-const WD=['sun','mon','tue','wed','thu','fri','sat'], wd=d=>WD[new Date(d+'T00:00:00Z').getUTCDay()];
 const TODAY=new Date().toISOString().slice(0,10);
 const SCAN_BAR=3.3;
+const $=id=>document.getElementById(id);
 const fmt=v=>v==null?'&#183;&#183;':(Math.round(v*10)/10).toString();
 /* the index in one word. 100 is your usual, ten points is one step of your own variation */
 const wordOfRank=r=>r==null?{w:'',cls:'mu'}:r>=110?{w:'high for you',cls:'pos'}:r<=90?{w:'low for you',cls:'neg'}:{w:'normal for you',cls:'mu'};
-const sgn=v=>(v>=0?'+':'')+(Math.round(v*10)/10);
-
-/* ---------- what the ledger says ---------- */
-let ALL=[], RULES={}, COMMITS=[], SERIES={}, OWNED=[], YOU=[], DAYS=[], DI={}, N=0, RAW=[];
-let sel='you', PICK=null, DAYPIN=0, OPEN=null, VIEW='you', SRC={};
-const cur=()=>sel==='you'?{id:'you',s:'YOU',pts:YOU}:{id:sel,s:sel,pts:SERIES[sel]||[]};
+const sgn=v=>Number.isFinite(v)?(v>=0?'+':'')+(Math.round(v*10)/10):'&#183;&#183;';
 const colour=v=>v==null?null:v<90?'#c9695c':v<110?'#232a30':'#c9a25a';
 const addDays=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
+/* the pad's own name rule, the same as pad.html */
+const slug=s=>s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+function remember(m){ try{ localStorage.setItem('wire.pad.metric',m); }catch(e){} }
+function remembered(){ try{ return localStorage.getItem('wire.pad.metric'); }catch(e){ return null; } }
+
+/* ---------- what the ledger says ---------- */
+let ALL=[], RULES={}, COMMITS=[], GOALS=[], SERIES={}, OWNED=[], YOU=[], RAW=[], DAYS=[], DI={}, N=0;
+const YOU_ID='YOU';   /* slugs are lower case, so no goal can take this id */
+let sel=YOU_ID, PICK=null, OPEN=null, BAND=false, GPICK=new Set();
+/* the goal on screen. YOU is the goal made of every declared stock */
+const cur=()=>{ if(sel===YOU_ID) return {id:YOU_ID,name:'YOU',measures:OWNED,target:null,pts:YOU}; const g=GOALS.find(x=>x.id===sel); return {...g,pts:goalSeries(g,SERIES)}; };
+const pick=()=>COMMITS.find(c=>c.id===PICK)||null;
+const lastPt=pts=>pts.length?pts[pts.length-1]:null;
+const lastRaw=m=>RAW.filter(r=>r.metric===m).slice(-1)[0]||null;
 /* every calendar day from the first reading to the last, so a gap is a gap */
 function buildDays(){ const all=[...new Set(OWNED.flatMap(m=>SERIES[m].map(p=>p.day)))].sort(); DAYS=[]; DI={};
-  if(!all.length) return; let d=all[0]; const last=all[all.length-1]>TODAY?all[all.length-1]:TODAY;
+  if(!all.length){ N=0; return; } let d=all[0]; const last=all[all.length-1]>TODAY?all[all.length-1]:TODAY;
   while(d<=last){ DI[d]=DAYS.length; DAYS.push(d); d=addDays(d,1); } N=DAYS.length; }
 const arrOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.rank; }); return a; };
-const valOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.value; }); return a; };
-const lastPt=pts=>pts.length?pts[pts.length-1]:null;
-/* the move over the last seven readings, the same as the page you had */
+/* the move over the last seven readings */
 function moveOf(pts){ if(pts.length<8) return null; return Math.round((pts[pts.length-1].rank-pts[pts.length-8].rank)*10)/10; }
+function say(m){ $('msg').innerHTML=m?`<p class="err">${esc(m)}</p>`:''; }
+const note=id=>(m,kind)=>{ const el=$(id); el.textContent=m||''; el.className='msg'+(kind?' '+kind:''); };
+const pmsg=note('padmsg'), cmsg=note('cmmsg'), gmsg=note('goalmsg');
 
-/* ---------- pages ---------- */
-document.getElementById('ldg').onclick=()=>{ VIEW=VIEW==='ledger'?'you':'ledger'; render(); window.scrollTo({top:0}); };
-function focusOn(){ return !!PICK&&COMMITS.includes(PICK); }
-function render(){ const t=cur(); drawTable(); head(t); drawRules(t); drawStrip(t); drawDayBoard(t,DAYPIN); drawChart(t); drawPickMet(t); drawNotices(t); drawLanes(t); hookup(t); drawLedger(); }
+function render(){ const t=cur(); drawTable(); head(t); drawTiles(t,null); drawRules(t); drawChart(t); hookup(t); drawCommits(t); drawLeads(t); drawLines(); }
 
-/* ---------- the ledger: every metric, the last 30 days, grouped by the door it came through ---------- */
-const DOOR={pad:['typed','pad.html'],csv:['file drop','import.html'],github:['writes itself',null]};
-function drawLedger(){
-  const box=document.getElementById('ledger'), on=VIEW==='ledger';
-  document.getElementById('main').classList.toggle('lg',on); document.getElementById('ldg').setAttribute('aria-pressed',String(on));
-  if(!on){ box.innerHTML=''; return; }
-  const days=[]; for(let i=29;i>=0;i--) days.push(addDays(TODAY,-i));
-  const groups={}; ALL.forEach(m=>{ const src=SRC[m]||'other'; (groups[src]=groups[src]||[]).push(m); });
-  const order=Object.keys(groups).sort((a,b)=>(a==='pad')-(b==='pad')||(a==='csv')-(b==='csv')||a.localeCompare(b));
-  const row=m=>{ const pts=SERIES[m]||[], scored=!!SERIES[m], by=Object.fromEntries(pts.map(p=>[p.day,p.rank]));
-    const raw=scored?null:Object.fromEntries(RAW.filter(r=>r.metric===m).map(r=>[r.day,1]));
-    const cells=days.map(d=>{ const r=by[d]; if(r!=null) return `<i style="background:${colour(r)}" title="${d} &#183; ${r}"></i>`; if(raw&&raw[d]) return `<i title="${d}"></i>`; return `<i class="e" title="${d}"></i>`; }).join('');
-    const p=lastPt(pts), mv=moveOf(pts), n=scored?pts.length:RAW.filter(r=>r.metric===m).length, last=scored?(p?p.day.slice(5):'never'):(RAW.filter(r=>r.metric===m).slice(-1)[0]||{day:'never'}).day.slice(5);
-    return `<div class="lg-r ${scored?'':'off'}" data-m="${esc(m)}"><div class="nm">${esc(m)}</div><div class="lg-cells">${cells}</div><div class="rt">${mv==null?'':`<span class="${mv<0?'neg':'pos'}">${mv<0?'&#8595;':'&#8593;'}</span>`}<b>${n}</b> &#183; ${last}</div></div>`; };
-  box.innerHTML=`<div class="lg-t">Ledger.</div><div class="lg-m"><b>30</b> days &#183; <b>${ALL.length}</b> metrics &#183; <b>${RAW.length}</b> rows</div>
-    <div class="lg-axis"><span></span><span class="ax"><span>${days[0].slice(5)}</span><span>${days[15].slice(5)}</span><span>${days[29].slice(5)}</span></span><span class="rl">readings &#183; last</span></div>`+
-    order.map(src=>{ const [k,go]=DOOR[src]||[src,null]; return `<div class="lg-g"><div class="lg-gh"><span class="gn">${esc(src)}</span><span class="gk">${esc(k)}</span><span class="gc">${groups[src].filter(m=>SERIES[m]).length} of ${groups[src].length} scored</span>${go?`<a class="plus" href="${go}" aria-label="add">+</a>`:''}</div>${groups[src].sort().map(row).join('')}</div>`; }).join('');
-  box.querySelectorAll('.lg-r').forEach(el=>el.onclick=()=>{ sel=el.dataset.m; VIEW='you'; PICK=null; render(); window.scrollTo({top:0}); });
-}
-
-/* ---------- the table ---------- */
+/* ---------- the goals ---------- */
 function spark(pts){ const a=pts.slice(-45); if(a.length<3) return '<svg viewBox="0 0 60 28"></svg>';
   const v=a.map(p=>p.rank); let lo=Math.min(...v,100),hi=Math.max(...v,100); const span=(hi-lo)||1; const w=60,h=28;
   const d=a.map((p,i)=>(i?'L':'M')+(i*w/(a.length-1)).toFixed(1)+' '+(2+(hi-p.rank)*(h-4)/span).toFixed(1)).join(' ');
   const m=moveOf(pts); const col=(m!=null&&m<0)?'#c9695c':'#c9a25a';
   return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${(2+(hi-100)*(h-4)/span).toFixed(1)}" x2="${w}" y2="${(2+(hi-100)*(h-4)/span).toFixed(1)}" stroke="#2c363d" stroke-dasharray="2 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
-/* one row per stock: rule, readings, last day, last value, index, the move over seven readings, the word, the line */
+/* YOU first, then one row per goal: index, glyph for the move over seven readings, the line */
 function drawTable(){
-  const undecided=ALL.filter(m=>!(m in RULES)), ignored=Object.keys(RULES).filter(m=>RULES[m].kind==='ignore');
-  const ruleOf=m=>{ const r=RULES[m]; return r.kind==='band'?`band ${r.lo}&#8211;${r.hi}`:r.kind; };
-  const row=(id,s,pts,off,rule)=>{ const p=lastPt(pts), m=moveOf(pts), w=wordOfRank(p?p.rank:null);
-    const raw=off?RAW.filter(r=>r.metric===id):null, n=off?raw.length:pts.length;
-    const last=p?p.day.slice(5):(raw&&raw.length?raw[raw.length-1].day.slice(5):'&#183;&#183;');
-    return `<tr class="row${id===sel?' on':''}${off?' off':''}" data-id="${esc(id)}" tabindex="0">
-      <td class="nm">${esc(s)}</td><td class="k">${rule}</td><td class="r">${n}</td><td class="k">${last}</td>
-      <td class="r">${p&&id!=='you'?fmt(p.value):'&#183;&#183;'}</td><td class="r">${p?p.rank:'&#183;&#183;'}</td>
-      <td class="r ${m==null?'k':m<0?'neg':'pos'}">${m==null?'&#183;&#183;':(m<0?'':'+')+m.toFixed(1)}</td>
-      <td class="${w.cls}">${w.w||'&#183;&#183;'}</td><td>${spark(pts)}</td></tr>`; };
-  const grp=t=>`<tr class="grp"><td colspan="9"><span class="lab">${t}</span></td></tr>`;
-  document.getElementById('tbl').innerHTML=`<thead><tr><th>stock</th><th>rule</th><th class="r">readings</th><th>last</th><th class="r">value</th><th class="r">index</th><th class="r">move 7</th><th>status</th><th>trend</th></tr></thead><tbody>`+
-    row('you','YOU',YOU,false,`${OWNED.length} scored`)+OWNED.map(m=>row(m,m,SERIES[m],false,ruleOf(m))).join('')+
-    (undecided.length?grp('not scored')+undecided.map(m=>row(m,m,[],true,'needs a rule')).join(''):'')+
-    (ignored.length?grp('ignored')+ignored.map(m=>row(m,m,[],true,'ignore')).join(''):'')+`</tbody>`;
-  document.querySelectorAll('#tbl tr.row').forEach(el=>{ const go=()=>{ sel=el.dataset.id; PICK=null; OPEN=null; render(); };
+  const row=(id,name,pts,sub)=>{ const p=lastPt(pts), m=moveOf(pts);
+    const g=m==null?['&#183;','k']:m>0?['&#8593;','pos']:m<0?['&#8595;','neg']:['&#8594;','k'];
+    return `<tr class="row${id===sel?' on':''}" data-id="${esc(id)}" tabindex="0"><td class="nm">${esc(name)}<span class="sub">${sub}</span></td><td class="r">${p?p.rank:'&#183;&#183;'}</td><td class="g ${g[1]}">${g[0]}</td><td>${spark(pts)}</td></tr>`; };
+  const scored=g=>g.measures.filter(m=>SERIES[m]).length;
+  $('tbl').innerHTML=`<thead><tr><th>goal</th><th class="r">index</th><th></th><th>trend</th></tr></thead><tbody>`+
+    row(YOU_ID,'YOU',YOU,`${OWNED.length} stock${OWNED.length===1?'':'s'}`)+
+    GOALS.map(g=>row(g.id,g.name,goalSeries(g,SERIES),`${scored(g)} of ${g.measures.length} scored${g.target?' &#183; target':''}`)).join('')+`</tbody>`+
+    (GOALS.length?'':`<tfoot><tr><td colspan="4" class="hint">0 goals &#183; declare one below</td></tr></tfoot>`);
+  document.querySelectorAll('#tbl tr.row').forEach(el=>{ const go=()=>{ sel=el.dataset.id; PICK=null; OPEN=null; BAND=false; fillGoalLine(cur()); render(); };
     el.onclick=go; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
 }
 
-/* ---------- the number ---------- */
+/* ---------- the number and the target ---------- */
 function head(t){
   const p=lastPt(t.pts), w=wordOfRank(p?p.rank:null);
-  document.getElementById('sym').textContent=t.s;
-  document.getElementById('now').innerHTML=p?(t.id==='you'?p.rank:fmt(p.value)):'&#183;&#183;';
-  const el=document.getElementById('delta');
-  el.innerHTML=w.w; el.style.color=w.cls==='pos'?'var(--teal)':w.cls==='neg'?'var(--leak)':'var(--muted)';
+  $('sym').textContent=t.name; $('now').innerHTML=p?p.rank:'&#183;&#183;';
+  const el=$('delta'); el.innerHTML=p?`${w.w} &#183; ${p.day.slice(5)}`:''; el.style.color=w.cls==='pos'?'var(--teal)':w.cls==='neg'?'var(--leak)':'var(--muted)';
+  const tg=t.target, box=$('target'); if(!tg){ box.innerHTML=''; return; }
+  const lr=lastRaw(tg.metric), now=lr?Number(lr.mean):null, age=lr?dayNum(TODAY)-dayNum(lr.day):null;
+  const shown=tg.value!=null?tg.value:`${tg.lo}&#8211;${tg.hi}`;
+  if(now==null){ box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; no reading yet`; return; }
+  if(age>STALE_DAYS){ box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; last <b>${Math.round(now*100)/100}</b> &#183; ${lr.day.slice(5)} &#183; stale`; return; }
+  let gap;
+  if(tg.value!=null){ const g=Math.round((tg.value-now)*100)/100; gap=g>0?`<b>${g}</b> under`:g<0?`<b>${-g}</b> over`:'<b>met</b>'; }
+  else gap=now<tg.lo?`<b>${Math.round((tg.lo-now)*100)/100}</b> under`:now>tg.hi?`<b>${Math.round((now-tg.hi)*100)/100}</b> over`:'<b>inside</b>';
+  box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; now <b>${Math.round(now*100)/100}</b> &#183; ${lr.day.slice(5)} &#183; ${gap}`;
+}
+
+/* ---------- the measures: reading, index, state. click one to set its rule ---------- */
+function drawTiles(t,i){
+  const weak=weakPoint(t,SERIES), d=i==null?null:DAYS[i], today=dayNum(TODAY);
+  const tile=m=>{ const pts=SERIES[m], r=RULES[m]; let reading='&#183;&#183;', idx=null, state='', na=true, col=null;
+    if(pts){ const p=d?pts.find(q=>q.day===d):lastPt(pts);
+      if(p){ reading=fmt(p.value); idx=p.rank; na=false; col=colour(p.rank); const age=today-dayNum(p.day);
+        state=(!d&&age>STALE_DAYS)?`stale &#183; ${age} days`:`${wordOfRank(p.rank).w} &#183; ${p.day.slice(5)}`; }
+      else { const lp=d?lastPt(pts.filter(q=>q.day<d)):null; state=lp?`last ${lp.day.slice(5)}`:'no reading'; } }
+    else if(r&&r.kind==='ignore') state='ignored';
+    else if(ALL.includes(m)){ const lr=lastRaw(m); if(lr) reading=fmt(Number(lr.mean)); state='needs a rule'; }
+    else state='no readings';
+    const rule=r?(r.kind==='band'?`band ${r.lo}&#8211;${r.hi}`:r.kind):'no rule';
+    return `<button type="button" class="mt${na?' na':''}${OPEN===m?' open':''}" data-m="${esc(m)}" style="${col?`border-top-color:${col}`:''}">${weak&&weak.metric===m?'<span class="lab weak">weak point</span>':''}<div class="r" style="${col&&col!=='#232a30'?`color:${col}`:''}">${reading}</div><div class="n">${esc(m)}</div><div class="raw">${idx!=null?`${idx} &#183; `:''}${state}</div><div class="rule">${rule}</div></button>`; };
+  $('tiles').innerHTML=t.measures.length?t.measures.map(tile).join(''):`<div class="hint">0 measures</div>`;
+  $('tiles').querySelectorAll('.mt').forEach(el=>el.onclick=()=>{ OPEN=OPEN===el.dataset.m?null:el.dataset.m; BAND=false; drawTiles(t,null); drawRules(t); });
 }
 /* rules: the same four, the same writeRule */
 function drawRules(t){
-  const box=document.getElementById('rulebox'); if(t.id==='you'){ box.innerHTML=''; return; }
-  const r=RULES[t.id], k=r&&r.kind, b=(kind,text)=>`<button data-k="${kind}" aria-pressed="${k===kind}">${text}</button>`;
-  let h=`<div class="rules"><span class="lab rl">rule &#183; ${esc(t.s)}</span>${b('up','up')}${b('down','down')}${b('band','best between')}${b('ignore','ignore')}</div>`;
-  if(OPEN===t.id) h+=`<div class="band"><input id="lo" type="number" step="any" placeholder="low" value="${r&&r.lo!==undefined?r.lo:''}"><span class="lab">to</span><input id="hi" type="number" step="any" placeholder="high" value="${r&&r.hi!==undefined?r.hi:''}"><button class="bt go" data-k="save">set</button></div>`;
-  box.innerHTML=h;
-  box.querySelectorAll('button[data-k]').forEach(bt=>bt.onclick=()=>setRule(t.id,bt.dataset.k));
+  const box=$('rulebox'); if(!OPEN||!t.measures.includes(OPEN)){ box.innerHTML=''; return; }
+  const m=OPEN, r=RULES[m], k=r&&r.kind, b=(kind,text)=>`<button type="button" data-k="${kind}" aria-pressed="${k===kind}">${text}</button>`;
+  let h=`<div class="rules"><span class="lab rl">rule &#183; ${esc(m)}</span>${b('up','up')}${b('down','down')}${b('band','best between')}${b('ignore','ignore')}<button type="button" class="px" data-k="close" aria-label="close">&#215;</button></div>`;
+  if(BAND) h+=`<div class="band"><input id="lo" type="number" step="any" placeholder="low" value="${r&&r.lo!==undefined?r.lo:''}"><span class="lab">to</span><input id="hi" type="number" step="any" placeholder="high" value="${r&&r.hi!==undefined?r.hi:''}"><button type="button" class="bt" data-k="save">set</button></div>`;
+  box.innerHTML=h; box.querySelectorAll('button[data-k]').forEach(bt=>bt.onclick=()=>setRule(m,bt.dataset.k));
 }
 async function setRule(metric,kind){
-  if(kind==='band'&&OPEN!==metric){ OPEN=metric; drawRules(cur()); document.getElementById('lo').focus(); return; }
+  if(kind==='close'){ OPEN=null; BAND=false; const t=cur(); drawTiles(t,null); drawRules(t); return; }
+  if(kind==='band'){ if(!BAND){ BAND=true; drawRules(cur()); } $('lo').focus(); return; }
   let rule={kind};
-  if(kind==='save'){ const lo=Number(document.getElementById('lo').value), hi=Number(document.getElementById('hi').value);
-    if(!isFinite(lo)||!isFinite(hi)||hi<=lo){ say('low, then high'); return; } rule={kind:'band',lo,hi}; }
-  OPEN=null; const {error}=await writeRule(db,metric,rule); if(error){ say(error.message); return; }
-  await load(); render();
-}
-function say(m){ document.getElementById('msg').innerHTML=`<p class="err">${esc(m)}</p>`; }
-
-/* ---------- the day strip and the day read ---------- */
-function drawStrip(t){
-  const box=document.getElementById('dstrip'), arr=arrOf(t.pts); const seen={}; let lastM=-99, cells='', months='';
-  DAYS.forEach((d,i)=>{ const col=colour(arr[i]);
-    cells+=`<i data-i="${i}" class="${col?'':'e'}${i===DAYPIN?' on':''}" style="${col?`background:${col}`:''}" title="${d}"></i>`;
-    const m=d.slice(0,7); if(!(m in seen)){ seen[m]=1; if(i===0||i-lastM>=N*0.06){ months+=`<span style="left:${(i/N*100).toFixed(2)}%">${MON[+m.slice(5)]}</span>`; lastM=i; } } });
-  box.innerHTML=`<div class="cells">${cells}</div><div class="months">${months}</div>`;
-  const cs=box.querySelector('.cells');
-  cs.querySelectorAll('i').forEach(el=>{ el.onclick=()=>{ DAYPIN=+el.dataset.i; drawDayBoard(t,DAYPIN); }; el.onpointerenter=()=>drawDayBoard(t,+el.dataset.i); });
-  cs.onpointerleave=()=>drawDayBoard(t,DAYPIN);
-  box.onkeydown=e=>{ if(e.key==='ArrowLeft'){ e.preventDefault(); DAYPIN=Math.max(0,DAYPIN-1); drawDayBoard(t,DAYPIN); } if(e.key==='ArrowRight'){ e.preventDefault(); DAYPIN=Math.min(N-1,DAYPIN+1); drawDayBoard(t,DAYPIN); } };
-}
-function runningOn(d){ const x=dayNum(d); return COMMITS.filter(c=>dayNum(c.from)<=x&&dayNum(c.to||TODAY)>=x); }
-function drawDayBoard(t,i){
-  if(!N) return; const d=DAYS[i], yv=arrOf(YOU)[i];
-  const ks=OWNED.map(m=>{ const p=SERIES[m].find(q=>q.day===d); return {k:m,v:p?p.rank:null,raw:p?p.value:null}; });
-  const have=ks.filter(x=>x.v!=null).sort((a,b)=>b.v-a.v), miss=ks.filter(x=>x.v==null);
-  const tile=(x,j)=>{ const col=colour(x.v); const lastp=x.v==null?lastPt(SERIES[x.k].filter(q=>q.day<d)):null;
-    const w=wordOfRank(x.v);
-    return `<div class="mt${x.v==null?' na':''}" style="${col?`border-top-color:${col}`:''}">${have.length>1&&j===0?'<span class="lab" style="color:var(--teal)">top</span>':have.length>1&&j===have.length-1?'<span class="lab" style="color:var(--leak)">bottom</span>':''}<div class="r" style="${col?`color:${col}`:''}">${x.raw!=null?fmt(x.raw):'&#183;&#183;'}</div><div class="n">${esc(x.k)}</div><div class="raw">${x.v!=null?`${w.w} &#183; ${Math.round(x.v)}`:(lastp?'last '+lastp.day.slice(5):'no reading')}</div></div>`; };
-  const run=runningOn(d);
-  document.getElementById('dayboard').innerHTML=`<div class="db">
-    <div class="dbh"><span class="dbd">${d}</span><span class="lab">${wd(d)}</span><span class="dbv">YOU <b>${yv==null?'&#183;&#183;':yv}</b></span></div>
-    <div class="dbm">${have.map(tile).join('')}${miss.map(x=>tile(x,-1)).join('')}</div>
-    ${run.length?`<div class="dbr"><span class="lab">running</span>${run.map(c=>`<b>${esc(c.name)}</b>`).join('')}</div>`:''}</div>`;
-  document.querySelectorAll('#dstrip .cells i').forEach(el=>el.classList.toggle('on',+el.dataset.i===i));
+  if(kind==='save'){ const ls=$('lo').value.trim(), hs=$('hi').value.trim(), lo=Number(ls), hi=Number(hs);
+    if(!ls||!hs||!Number.isFinite(lo)||!Number.isFinite(hi)||hi<=lo){ say('low, then high'); return; } rule={kind:'band',lo,hi}; }
+  OPEN=null; BAND=false; const {error}=await writeRule(db,metric,rule); if(error){ say(error.message); return; }
+  say(''); await load(); render();
 }
 
-/* ---------- the line ---------- */
+/* ---------- the line: the goal's index, every commit as a tick ---------- */
 const W=1000,L=40,R=12,T=14,B=16; let H=300,AX=H-B; const px=i=>L+i*(W-L-R)/Math.max(N-1,1);
-function fitChart(){ const w=document.getElementById('c').getBoundingClientRect().width||1000; H=Math.round(1000*Math.max(220,Math.min(320,w*.32))/w); AX=H-B; document.getElementById('c').setAttribute('viewBox',`0 0 ${W} ${H}`); }
+function fitChart(){ const w=$('c').getBoundingClientRect().width||1000; H=Math.round(1000*Math.max(220,Math.min(320,w*.32))/w); AX=H-B; $('c').setAttribute('viewBox',`0 0 ${W} ${H}`); }
 let YLO=80,YHI=120; const y=v=>T+(YHI-v)*(AX-T)/(YHI-YLO);
 const pathOf=v=>{let o='',pen=false;v.forEach((x,i)=>{if(x==null){pen=false;return;}o+=(pen?'L':'M')+px(i).toFixed(1)+' '+y(x).toFixed(1)+' ';pen=true;});return o;};
 function drawChart(t){
@@ -450,98 +313,168 @@ function drawChart(t){
   YLO=Math.floor((Math.min(...vals,100)-5)/10)*10; YHI=Math.ceil((Math.max(...vals,100)+5)/10)*10; if(!vals.length){YLO=80;YHI=120;}
   const ticks=[]; for(let v=YLO;v<=YHI;v+=10) ticks.push(v);
   const grid=ticks.map(v=>`<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W-R}" y2="${y(v).toFixed(1)}" stroke="${v===100?'#424b51':'#20272c'}" ${v===100?'stroke-dasharray="4 4"':''}/><text x="4" y="${(y(v)+3.5).toFixed(1)}" font-family="JetBrains Mono, monospace" font-size="10.5" fill="${v===100?'#b0b8bd':'#879198'}">${v}</text>`).join('');
-  const marks=COMMITS.map(c=>{ const i=DI[c.from]; if(i==null) return ''; return `<line x1="${px(i).toFixed(1)}" y1="${T}" x2="${px(i).toFixed(1)}" y2="${AX}" stroke="#232a30" stroke-width="1" stroke-dasharray="2 3"/>`; }).join('');
-  let ov=''; const pl=document.getElementById('pickline'); pl.innerHTML='';
-  if(focusOn()){ const c=PICK, r=testCommit(t.pts,c,COMMITS,TODAY), i0=DI[c.from]??0, i1=DI[c.to||TODAY]??N-1;
-    (r.clash||[]).forEach(o=>{ const a=px(DI[o.from]??0), b=px(DI[o.to||TODAY]??N-1); ov+=`<rect x="${a.toFixed(1)}" y="${T}" width="${Math.max(b-a,2).toFixed(1)}" height="${AX-T}" fill="#e3a33f" opacity=".06"/>`; });
+  const marks=COMMITS.map(c=>{ const i=DI[c.from]; if(i==null) return ''; return `<line x1="${px(i).toFixed(1)}" y1="${T}" x2="${px(i).toFixed(1)}" y2="${AX}" stroke="#3a4247" stroke-width="1" stroke-dasharray="2 3"><title>${esc(c.name)} &#183; ${c.from}</title></line>`; }).join('');
+  let ov=''; const c=pick();
+  if(c&&N&&!(c.to&&c.to<DAYS[0])){ const r=testCommit(t.pts,c,COMMITS,TODAY), i0=DI[c.from]??0, i1=DI[c.to||TODAY]??N-1;
+    (r.clash||[]).forEach(o=>{ if(o.to&&o.to<DAYS[0]) return; const a=px(DI[o.from]??0), b=px(DI[o.to||TODAY]??N-1); ov+=`<rect x="${a.toFixed(1)}" y="${T}" width="${Math.max(b-a,2).toFixed(1)}" height="${AX-T}" fill="#e3a33f" opacity=".06"/>`; });
     ov+=`<rect x="${px(i0).toFixed(1)}" y="${T}" width="${Math.max(px(i1)-px(i0),2).toFixed(1)}" height="${AX-T}" fill="#e6e3dc" opacity=".06"/>`;
     ov+=`<line x1="${px(i0).toFixed(1)}" y1="${T}" x2="${px(i0).toFixed(1)}" y2="${AX}" stroke="#e6e3dc" stroke-width="1" opacity=".6"/>`;
     if(r.beforeMean!=null&&r.duringMean!=null){ const len=dayNum(c.to||TODAY)-dayNum(c.from), b0=Math.max(0,i0-len-1), col=r.verdict==='finding'?(r.effect>0?'#c9a25a':'#c9695c'):'#9ba4a7';
       ov+=`<line x1="${px(b0).toFixed(1)}" y1="${y(r.beforeMean).toFixed(1)}" x2="${px(i0).toFixed(1)}" y2="${y(r.beforeMean).toFixed(1)}" stroke="#e6e3dc" stroke-width="1.6" stroke-dasharray="5 4"/>`;
       ov+=`<line x1="${px(i0).toFixed(1)}" y1="${y(r.duringMean).toFixed(1)}" x2="${px(i1).toFixed(1)}" y2="${y(r.duringMean).toFixed(1)}" stroke="${col}" stroke-width="2.2"/>`;
-      if(r.effect!=null) ov+=`<text x="${px(i1).toFixed(1)}" y="${(y(r.duringMean)-7).toFixed(1)}" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" font-weight="800" fill="${col}">${sgn(r.effect)}</text>`; }
-    const v=wordOf(r), nums=r.beforeMean!=null?`<span class="pk">before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean}</b> &#183; needs <b>${r.bar}</b>${r.needs?` &#183; <b>${r.needs}</b> more days`:''}</span>`:`<span class="pk"><b>${r.during}</b> days &#183; 0 before</span>`;
-    pl.innerHTML=`<b class="pn">${esc(c.name)}</b><span class="pw ${v.cls}">${r.effect!=null?sgn(r.effect)+' &#183; ':''}${v.word}</span>${nums}${r.clash&&r.clash.length?`<span class="coll">with ${r.clash.map(o=>esc(o.name)).join(', ')}</span>`:''}${c.to?'':`<button class="pe" data-fend>end</button>`}<button class="px" aria-label="clear">&#215;</button>`;
-    pl.querySelector('.px').onclick=()=>{ PICK=null; render(); };
-    const fe=pl.querySelector('[data-fend]'); if(fe) fe.onclick=()=>endCommit(c); }
-  document.getElementById('c').innerHTML=grid+marks+ov+
+      if(Number.isFinite(r.effect)) ov+=`<text x="${px(i1).toFixed(1)}" y="${(y(r.duringMean)-7).toFixed(1)}" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" font-weight="800" fill="${col}">${sgn(r.effect)}</text>`; } }
+  $('c').innerHTML=grid+marks+ov+
     `<path d="${pathOf(arr)}" fill="none" stroke="#e6e3dc" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
     (()=>{ let i=arr.length-1; while(i>=0&&arr[i]==null) i--; return i>=0?`<circle cx="${px(i).toFixed(1)}" cy="${y(arr[i]).toFixed(1)}" r="3.2" fill="#c9a25a"/>`:''; })()+
     `<line id="cur" x1="0" y1="${T}" x2="0" y2="${AX}" stroke="#c9a25a" stroke-width="1" opacity="0"/>`;
-  document.getElementById('emptyBox').innerHTML=vals.length?'':`<div class="empty">0 readings</div>`;
+  $('emptyBox').innerHTML=vals.length?'':`<div class="empty">0 readings</div>`;
 }
+/* hover the line: the readout, and the measures as they stood that day */
 function hookup(t){
-  const svg=document.getElementById('c'), rd=document.getElementById('rd'), arr=arrOf(t.pts), val=valOf(t.pts);
-  svg.onpointermove=e=>{ const b=svg.getBoundingClientRect(); let i=Math.round(((e.clientX-b.left)/b.width*W-L)/((W-L-R)/Math.max(N-1,1))); i=Math.max(0,Math.min(N-1,i));
-    const cl=document.getElementById('cur'); if(cl){ cl.setAttribute('x1',px(i)); cl.setAttribute('x2',px(i)); cl.setAttribute('opacity','.5'); }
-    rd.innerHTML=`${DAYS[i]} &#8195; ${esc(t.s)} <b>${val[i]!=null?fmt(val[i]):arr[i]==null?'&#183;&#183;':arr[i]}</b>${arr[i]!=null?' &#8195; '+wordOfRank(arr[i]).w+' &#183; '+arr[i]:''}`; drawDayBoard(t,i); };
-  svg.onpointerleave=()=>{ const cl=document.getElementById('cur'); if(cl) cl.setAttribute('opacity','0'); rd.innerHTML='&nbsp;'; drawDayBoard(t,DAYPIN); };
+  const svg=$('c'), rd=$('rd'), arr=arrOf(t.pts);
+  svg.onpointermove=e=>{ if(!N) return; const b=svg.getBoundingClientRect(); let i=Math.round(((e.clientX-b.left)/b.width*W-L)/((W-L-R)/Math.max(N-1,1))); i=Math.max(0,Math.min(N-1,i));
+    const cl=$('cur'); if(cl){ cl.setAttribute('x1',px(i)); cl.setAttribute('x2',px(i)); cl.setAttribute('opacity','.5'); }
+    rd.innerHTML=`${DAYS[i]} &#8195; ${esc(t.name)} <b>${arr[i]==null?'&#183;&#183;':arr[i]}</b>${arr[i]!=null?' &#8195; '+wordOfRank(arr[i]).w:''}`; drawTiles(t,i); };
+  svg.onpointerleave=()=>{ const cl=$('cur'); if(cl) cl.setAttribute('opacity','0'); rd.innerHTML='&nbsp;'; drawTiles(t,null); };
 }
 
-/* ---------- the verdict, in the Wire's words ---------- */
+/* ---------- what you did, in the Wire's words ---------- */
 function wordOf(r){
   if(r.verdict==='finding') return {word:r.effect>0?'went up':'went down',cls:r.effect>0?'up':'down'};
   if(r.verdict==='tangled') return {word:'cannot be separated',cls:'mute'};
+  if(r.verdict==='early') return {word:`early &#183; ${r.needs} more days`,cls:'mute'};
   return {word:r.verdict,cls:'mute'};
 }
-const FILL={'no before':'#232a2e',early:'#2a3338','no finding':'#3a4247',tangled:'#3a4247'};
-function drawLanes(t){
-  const box=document.getElementById('lanes'), list=COMMITS.slice().sort((a,b)=>a.from.localeCompare(b.from));
-  box.innerHTML=list.map(o=>{ const i0=DI[o.from]??0, i1=DI[o.to||TODAY]??N-1, x=testCommit(t.pts,o,COMMITS,TODAY);
-    const col=x.verdict==='finding'?(x.effect>0?'#c9a25a':'#c9695c'):FILL[x.verdict]||'#3a4247', l=i0/N*100, w=Math.max((i1-i0+1)/N*100,1.2);
-    return `<div class="ln"><button class="lane-name${o===PICK?' on':''}" data-id="${esc(o.id)}" aria-pressed="${o===PICK}" title="${esc(o.name)}">${esc(o.name)}</button><div class="bar${o.to?'':' open'}${o===PICK?' on':''}" data-id="${esc(o.id)}" title="${esc(o.name)}" style="left:${l.toFixed(2)}%;width:${w.toFixed(2)}%;border-color:${x.verdict==='tangled'?'#c9a25a':col};background:${col}${x.verdict==='early'?'80':x.verdict==='no before'?'99':'38'};${x.verdict==='no before'?'border-style:dashed':''}"></div></div>`; }).join('');
-  box.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{ const o=COMMITS.find(z=>z.id===b.dataset.id); if(!o) return; PICK=(PICK===o)?null:o; render(); });
+/* every commit, its verdict on the goal's line, and its verdict on each measure */
+function drawCommits(t){
+  const weak=weakPoint(t,SERIES);
+  $('weak').innerHTML=`<span class="lab">weak point</span> ${weak?`<b>${esc(weak.metric)}</b> ${weak.rank} &#183; ${weak.day.slice(5)}`:'&#183;&#183;'}`;
+  $('ccount').textContent=COMMITS.length;
+  const scored=t.measures.filter(m=>SERIES[m]);
+  $('clist').innerHTML=COMMITS.length?COMMITS.map(c=>{ const r=testCommit(t.pts,c,COMMITS,TODAY), v=wordOf(r);
+    const per=scored.map(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY), w=wordOf(x);
+      return `<span class="n">${esc(m)}</span><b class="${w.cls}">${sgn(x.effect)}</b><span class="w ${w.cls}">${w.word}</span>`; }).join('');
+    return `<div class="cm${c.id===PICK?' on':''}"><button type="button" class="cmh" data-id="${esc(c.id)}"><span class="nm">${esc(c.name)}</span><span class="when">${c.from} &#8594; ${c.to||'today'} &#183; ${c.days} d</span></button>`+
+      `<div class="cmv"><b class="${v.cls}">${Number.isFinite(r.effect)?sgn(r.effect)+' &#183; ':''}${v.word}</b>${c.to?'':`<button type="button" class="end" data-end="${esc(c.id)}">end</button>`}</div>`+
+      (per?`<div class="cmm">${per}</div>`:'')+`</div>`; }).join(''):`<div class="hint">0 commits &#183; log one below</div>`;
+  $('clist').querySelectorAll('.cmh').forEach(b=>b.onclick=()=>{ PICK=PICK===b.dataset.id?null:b.dataset.id; render(); });
+  $('clist').querySelectorAll('.end').forEach(b=>b.onclick=async()=>{ if(await endCommit(b.dataset.end)){ await load(); render(); } });
 }
-/* every metric under this commit, and whether it clears the raised bar */
-function drawPickMet(t){
-  const box=document.getElementById('pickmet'); if(!focusOn()){ box.innerHTML=''; return; } const c=PICK;
-  box.innerHTML=OWNED.map(m=>{ const r=testCommit(SERIES[m],c,COMMITS,TODAY);
-    if(r.effect==null) return `<span class="pm"><b class="wait">&#183;&#183;</b><span class="n">${esc(m)}</span><span class="r">${r.during} during &#183; 0 before</span></span>`;
-    const raised=Math.round(SCAN_BAR*(r.bar/2)*10)/10, lead=r.verdict!=='early'&&raised>0&&Math.abs(r.effect)>0&&Math.abs(r.effect)>=raised;
-    const cls=r.verdict==='early'?'wait':r.verdict==='finding'?(r.effect>0?'pos':'neg'):(Math.abs(r.effect)>=r.bar?(r.effect>0?'pos':'neg'):'flat');
-    return `<span class="pm"><b class="${cls}">${sgn(r.effect)}</b><span class="n">${esc(m)}</span><span class="r ${lead?'lead':''}">${r.verdict==='early'?`${r.needs} more days`:lead?`lead &#183; bar ${raised}`:`${r.beforeMean} &#8594; ${r.duringMean} &#183; bar ${r.bar}`}</span></span>`; }).join('');
-}
-async function endCommit(c){
-  const {error}=await db.from('events').insert({ occurred_at:new Date().toISOString(), metric:c.id, event_type:'commit_end', source:'you', context:{to:TODAY} });
-  if(error){ say(error.message); return; } await load(); PICK=COMMITS.find(z=>z.id===c.id)||null; render();
+/* the scan, narrowed to this goal: a commit against a measure at the raised bar is a lead, never a finding */
+function drawLeads(t){
+  const out=[];
+  COMMITS.forEach(c=>t.measures.filter(m=>SERIES[m]).forEach(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY); if(x.effect==null) return;
+    const raised=Math.round(SCAN_BAR*(x.bar/2)*10)/10;
+    if(x.verdict!=='early'&&raised>0&&Math.abs(x.effect)>0&&Math.abs(x.effect)>=raised) out.push({c,m,x,raised}); }));
+  out.sort((a,b)=>Math.abs(b.x.effect)-Math.abs(a.x.effect));
+  $('lcount').textContent=out.length;
+  $('leads').innerHTML=out.length?out.map(l=>`<div class="ld"><span class="nm">${esc(l.c.name)}</span><b class="${l.x.effect>0?'pos':'neg'}">${sgn(l.x.effect)}</b><span class="n">${esc(l.m)}</span><span class="k">bar ${l.raised}</span></div>`).join(''):`<div class="hint">0 leads</div>`;
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&PICK){ PICK=null; render(); } });
 let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(N) render(); },150); });
 
-/* ---------- now: only what is true today ---------- */
-function drawNotices(t){
-  const out=[], arr=arrOf(t.pts), pts=t.pts;
-  if(pts.length>=14){ const now=pts[pts.length-1].rank, above=pts.filter(p=>p.rank>now).length, pct=above/pts.length*100;
-    if(pct>=90) out.push(['index',`<b class="neg">${now}</b> &#183; lowest <b>${Math.round(100-pct)||1}%</b> of your readings`,`n ${pts.length}`]);
-    else if(pct<=10) out.push(['index',`<b class="pos">${now}</b> &#183; highest <b>${Math.round(pct)||1}%</b> of your readings`,`n ${pts.length}`]); }
-  if(pts.length){ const ter=v=>v<90?'under 90':v<110?'near 100':'over 110'; let k=pts.length-1, run=1; while(k>0&&ter(pts[k-1].rank)===ter(pts[k].rank)){run++;k--;}
-    const tt=ter(pts[pts.length-1].rank); if(run>=3&&tt!=='near 100') out.push(['streak',`<b class="${tt==='over 110'?'pos':'neg'}">${tt}</b> &#183; <b>${run}</b> readings running`,`since ${pts[k].day}`]); }
-  const today=dayNum(TODAY);
-  OWNED.forEach(m=>{ const p=lastPt(SERIES[m]); if(!p) return; const age=today-dayNum(p.day); if(age>STALE_DAYS) out.push([esc(m),`last row <b>${p.day}</b> &#183; <b class="neg">${age}</b> days &#183; stale`,`YOU not drawn`]); });
-  for(let i=1;i<N;i++){ if(arr[i]!=null&&arr[i-1]==null){ let j=i-1; while(j>=0&&arr[j]==null) j--; const g=i-j-1; if(g>=3&&(N-1-i)<=14&&j>=0) out.push(['quiet',`<b>${g}</b> days &#183; ${DAYS[j]} &#8594; ${DAYS[i]}`,'']); } }
-  let leads=0; const earning=[];
-  COMMITS.forEach(c=>{ const r=testCommit(t.pts,c,COMMITS,TODAY); if(r.verdict==='early') earning.push([c,r]);
-    OWNED.forEach(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY); if(x.effect==null) return; const raised=Math.round(SCAN_BAR*(x.bar/2)*10)/10; if(x.verdict!=='early'&&raised>0&&Math.abs(x.effect)>0&&Math.abs(x.effect)>=raised) leads++; }); });
-  if(leads) out.push(['scan',`<b class="pos">${leads}</b> lead${leads===1?'':'s'} &#183; bar ${SCAN_BAR} se`,`${COMMITS.length} commits`,'scan.html']);
-  earning.forEach(([c,r])=>out.push([esc(c.name),`<b>${r.during}</b> during &#183; <b>${r.before}</b> before &#183; min ${MIN_DAYS}`,`${r.needs} more days`,c]));
-  document.getElementById('nowcount').textContent=out.length;
-  document.getElementById('notices').innerHTML=out.map(([l,v,n,go],i)=>`<div class="nt${go?' go':''}" data-i="${i}"><span class="nl">${l}</span><span class="nv">${v}<span class="nn">${n}</span></span></div>`).join('');
-  document.querySelectorAll('#notices .nt.go').forEach(el=>el.onclick=()=>{ const go=out[+el.dataset.i][3]; if(typeof go==='string') location.href=go; else { PICK=go; VIEW='you'; render(); } });
+/* ---------- the three lines ---------- */
+function drawLines(){
+  const ps=$('pstock'), r=remembered(); const want=ps.dataset.ready?ps.value:(ALL.includes(r)?r:(ALL[0]||''));
+  ps.innerHTML=ALL.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')+`<option value="">+ new</option>`;
+  ps.value=ALL.includes(want)?want:''; ps.dataset.ready='1'; padNew();
+  const gt=$('gtm'), tw=gt.value; gt.innerHTML=`<option value="">none</option>`+ALL.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join(''); gt.value=ALL.includes(tw)?tw:'';
+  drawPicks(); if(!$('cfrom').value) $('cfrom').value=TODAY;
 }
+function padNew(){ const fresh=$('pstock').value===''; $('pnew1').classList.toggle('hide',!fresh); $('pnew2').classList.toggle('hide',!fresh); }
+$('pstock').onchange=padNew;
+/* the pick list: every stock, scored ones first */
+function drawPicks(){
+  const names=[...new Set([...ALL,...GPICK])].sort((a,b)=>(!SERIES[a])-(!SERIES[b])||a.localeCompare(b));
+  const stateOf=m=>SERIES[m]?'scored':RULES[m]&&RULES[m].kind==='ignore'?'ignored':ALL.includes(m)?'needs a rule':'no readings';
+  $('gpicks').innerHTML=names.map(m=>`<button type="button" data-m="${esc(m)}" class="${SERIES[m]?'':'off'}" aria-pressed="${GPICK.has(m)}" title="${stateOf(m)}">${esc(m)}</button>`).join('');
+  $('gpicks').querySelectorAll('button').forEach(b=>b.onclick=()=>{ const m=b.dataset.m; if(GPICK.has(m)) GPICK.delete(m); else GPICK.add(m); drawPicks(); });
+}
+/* the goal line shows the goal on screen, so declaring it again is one edit and one click */
+function fillGoalLine(t){ drawLines(); const g=t.id===YOU_ID?null:t;
+  $('gname').value=g?g.name:''; $('gtm').value=g&&g.target?g.target.metric:'';
+  $('gtv').value=g&&g.target?(g.target.value!=null?String(g.target.value):`${g.target.lo} to ${g.target.hi}`):'';
+  GPICK=new Set(g?g.measures:[]); drawPicks(); }
+
+/* the pad's line. a number is a reading, anything else is a note. the rows are pad.html's rows */
+async function lastUnit(metric){
+  const {data,error}=await db.from('events').select('value, unit, occurred_at').eq('metric',metric).eq('event_type','measurement').not('value','is',null).order('occurred_at',{ascending:false}).limit(7);
+  if(error){ pmsg(error.message,'bad'); return undefined; }
+  return (data.find(r=>r.unit)||{}).unit||null;
+}
+$('padf').addEventListener('submit',async e=>{ e.preventDefault();
+  const raw=$('pval').value.trim(); if(!raw){ pmsg('a number or a note','bad'); return; }
+  $('padd').disabled=true; pmsg('');
+  const n=Number(raw), isNumber=Number.isFinite(n);
+  let metric=$('pstock').value, unit=null;
+  if(metric===''){ metric=slug($('pname').value); if(!metric){ $('padd').disabled=false; pmsg('a name','bad'); $('pname').focus(); return; } unit=$('punit').value.trim()||null; }
+  else { unit=await lastUnit(metric); if(unit===undefined){ $('padd').disabled=false; return; } }
+  const row=isNumber
+    ? { occurred_at:new Date().toISOString(), metric, value:n, unit, source:'pad' }
+    : { occurred_at:new Date().toISOString(), metric, event_type:'note', value:null, source:'you', context:{ text:raw } };
+  const {error}=await db.from('events').insert(row); $('padd').disabled=false;
+  if(error){ pmsg(error.message,'bad'); return; }
+  $('pval').value=''; $('pname').value=''; $('punit').value=''; remember(metric);
+  pmsg(isNumber?`${n}${unit?' '+unit:''} added to ${metric}`:`note added to ${metric}`,'good');
+  await load(); render(); $('pstock').value=ALL.includes(metric)?metric:''; padNew();
+});
+
+/* the commit line. a start row, and an end row if it has ended. the rows are commit.html's rows */
+async function endCommit(id,to){
+  const day=to||TODAY;
+  const {error}=await db.from('events').insert({ occurred_at:new Date(day+'T12:00:00Z').toISOString(), metric:id, event_type:'commit_end', source:'you', context:{ to:day } });
+  if(error){ cmsg(error.message,'bad'); return false; }
+  return true;
+}
+$('cmf').addEventListener('submit',async e=>{ e.preventDefault();
+  const name=$('cwhat').value.trim(), from=$('cfrom').value, to=$('cto').value;
+  if(!name){ cmsg('a name','bad'); return; }
+  if(!from){ cmsg('a start date','bad'); return; }
+  if(from>TODAY){ cmsg('the start is in the future','bad'); return; }
+  if(to&&to<from){ cmsg('the end is before the start','bad'); return; }
+  const id=slugCommit(name);
+  if(COMMITS.some(c=>c.id===id)){ cmsg(`${id} exists · use a different name`,'bad'); return; }
+  $('cadd').disabled=true; cmsg('');
+  const {error}=await db.from('events').insert({ occurred_at:new Date(from+'T12:00:00Z').toISOString(), metric:id, event_type:'commit', source:'you', context:{ name, from } });
+  if(error){ $('cadd').disabled=false; cmsg(error.message,'bad'); return; }
+  if(to){ const ok=await endCommit(id,to); if(!ok){ $('cadd').disabled=false; return; } }
+  $('cadd').disabled=false; $('cwhat').value=''; $('cto').value=''; $('cfrom').value=TODAY;
+  cmsg(`${name} · ${from} → ${to||'today'} · added`,'good');
+  await load(); render();
+});
+
+/* the goal line. a name, a target on one stock if you have one, and the stocks it is made of */
+function parseTarget(metric,text){
+  const s=text.trim(); if(!metric&&!s) return null;
+  if(!metric) throw 'pick the stock the target is on';
+  if(!s) throw 'a target value, or low to high';
+  const band=s.match(/^(-?\d+(?:\.\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:\.\d+)?)$/);
+  if(band){ const lo=Number(band[1]), hi=Number(band[2]); if(!(hi>lo)) throw 'low, then high'; return {metric,lo,hi}; }
+  const v=Number(s); if(!Number.isFinite(v)) throw 'a number, or low to high'; return {metric,value:v};
+}
+$('goalf').addEventListener('submit',async e=>{ e.preventDefault();
+  const name=$('gname').value.trim(); if(!name){ gmsg('a name','bad'); return; }
+  if(!slug(name)){ gmsg('a name with letters or digits','bad'); return; }
+  const measures=[...GPICK]; if(!measures.length){ gmsg('pick at least one stock','bad'); return; }
+  let target; try{ target=parseTarget($('gtm').value,$('gtv').value); }catch(m){ gmsg(m,'bad'); return; }
+  $('gadd').disabled=true; gmsg('');
+  const {error}=await writeGoal(db,name,measures,target); $('gadd').disabled=false;
+  if(error){ gmsg(error.message,'bad'); return; }
+  gmsg(`${name} · ${measures.length} measure${measures.length===1?'':'s'}${target?` · target ${target.metric} ${target.value!=null?target.value:`${target.lo} to ${target.hi}`}`:''} · declared`,'good');
+  sel=slugCommit(name); PICK=null; OPEN=null; BAND=false; await load(); fillGoalLine(cur()); render();
+});
 
 /* ---------- load ---------- */
 async function load(){
-  const [all,rules,commits]=await Promise.all([readMetrics(db),readRules(db),readCommits(db)]);
+  const [all,rules,commits,goals]=await Promise.all([readMetrics(db),readRules(db),readCommits(db),readGoals(db)]);
   const rows=await readDays(db,all); RAW=rows;
-  const {data:srcRows}=await db.from('events').select('metric, source').eq('event_type','measurement').limit(20000);
-  const cnt={}; (srcRows||[]).forEach(r=>{ cnt[r.metric]=cnt[r.metric]||{}; cnt[r.metric][r.source]=(cnt[r.metric][r.source]||0)+1; });
-  SRC={}; Object.keys(cnt).forEach(m=>{ SRC[m]=Object.keys(cnt[m]).sort((a,b)=>cnt[m][b]-cnt[m][a])[0]; });
-  ALL=all; RULES=rules; COMMITS=commits; SERIES=rankSeries(rows,rules); OWNED=Object.keys(SERIES);
-  buildDays(); YOU=etfSeries(SERIES,OWNED); const lastRead=Math.max(0,...OWNED.map(m=>DI[lastPt(SERIES[m]).day]??0)); DAYPIN=lastRead;
-  if(!(sel==='you'||SERIES[sel]||ALL.includes(sel))) sel='you';
+  ALL=all; RULES=rules; COMMITS=commits; GOALS=goals; SERIES=rankSeries(rows,rules); OWNED=Object.keys(SERIES);
+  buildDays(); YOU=etfSeries(SERIES,OWNED);
+  if(!(sel===YOU_ID||GOALS.some(g=>g.id===sel))) sel=YOU_ID;
 }
+$('out').onclick=async()=>{ await db.auth.signOut(); location.href='index.html'; };
 db.auth.getSession().then(async ({data})=>{
   if(!data.session){ location.href='index.html'; return; }
-  try{ await load(); render(); }catch(e){ say(e.message||String(e)); }
+  try{ await load(); fillGoalLine(cur()); render(); }catch(e){ say(e.message||String(e)); }
 });
 </script>

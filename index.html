@@ -30,7 +30,7 @@
 const db = supabase.createClient(WIRE.url, WIRE.key);
 
 db.auth.getSession().then(({ data }) => {
-  if (data.session) location.href = 'pad.html';
+  if (data.session) location.href = 'you.html';
 });
 
 f.onsubmit = async (e) => {
@@ -41,6 +41,6 @@ f.onsubmit = async (e) => {
     password: pw.value
   });
   if (error) msg.textContent = error.message;
-  else location.href = 'pad.html';
+  else location.href = 'you.html';
 };
 </script>

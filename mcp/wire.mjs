@@ -22,7 +22,8 @@ const { WIRE_URL, WIRE_KEY, WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
   return { readMetrics, readRules, readDays, rankSeries, etfSeries,
-           readCommits, testCommit, dayNum, slugCommit };`)();
+           readCommits, testCommit, dayNum, slugCommit,
+           readGoals, goalSeries, weakPoint };`)();
 
 const db = createClient(WIRE_URL, WIRE_KEY);
 
@@ -88,6 +89,36 @@ server.tool(
     const p = series[metric];
     if (!p) return text({ error: `no stock called ${metric}, or it has no rule yet` });
     return text({ metric, points: p.slice(-days) });
+  }
+);
+
+server.tool(
+  'goals',
+  'What the stocks are for. Each goal is YOU drawn over only its own ' +
+  'measures, 100 at your usual across the first thirty readings. The weak ' +
+  'point is the measure with the lowest index right now.',
+  {},
+  async () => {
+    const { series } = await load();
+    const goals = await R.readGoals(db);
+    return text({
+      goals: goals.map(g => {
+        const p = R.goalSeries(g, series);
+        const last = p[p.length - 1];
+        const weak = R.weakPoint(g, series);
+        return {
+          goal: g.name,
+          id: g.id,
+          index: p.length >= 14 && last ? last.rank : null,
+          note: !g.measures.some(m => series[m]) ? 'no measure has a rule yet'
+              : p.length >= 14 ? undefined : 'under 14 days, no index yet',
+          day: last ? last.day : null,
+          target: g.target,
+          measures: g.measures,
+          weak_point: weak ? { metric: weak.metric, index: weak.rank, day: weak.day } : null
+        };
+      })
+    });
   }
 );
 

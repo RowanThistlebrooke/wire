@@ -292,3 +292,66 @@ function testCommit(points, commit, commits, todayStr) {
             `against a bar of ${out.bar}, with nothing else running.`;
   return out;
 }
+
+
+// ---- goals: what the stocks are for ----
+//
+// A goal names the measures it is made of, and can name a target on one
+// of them. It is an event like a rule: the latest row per goal wins and
+// the older ones stay on the record. A goal has no readings of its own.
+// Its line is YOU drawn over only its measures, by exactly the same rules.
+
+async function readGoals(db) {
+  const { data, error } = await db
+    .from('events')
+    .select('metric, context, occurred_at')
+    .eq('event_type', 'goal')
+    .order('occurred_at', { ascending: true })
+    .limit(20000);
+  if (error) throw error;
+  const byId = new Map();                       // latest wins, first declared keeps its place
+  for (const r of data) {
+    const c = r.context || {};
+    const t = c.target;
+    byId.set(r.metric, {
+      id: r.metric,
+      name: typeof c.name === 'string' && c.name ? c.name : r.metric,
+      target: t && typeof t.metric === 'string' ? t : null,
+      measures: Array.isArray(c.measures) ? c.measures.filter(m => typeof m === 'string') : [],
+      declared: r.occurred_at
+    });
+  }
+  return [...byId.values()];
+}
+
+// target is optional: { metric, value } or { metric, lo, hi }.
+async function writeGoal(db, name, measures, target) {
+  const context = { name, measures };
+  if (target) context.target = target;
+  return db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric: slugCommit(name),
+    event_type: 'goal',
+    value: null,
+    source: 'you',
+    context
+  });
+}
+
+// A goal's line is YOU over only its measures. The same silence rule holds:
+// one stale measure and the goal has no value that day.
+function goalSeries(goal, series) {
+  return etfSeries(series, goal.measures);
+}
+
+// The measure with the lowest latest index. Where the goal is weakest now.
+function weakPoint(goal, series) {
+  let weak = null;
+  for (const m of goal.measures) {
+    const pts = series[m];
+    if (!pts || !pts.length) continue;
+    const p = pts[pts.length - 1];
+    if (!weak || p.rank < weak.rank) weak = { metric: m, rank: p.rank, day: p.day };
+  }
+  return weak;
+}
