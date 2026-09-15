@@ -1,233 +1,116 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>You · The Wire</title>
+<title>The Wire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-/* The Wire: a quiet reading surface. All scoring stays in you-reader.js. */
-:root{--ground:#0b0d0f;--surface:#111518;--edge:#252b30;--edge2:#343d44;--ink:#eeece6;--dim:#a4adb3;--muted:#879198;
- --teal:#c9a25a;--amber:#c9a25a;--leak:#c9695c;
- --ui:"Manrope","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+:root{--ground:#070809;--panel:#0c0f11;--edge:#171c20;--edge2:#232a30;--ink:#e6e3dc;--dim:#8d959a;--muted:#5c656b;
+ --teal:#5fc4b4;--tealsoft:rgba(95,196,180,.12);--amber:#c9a25a;--leak:#c9695c;--leaksoft:rgba(201,105,92,.12);
+ --ui:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
 *{box-sizing:border-box}
 html{color-scheme:dark}
-body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
-button{font-family:var(--mono)}
-a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-a{color:inherit;text-decoration:none}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input{font-family:var(--mono)}
+button:focus-visible,input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+.main{max-width:720px;margin:0 auto;padding-block:20px 90px;padding-inline:20px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0}
+.out{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0}
+.demo{margin:14px 0 0;font:11px/1.6 var(--mono);letter-spacing:.06em;color:var(--amber);border:1px solid var(--edge2);padding:8px 10px}
 
-/* frame */
-.app{min-height:100vh}
-.main{padding:18px 28px 90px;max-width:1400px;margin:0 auto}
-.bar{display:flex;align-items:center;gap:14px}
-.bar .tog{background:none;border:1px solid var(--edge);color:var(--dim);width:32px;height:28px;border-radius:6px;cursor:pointer;padding:0;display:grid;place-items:center}
-.bar .tog:hover{color:var(--ink)}
-.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0}
-.lab{font:800 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-.pos{color:var(--teal)}.neg{color:var(--leak)}.mu{color:var(--muted)}
-.err{font:600 12px/1.6 var(--mono);color:var(--leak);margin-top:14px}
+/* the one number */
+.hero{display:flex;gap:26px;align-items:center;margin-top:30px;padding-bottom:22px;border-bottom:1px solid var(--edge)}
+.hero .big{font:300 92px/.9 var(--ui);letter-spacing:-.03em}
+.hero .big.pos{color:var(--teal)}.hero .big.neg{color:var(--leak)}
+.hero .side{display:flex;flex-direction:column;gap:12px}
+.hero .side .l{font:400 10px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.hero .side .w{display:flex;align-items:center}
+.hero .side .w svg{width:56px;height:56px}
+.hero .side .s{font:400 11px/1.6 var(--mono);color:var(--dim);margin-top:8px;letter-spacing:.04em}
+@media (max-width:520px){.hero{gap:18px}.hero .big{font-size:64px}.hero .side .w svg{width:40px;height:40px}}
 
-/* the table: YOU and every stock, one row each. click a row to put it on the chart */
-.tw{overflow-x:auto;margin-top:14px}
-.tbl{width:100%;border-collapse:collapse;font:600 12px/1.4 var(--mono)}
-.tbl th{font:600 9.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 12px 8px 0;border-bottom:1px solid var(--edge);white-space:nowrap}
-.tbl td{padding:8px 12px 8px 0;border-bottom:1px solid var(--edge);vertical-align:middle;white-space:nowrap}
-.tbl th:last-child,.tbl td:last-child{padding-right:0}
-.tbl th.r,.tbl td.r{text-align:right}
-.tbl td.nm{font:700 13px/1.2 var(--ui);max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.tbl td.k{color:var(--muted)}
-.tbl td svg{display:block;width:72px;height:22px;margin-left:auto}
-.tbl tr.row{cursor:pointer;outline:0}
-.tbl tr.row:hover td.nm,.tbl tr.row:focus-visible td.nm{color:var(--teal)}
-.tbl tr.on td{background:#0f1316}
-.tbl tr.on td.nm{color:var(--teal)}
-.tbl tr.off td{color:var(--muted)}
-.tbl tr.grp td{padding:18px 0 6px;border-bottom:1px solid var(--edge)}
+/* key */
+.key{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 0;font:400 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.key i{display:inline-block;width:8px;height:8px;margin-right:7px;vertical-align:middle}
+.key i.t{background:var(--teal)}.key i.r{background:var(--leak)}.key i.g{background:var(--edge2)}.key i.a{background:var(--amber)}
 
-/* the number */
-.head2{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:36px;align-items:start;margin-top:4px}
-.tick{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.sym{font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.now{font:700 20px/1 var(--ui);letter-spacing:-.01em}
-.delta{font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
-.rules{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.rules .rl{margin-right:6px}
-.rules button{background:none;border:1px solid var(--edge);color:var(--muted);font:800 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:7px 9px;border-radius:5px;cursor:pointer}
-.rules button:hover{color:var(--ink);border-color:var(--dim)}
-.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
-.band{display:flex;gap:10px;align-items:baseline;margin-top:12px;flex-wrap:wrap}
-.band input{width:96px;background:none;border:0;border-bottom:2px solid var(--edge);color:var(--ink);font:800 20px/1.3 var(--ui);letter-spacing:-.02em;padding:4px 0;outline:0;min-width:0}
-.band input:focus{border-bottom-color:var(--teal)}
-.bt{background:none;border:1px solid var(--edge);color:var(--dim);font:800 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:10px 14px;border-radius:5px;cursor:pointer}
-.bt:hover{border-color:var(--teal);color:var(--teal)}
-.bt.go{color:var(--ink)}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:20px}
+.t{background:var(--panel);border:1px solid var(--edge);border-top:2px solid var(--edge2);padding:12px 12px 10px;min-width:0}
+.t.pos{border-top-color:var(--teal)}.t.neg{border-top-color:var(--leak)}
+.t .n{font:400 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t b{display:block;font:300 30px/1 var(--ui);margin-top:10px}
+.t b small{font:400 10px/1 var(--mono);color:var(--muted);margin-left:3px}
+.t .w{margin-top:8px;height:12px;display:flex;align-items:center}
+.t > svg{margin-top:10px;height:26px}
+.t .w svg{width:12px;height:12px;margin:0}
+@media (max-width:700px){.tiles{grid-template-columns:repeat(2,1fr)}}
 
-/* now: what needs a look */
-.nowcol{max-height:250px;overflow:auto;scrollbar-width:thin}
-.notices{margin-top:0}
-.nt{display:grid;grid-template-columns:1fr;gap:2px;padding:7px 0;border-bottom:1px solid #141a1e}
-.nt .nl{font:800 13px/1.1 var(--ui);letter-spacing:-.02em}
-.nt .nv{font:600 11px/1.5 var(--mono);color:var(--dim)}.nt .nv b{color:var(--ink)}
-.nt .nv b.pos{color:var(--teal)}.nt .nv b.neg{color:var(--leak)}
-.nt .nn{font:600 11px/1 var(--mono);color:var(--muted);display:inline;margin-left:8px}
-.nt.go{cursor:pointer}.nt.go:hover .nl{color:var(--teal)}
-.nowcol .notices:empty::after{content:"0";display:block;font:600 12px/1 var(--mono);color:var(--muted);padding:10px 0}
+/* chart */
+.chart{margin-top:24px;background:var(--panel);border:1px solid var(--edge);padding:12px 10px 6px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 8px 4px;font:400 10px/1 var(--mono);letter-spacing:.08em;color:var(--dim)}
+.legend i{display:inline-block;width:14px;height:1.5px;vertical-align:middle;margin-right:6px}
+svg{width:100%;height:auto;display:block}
 
-/* the day read */
-.db{margin-top:16px;border-top:1px solid var(--edge);padding-top:10px}
-.dbh{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.dbd{font:800 15px/1 var(--ui);letter-spacing:-.03em}
-.dbv{font:600 12px/1.4 var(--mono);color:var(--muted);margin-left:auto}.dbv b{color:var(--ink)}
-.dbm{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:0 12px;margin-top:22px}
-.mt{border:0;border-top:2px solid var(--edge);padding:8px 0 0;position:relative;min-width:0}
-.mt .r{font:800 20px/1 var(--ui);letter-spacing:-.03em}
-.mt .n{font:600 10.5px/1.4 var(--mono);color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mt .raw{font:600 10.5px/1.4 var(--mono);color:var(--muted)}
-.mt .lab{position:absolute;top:-16px;left:0}
-.mt.na{border-top-style:dashed}.mt.na .r{color:var(--muted)}
-.dbr{margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:baseline}
-.dbr b{font:800 13px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
+/* one line */
+.line{display:grid;grid-template-columns:minmax(0,1fr) 150px 74px;gap:14px;align-items:end;margin-top:34px}
+.line input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
+.line input[type=date]{font:400 13px/1.2 var(--mono);color:var(--dim)}
+.line input:focus{border-bottom-color:var(--teal);outline:0}
+.line button{background:none;border:1px solid var(--edge2);color:var(--ink);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:14px 0;cursor:pointer}
+.line button:hover{border-color:var(--teal);color:var(--teal)}
+@media (max-width:520px){.line{grid-template-columns:1fr 1fr}.line input[type=text]{grid-column:1/3}}
 
-/* the line */
-.panel{margin-top:14px;border-top:1px solid var(--edge);padding-top:10px}
-.keyrow{display:flex;gap:20px;flex-wrap:wrap;align-items:center;min-height:0}
-.key{display:flex;gap:20px;font:600 11.5px/1 var(--mono);color:var(--muted);flex-wrap:wrap;align-items:center}
-.key b{font-weight:600}
-.sw{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:7px}
-.chip{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:7px}
-.pickline{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font:600 11px/1.4 var(--mono);color:var(--dim);margin-bottom:8px}
-.pickline:empty{display:none}
-.pickline .pk{color:var(--muted)}.pickline .pk b{color:var(--ink);font-weight:800}
-.pickline .pe{background:none;border:1px solid var(--edge);color:var(--dim);font:800 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 9px;border-radius:5px;cursor:pointer}
-.pickline .pe:hover{border-color:var(--teal);color:var(--teal)}
-.pickline .coll{color:var(--amber)}
-.pickline .pn{font:800 14px/1 var(--ui);letter-spacing:-.02em;color:var(--ink)}
-.pickline .pw{font:800 14px/1 var(--ui);letter-spacing:-.02em}.pw.up{color:var(--teal)}.pw.down{color:var(--leak)}.pw.mute{color:var(--dim)}
-.pickline .px{background:none;border:1px solid var(--edge);color:var(--dim);width:24px;height:24px;border-radius:5px;cursor:pointer;font:800 13px/1 var(--mono)}
-.stage svg{display:block;width:100%;height:auto}
-.stage svg .clip{cursor:pointer}
-.stage svg .clip[aria-pressed="true"] rect:first-child{stroke:var(--ink);stroke-width:1.8}
-.rd{font:600 11px/1.6 var(--mono);color:var(--dim);text-align:right;min-height:18px;pointer-events:none;margin-top:4px}
-.rd b{color:var(--ink);font-weight:800}
-.empty{font:600 13px/1.8 var(--mono);color:var(--muted);border:1px dashed var(--edge);border-radius:6px;padding:26px 22px;margin-top:14px}
-.dstrip{outline:0}
-.dstrip.axis{margin-top:6px;padding:0 1.2% 0 4%}
-.cells{display:flex;gap:1px;height:9px;margin-bottom:8px;opacity:.85}
-.cells i{flex:1;min-width:0;border-radius:1px;cursor:pointer;position:relative}
-.cells i.e{border:1px dashed var(--edge)}
-.cells i.on{outline:1.5px solid var(--ink);outline-offset:1px;z-index:1}
-.months{position:relative;height:14px;margin-top:8px;font:600 10px/1 var(--mono);letter-spacing:1px;color:var(--muted)}
-.months span{position:absolute;top:0}
-.pickmet{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid var(--edge)}
-.pickmet:empty{display:none}
-.pm{display:flex;flex-direction:column;gap:3px}
-.pm b{font:800 17px/1 var(--ui);letter-spacing:-.03em}.pm b.pos{color:var(--teal)}.pm b.neg{color:var(--leak)}.pm b.flat{color:var(--dim)}.pm b.wait{color:var(--muted)}
-.pm .n{font:600 11px/1.3 var(--mono);color:var(--dim)}.pm .r{font:600 10.5px/1.3 var(--mono);color:var(--muted)}
-.pm .r.lead{color:var(--amber)}
+/* decisions */
+.list{margin-top:28px}
+.d{background:var(--panel);border:1px solid var(--edge);border-left:2px solid var(--edge2);padding:16px 16px 14px;margin-bottom:10px}
+.d.pos{border-left-color:var(--teal)}.d.neg{border-left-color:var(--leak)}.d.early{border-left-color:var(--amber)}
+.d .h{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.d .h b{font:400 19px/1.3 var(--ui)}
+.d .h span{font:400 11px/1 var(--mono);color:var(--muted);letter-spacing:.08em;white-space:nowrap}
+.d .h span em{font-style:normal;color:var(--dim)}
+.d .say{font:300 15px/1.5 var(--ui);color:var(--dim);margin:8px 0 0;max-width:60ch}
+.d .say em{font-style:normal;color:var(--ink)}
+.d .say em.pos{color:var(--teal)}.d .say em.neg{color:var(--leak)}
+.fx{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px}
+.f{min-width:0;padding:8px 8px 8px;margin:-8px -8px -8px;cursor:pointer;border:1px solid transparent;transition:background .18s,border-color .18s}
+.f:hover{background:rgba(255,255,255,.025)}
+.f.sel{background:rgba(255,255,255,.04);border-color:var(--edge2);animation:pop .32s cubic-bezier(.2,.9,.2,1)}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+.d{cursor:pointer;transition:background .18s,border-color .18s}
+.d.on{background:#0f1518;border-color:var(--edge2)}
+.chart.sw svg{animation:fade .35s ease}
+@keyframes fade{from{opacity:.35}to{opacity:1}}
+.chart .trend{animation:drawline 2.4s cubic-bezier(.4,0,.2,1) .5s forwards}
+@keyframes drawline{to{stroke-dashoffset:0}}
+.chart .pct{opacity:0;animation:fadein .7s ease 2.4s forwards}
+@keyframes fadein{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.f.sel,.chart.sw svg{animation:none}.chart .trend{stroke-dashoffset:0!important;animation:none}.chart .pct{opacity:1;animation:none}}
+.f .n{font:400 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f b{display:block;font:300 30px/1 var(--ui);color:var(--muted);margin-top:10px;letter-spacing:-.01em}
+.f b.pos{color:var(--teal)}.f b.neg{color:var(--leak)}.f b.tan{color:var(--amber)}.f b.mid{color:var(--dim)}
+.dots{display:flex;gap:3px;margin-top:9px}
+.dots i{width:7px;height:7px;background:var(--edge2)}
+.dots i.on{background:var(--dim)}
+.dots.pos i.on{background:var(--teal)}.dots.neg i.on{background:var(--leak)}.dots.tan i.on{background:var(--amber)}
+@media (max-width:700px){.fx{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:420px){.fx{grid-template-columns:repeat(2,1fr)}}
 
-/* commits: thin lanes under the days, aligned to the chart, coloured by the verdict */
-.lanehead{display:flex;justify-content:space-between;align-items:center}
-.lanes{padding:0 1.2% 0 4%;margin-top:2px}
-.lanes .ln{position:relative;height:18px;margin-top:3px}
-.lanes .ln .bar{position:absolute;top:0;height:16px;border-radius:3px;border:1px solid;font:600 10.5px/14px var(--mono);padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);cursor:pointer;opacity:.55}
-.lanes .ln .bar.open{border-right-style:none;border-top-right-radius:0;border-bottom-right-radius:0}
-.lanes .ln .bar:hover{opacity:.9}
-.lanes .ln .bar.on{opacity:1;border-color:var(--ink)!important;border-width:1.5px}
-.lanes .ln .bar.out{background:none!important;border:0;padding:0;color:var(--dim);opacity:1;overflow:visible}
-.lanes:empty{display:none}
-
-
-@media (max-width:980px){.head2{grid-template-columns:1fr;gap:18px}}
-@media (max-width:820px){.main{padding:20px 16px 120px}.sym{max-width:100%}.mt .r{font-size:20px}}
-
-/* reading hierarchy */
-.main{max-width:1240px;padding:30px 36px 100px}
-.main > .bar{padding-bottom:24px;border-bottom:1px solid var(--edge);margin-bottom:24px}
-.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:800;letter-spacing:-.03em}
-.brand-mark{width:21px;height:21px;display:grid;place-items:center;color:var(--amber)}
-.bar-title{font:500 12px/1 var(--mono);color:var(--muted);padding-left:18px;border-left:1px solid var(--edge)}
-.bar .tog{margin-left:auto;width:auto;height:34px;padding:0 11px;gap:8px;display:flex;font:600 11px/1 var(--mono);border-color:var(--edge2);border-radius:6px}
-.bar .tog[aria-pressed="true"]{background:var(--surface);border-color:var(--amber)}
-.head2{grid-template-columns:minmax(0,1fr) 210px;gap:28px;margin:0 0 26px}
-.sectionhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:17px}
-.sectionhead h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.04em}
-.sectionhead span{font:500 10px/1.5 var(--mono);color:var(--muted)}
-.tw{margin-top:0}
-.tbl{font-size:11px;font-weight:600}
-.tbl th{font-size:9px;letter-spacing:.1em;padding:0 10px 12px 8px}
-.tbl td{height:48px;padding:11px 10px 11px 8px}
-.tbl td.nm{font-size:13px;min-width:105px}
-.tbl td.k{color:var(--dim)}
-.tbl td svg{width:58px;height:26px}
-.tbl tr.on td{background:#1b201f}
-.tbl tr.on td:first-child{box-shadow:inset 2px 0 var(--amber)}
-.tbl tr.row:hover td{background:#171c1f}
-.tbl tr.row:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
-.tbl tr.grp td{padding:20px 8px 8px;height:auto;border-bottom:0}
-.tbl tr.off td{color:var(--muted);height:42px}
-.lab,.eyebrow{letter-spacing:.13em;font-weight:600}
-.nowcol{align-self:start;margin-top:4px;padding:16px;border:1px solid var(--edge);border-radius:8px;background:var(--surface);max-height:280px}
-.nowcol .lanehead{margin-bottom:8px}
-.nt{padding:12px 0;gap:6px;border-color:var(--edge)}
-.nt:last-child{border-bottom:0;padding-bottom:0}
-.nt .nl{font-size:13px;font-weight:700}
-.nt .nv{font-size:10px;line-height:1.7}
-.nt .nn{display:block;margin:3px 0 0;line-height:1.5}
-.panel{margin-top:0;padding:24px 24px 20px;background:var(--surface);border:1px solid var(--edge);border-radius:12px}
-.tick{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin-bottom:24px}
-.sym{grid-column:1 / -1;font-size:11px;color:var(--dim);letter-spacing:.12em}
-.now{font-size:44px;font-weight:600;letter-spacing:-.055em}
-.delta{align-self:end;justify-self:start;font-size:10px;letter-spacing:.04em;padding-bottom:6px}
-.stage{margin-top:10px}
-.stage svg{overflow:visible}
-.cells{height:7px;gap:2px;opacity:1;margin-bottom:10px}
-.cells i{border-radius:2px}
-.cells i.e{background:transparent;border:1px solid var(--edge2)}
-.months{color:var(--dim);font-size:10px;letter-spacing:.09em;height:20px}
-.lanes{margin-top:6px}
-.lanes .ln{height:42px;margin-top:4px;border-bottom:1px solid var(--edge)}
-.lanes .ln .bar{top:24px;height:5px;border-radius:2px;padding:0;opacity:.9;min-width:4px}
-.lanes .ln .bar.on{outline:1px solid var(--ink);outline-offset:2px}
-.lanes .ln .lane-name{position:absolute;top:1px;left:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:none;border:0;padding:0;color:var(--dim);font:500 10px/18px var(--mono);cursor:pointer;text-align:left}
-.lanes .ln .lane-name:hover,.lanes .ln .lane-name.on{color:var(--ink)}
-.rd{font-size:10px;margin-top:10px}
-.db{margin-top:14px;padding-top:20px}
-.dbd{font:600 13px/1 var(--mono);letter-spacing:.01em}
-.dbv{font-size:11px}
-.dbm{gap:18px;margin-top:30px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
-.mt{padding:13px 0 0;border-top-width:1px}
-.mt .r{font-weight:600;font-size:26px;color:var(--ink)!important;letter-spacing:-.04em}
-.mt .n{font-size:11px;margin-top:8px;color:var(--dim)}
-.mt .raw{font-size:10px;margin-top:4px}
-.mt.na .r{color:var(--muted)!important}
-.dbr{padding-top:12px;gap:10px 16px}
-.dbr b{font-size:12px;font-weight:600;line-height:1.5}
-.rules{margin-top:16px}
-.rules button{padding:9px 11px;font-weight:600}
-.pickline{line-height:1.7;margin-bottom:16px}
-@media (max-width:1100px){
- .head2{grid-template-columns:minmax(0,1fr);gap:18px}
- .nowcol{margin:0;padding:12px 16px;max-height:200px;display:grid;grid-template-columns:85px minmax(0,1fr);gap:14px}
- .nowcol .lanehead{align-self:start;margin:4px 0 0}
- .nt{padding:10px 0}.nt:first-child{padding-top:0}
- .tbl{font-size:12px}.tbl td svg{width:64px}
-}
-@media (max-width:820px){
- .main{padding:22px 20px 94px}.main > .bar{padding-bottom:18px;margin-bottom:20px}
- .panel{padding:20px 16px 16px}.tbl{font-size:11px}.tbl th,.tbl td{padding-right:8px}
- .tbl td svg{width:48px}.tbl td.nm{font-size:12px}.now{font-size:38px}
- .sectionhead span{font-size:9px}
-}
-/* ==== additions: the target line, the weak measure, the levers grid from the mock, the three lines ==== */
-.target{font:600 11px/1.7 var(--mono);color:var(--dim);margin:-14px 0 12px}.target b{color:var(--ink)}.target:empty{display:none}
-.mt{cursor:pointer}.mt.wk .n{color:var(--leak)}.mt.open .n{color:var(--teal)}
-.rules .px{width:30px;padding:0;height:30px;font-size:13px}
+/* goal page additions */
+.hero .side .tg{display:grid;grid-template-columns:auto auto;gap:4px 14px;font:400 12px/1.4 var(--mono);color:var(--dim)}
+.hero .side .tg b{font-weight:400;color:var(--ink)}
+.hero .side .tg .neg{color:var(--leak)}.hero .side .tg .pos{color:var(--teal)}
+.tiles{grid-template-columns:repeat(5,1fr)}
+.t{cursor:pointer}
+.t.on{background:#0f1518;border-color:var(--edge2)}
+.t.weak{border-top-color:var(--leak)}
+.t .wk{font:400 9px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--leak);margin-top:8px}
 
 /* the levers grid */
 .lv{margin-top:28px;border-top:1px solid var(--edge)}
-.lv:empty{display:none}
-.lv .row{display:grid;gap:0;align-items:stretch;border-bottom:1px solid var(--edge)}
+.lv .row{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(5,minmax(0,1fr)) 78px;gap:0;align-items:stretch;border-bottom:1px solid var(--edge)}
 .lv .row.h{border-bottom:1px solid var(--edge2)}
 .lv .row.h > div{padding:12px 8px 8px;font:400 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv .row.h > div.weak{color:var(--leak);box-shadow:inset 0 -2px 0 var(--leak)}
@@ -239,118 +122,116 @@ a{color:inherit;text-decoration:none}
 .lv .name b{display:block;font:400 16px/1.25 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv .name span{display:block;font:400 10.5px/1 var(--mono);color:var(--muted);letter-spacing:.06em;margin-top:6px;white-space:nowrap}
 .lv .name span em{font-style:normal;color:var(--dim)}
-.lv .name .end{background:none;border:1px solid var(--edge2);color:var(--dim);font:600 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:4px 7px;margin-left:8px;cursor:pointer;vertical-align:middle}
-.lv .name .end:hover{border-color:var(--teal);color:var(--teal)}
 .lv .c{padding:12px 8px 10px;min-width:0;cursor:pointer;border:1px solid transparent;transition:background .18s,border-color .18s}
 .lv .c:hover{background:rgba(255,255,255,.025)}
 .lv .c.sel{background:rgba(255,255,255,.04);border-color:var(--edge2);animation:pop .32s cubic-bezier(.2,.9,.2,1)}
-@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
 .lv .c b{display:block;font:300 26px/1 var(--ui);color:var(--muted);letter-spacing:-.01em}
 .lv .c b.pos{color:var(--teal)}.lv .c b.neg{color:var(--leak)}.lv .c b.tan{color:var(--amber)}.lv .c b.mid{color:var(--dim)}
-.lv .c b small{font:400 11px/1 var(--mono)}
-.dots{display:flex;gap:3px;margin-top:9px}
-.dots i{width:7px;height:7px;background:var(--edge2)}
-.dots i.on{background:var(--dim)}
-.dots.pos i.on{background:var(--teal)}.dots.neg i.on{background:var(--leak)}.dots.tan i.on{background:var(--amber)}
 .lv .c .dots{margin-top:8px}
 .lv .sum{padding:12px 0 10px 8px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px}
 .lv .sum b{font:300 26px/1 var(--ui);letter-spacing:-.01em;color:var(--muted)}
 .lv .sum b.pos{color:var(--teal)}.lv .sum b.neg{color:var(--leak)}
 .lv .sum svg{width:14px;height:14px}
-.lv .sum .k{color:var(--muted)}
-.lv .sum .k svg{opacity:.55}
 .lv .next{display:grid;grid-template-columns:minmax(150px,1.4fr) 1fr;padding:14px 0 14px 12px;border-left:2px solid var(--leak);margin-top:10px;align-items:center}
 .lv .next .k{font:400 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .lv .next b{font:400 16px/1.2 var(--ui);color:var(--leak)}
-@media (max-width:700px){.lv .c b,.lv .sum b{font-size:18px}.lv .name b{font-size:14px}}
-.stage.fo svg{animation:fade .35s ease}
-@keyframes fade{from{opacity:.35}to{opacity:1}}
-.stage .trend{animation:drawline 2.4s cubic-bezier(.4,0,.2,1) .5s forwards}
-@keyframes drawline{to{stroke-dashoffset:0}}
-.stage .pct{opacity:0;animation:fadein .7s ease 2.4s forwards}
-@keyframes fadein{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.lv .c.sel,.stage.fo svg{animation:none}.stage .trend{stroke-dashoffset:0!important;animation:none}.stage .pct{opacity:1;animation:none}}
-
-/* the three lines: a reading, a commit, a goal. one line each, no headings */
-.lines{margin-top:34px}
-.line{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-top:14px}
-.line input,.line select{flex:1 1 160px;min-width:0;background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:500 22px/1.2 var(--ui);padding:6px 0;border-radius:0}
-.line select,.line input[type=date]{flex:0 1 150px;font:600 13px/1.6 var(--mono);color:var(--dim);color-scheme:dark;background:var(--ground)}
-.line input.small{flex:0 1 110px}
-.line input::placeholder{color:var(--muted);font-weight:500}
-.line input:focus,.line select:focus{border-bottom-color:var(--teal);outline:0}
-.line button[type=submit]{flex:0 0 74px;background:none;border:1px solid var(--edge2);color:var(--ink);font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:14px 0;cursor:pointer}
-.line button[type=submit]:hover{border-color:var(--teal);color:var(--teal)}
-.line button[disabled]{opacity:.35;cursor:default}
-.line .picks{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}
-.picks button{background:none;border:1px solid var(--edge2);color:var(--muted);font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:8px 10px;cursor:pointer}
-.picks button:hover{color:var(--ink);border-color:var(--dim)}
-.picks button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
-.picks button.off{border-style:dashed}
-.msg{font:600 11px/1.6 var(--mono);color:var(--muted);margin:8px 0 0;min-height:1.6em;letter-spacing:.04em}
-.msg.bad{color:var(--leak)}.msg.good{color:var(--teal)}
-.hide{display:none!important}
-@media (max-width:820px){.main{padding:20px 16px 60px}}
+@media (max-width:700px){.lv .row{grid-template-columns:minmax(120px,1.2fr) repeat(5,minmax(0,1fr)) 60px}.lv .c b,.lv .sum b{font-size:18px}.lv .name b{font-size:14px}.tiles{grid-template-columns:repeat(5,1fr)}.t b{font-size:20px}}
+.line{grid-template-columns:minmax(0,1fr) 150px 74px}
+.line + .line{margin-top:14px}
 </style>
 
-<div class="app">
-<div class="main" id="main">
-<div class="bar">
-  <a class="brand" href="you.html"><span class="brand-mark" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M2 13h5l3-8 4 14 3-6h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>The Wire</a>
-  <span class="bar-title">Overview</span>
-  <button class="tog" id="out" type="button">sign out</button>
-</div>
+<style>
+/* ---- the Wire's additions to the mock. everything above is the mock's own stylesheet, unchanged ---- */
 
-<div class="head2">
-  <div>
-    <div class="sectionhead"><h1>Goals</h1></div>
-    <div class="tw"><table class="tbl" id="tbl" aria-label="every goal"></table></div>
-  </div>
-  <div class="nowcol">
-    <div class="lanehead"><span class="lab">now</span><span class="lab" id="nowcount"></span></div>
-    <div class="notices" id="notices"></div>
-  </div>
-</div>
+/* the goals: the rail as it was at c3ab42d, thin rows above the number */
+.rail{margin-top:22px}
+.tbl{width:100%;border-collapse:collapse;font:400 11px/1.4 var(--mono)}
+.tbl td{height:48px;padding:11px 10px 11px 8px;border-bottom:1px solid var(--edge);vertical-align:middle;white-space:nowrap}
+.tbl td:last-child{padding-right:0}
+.tbl td.r{text-align:right}
+.tbl td.nm{font:500 13px/1.2 var(--ui);max-width:220px;min-width:105px;overflow:hidden;text-overflow:ellipsis}
+.tbl td.g{width:28px}
+.tbl td svg{display:block;width:58px;height:26px;margin-left:auto}
+.tbl td.g svg{width:12px;height:12px}
+.tbl tr.row{cursor:pointer;outline:0}
+.tbl tr.row:hover td{background:#171c1f}
+.tbl tr.row:hover td.nm{color:var(--amber)}
+.tbl tr.on td{background:#1b201f}
+.tbl tr.on td:first-child{box-shadow:inset 2px 0 var(--amber)}
+.tbl tr.on td.nm{color:var(--amber)}
+.tbl tr.row:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
 
-<div class="panel" id="panel">
-  <div class="tick"><span class="sym" id="sym">YOU</span><span class="now" id="now">&#183;&#183;</span><span class="delta" id="delta"></span></div>
-  <div class="target" id="target"></div>
-  <div class="stage" id="stage"><svg id="c" viewBox="0 0 1000 300" role="img" aria-label="the index across every day, 100 at your usual, ten points one step"></svg></div>
-  <div class="dstrip axis" id="dstrip" tabindex="0" aria-label="every day"></div>
-  <div class="rd" id="rd">&nbsp;</div>
-  <div id="emptyBox"></div>
+/* the levers grid holds as many measures as the goal has */
+.lv .row{grid-template-columns:minmax(150px,1.4fr) repeat(var(--n,5),minmax(0,1fr)) 78px}
+.lv.many .c b,.lv.many .sum b{font-size:20px}
+.lv .end{display:block;background:none;border:1px solid var(--edge2);color:var(--dim);font:400 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:4px 7px;margin-top:8px;cursor:pointer}
+.lv .end:hover{border-color:var(--teal);color:var(--teal)}
+@media (max-width:700px){.lv{overflow-x:auto}.lv .row{grid-template-columns:minmax(120px,1.2fr) repeat(var(--n,5),minmax(0,1fr)) 60px;min-width:calc(180px + var(--n,5) * 48px)}}
+
+/* a focused measure shows its rule */
+.rules{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.rules:empty{display:none}
+.rules button{background:none;border:1px solid var(--edge2);color:var(--muted);font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:9px 11px;cursor:pointer}
+.rules button:hover{color:var(--ink);border-color:var(--dim)}
+.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
+.rules input{width:84px;background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 18px/1.2 var(--ui);padding:4px 0;margin-left:8px;border-radius:0}
+.rules input:focus{border-bottom-color:var(--teal);outline:0}
+
+/* the three lines */
+.line select{background:var(--ground);border:0;border-bottom:1px solid var(--edge2);color:var(--dim);font:400 13px/1.2 var(--mono);padding:9px 0;width:100%;min-width:0;border-radius:0;color-scheme:dark}
+.line select:focus{border-bottom-color:var(--teal);outline:0}
+select:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+.line input[type=date]{color-scheme:dark}
+.line.c4{grid-template-columns:minmax(0,1fr) 150px 150px 74px}
+.line.new{grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr) 90px 74px}
+.line .picks{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.line .picks button{padding:8px 10px;font:400 10px/1 var(--mono);letter-spacing:.12em;color:var(--muted)}
+.line .picks button:hover{color:var(--ink);border-color:var(--dim)}
+.line .picks button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
+.line .picks button.off{border-style:dashed}
+.line button[disabled]{opacity:.35;cursor:default}
+.line .bad,.line .bad:focus,.rules .bad,.rules .bad:focus{border-bottom-color:var(--leak)}
+.line .picks.bad button{border-color:var(--leak)}
+.err{font:400 11px/1.6 var(--mono);letter-spacing:.04em;color:var(--leak);margin:14px 0 0;min-height:1.6em}
+@media (max-width:520px){.line.c4,.line.new{grid-template-columns:1fr 1fr}}
+</style>
+
+<div class="main">
+  <div class="bar">
+    <p class="eyebrow" id="eyebrow">YOU</p>
+    <button class="out" id="out" type="button">sign out</button>
+  </div>
+
+  <div class="rail"><table class="tbl" id="tbl" aria-label="goals"></table></div>
+
+  <div class="hero" id="hero"></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="rules" id="rules"></div>
+  <div class="chart"><svg id="c" viewBox="0 0 680 230" aria-label="the goal on the index scale with levers as ticks"></svg></div>
+
   <div class="lv" id="lv"></div>
-  <div id="dayboard"></div>
-  <div id="rulebox"></div>
-</div>
 
-<div class="lines">
   <form class="line" id="padf">
-    <select id="pstock"></select>
-    <input id="pname" class="hide" placeholder="name" autocomplete="off" spellcheck="false">
-    <input id="punit" class="small hide" placeholder="unit" autocomplete="off" spellcheck="false">
-    <input id="pval" placeholder="0" autocomplete="off" spellcheck="false" required>
+    <input id="pval" type="text" placeholder="82.1" autocomplete="off" spellcheck="false">
+    <select id="pstock" aria-label="stock"></select>
+    <input id="pname" type="text" placeholder="weight_kg" autocomplete="off" spellcheck="false" hidden>
+    <input id="punit" type="text" placeholder="kg" autocomplete="off" spellcheck="false" hidden>
     <button id="padd" type="submit">add</button>
   </form>
-  <p class="msg" id="padmsg"></p>
-  <form class="line" id="cmf">
-    <input id="cwhat" placeholder="creatine" autocomplete="off" spellcheck="false" required>
-    <input id="cfrom" type="date" required>
-    <input id="cto" type="date">
+  <form class="line c4" id="cmf">
+    <input id="cwhat" type="text" placeholder="creatine" autocomplete="off" spellcheck="false">
+    <input id="cfrom" type="date" aria-label="from">
+    <input id="cto" type="date" aria-label="to">
     <button id="cadd" type="submit">add</button>
   </form>
-  <p class="msg" id="cmmsg"></p>
-  <form class="line" id="goalf">
-    <input id="gname" placeholder="body" autocomplete="off" spellcheck="false" required>
-    <select id="gtm"></select>
-    <input id="gtv" class="small" placeholder="84" autocomplete="off" spellcheck="false">
-    <button id="gadd" type="submit">declare</button>
+  <form class="line c4" id="goalf">
+    <input id="gname" type="text" placeholder="body" autocomplete="off" spellcheck="false">
+    <select id="gtm" aria-label="target"></select>
+    <input id="gtv" type="text" placeholder="84" autocomplete="off" spellcheck="false">
+    <button id="gadd" type="submit">add</button>
     <div class="picks" id="gpicks"></div>
   </form>
-  <p class="msg" id="goalmsg"></p>
-</div>
-<div id="msg"></div>
-</div>
+  <p class="err" id="err"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -358,330 +239,302 @@ a{color:inherit;text-decoration:none}
 <script src="you-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
-const esc=s=>String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-const MON=['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-const WD=['sun','mon','tue','wed','thu','fri','sat'], wd=d=>WD[new Date(d+'T00:00:00Z').getUTCDay()];
-const TODAY=new Date().toISOString().slice(0,10);
-const SCAN_BAR=3.3;
-const $=id=>document.getElementById(id);
-const fmt=v=>v==null?'&#183;&#183;':(Math.round(v*10)/10).toString();
-/* the index in one word. 100 is your usual, ten points is one step of your own variation */
-const wordOfRank=r=>r==null?{w:'',cls:'mu'}:r>=110?{w:'high',cls:'pos'}:r<=90?{w:'low',cls:'neg'}:{w:'normal',cls:'mu'};
-const sgn=v=>Number.isFinite(v)?(v>=0?'+':'')+(Math.round(v*10)/10):'&#183;&#183;';
-const colour=v=>v==null?null:v<90?'#c9695c':v<110?'#232a30':'#c9a25a';
-const addDays=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
-const UP='<svg viewBox="0 0 12 12"><path d="M6 2L11 10H1z" fill="currentColor"/></svg>', DOWN='<svg viewBox="0 0 12 12"><path d="M6 10L1 2h10z" fill="currentColor"/></svg>', FLAT='<svg viewBox="0 0 12 12"><rect x="1" y="5" width="10" height="2" fill="currentColor"/></svg>';
-/* the pad's own name rule, the same as pad.html */
-const slug=s=>s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
-function remember(m){ try{ localStorage.setItem('wire.pad.metric',m); }catch(e){} }
-function remembered(){ try{ return localStorage.getItem('wire.pad.metric'); }catch(e){ return null; } }
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TODAY = new Date().toISOString().slice(0, 10);
+const MON = ['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-/* ---------- what the ledger says ---------- */
-let ALL=[], RULES={}, COMMITS=[], GOALS=[], SERIES={}, OWNED=[], YOU=[], RAW=[], DAYS=[], DI={}, N=0;
-const YOU_ID='YOU';   /* slugs are lower case, so no goal can take this id */
-let sel=YOU_ID, FOCUS=null, FO=null, OPEN=null, BAND=false, GPICK=new Set(), DAYPIN=0, X0=0, X1=0;
-/* the goal on screen. YOU is the goal made of every declared stock */
-const cur=()=>{ if(sel===YOU_ID) return {id:YOU_ID,name:'YOU',measures:OWNED,target:null,pts:YOU}; const g=GOALS.find(x=>x.id===sel); return {...g,pts:goalSeries(g,SERIES)}; };
-const scoredOf=t=>t.measures.filter(m=>SERIES[m]);
-const lastPt=pts=>pts.length?pts[pts.length-1]:null;
-const lastRaw=m=>RAW.filter(r=>r.metric===m).slice(-1)[0]||null;
-/* every calendar day from the first reading to the last, so a gap is a gap */
-function buildDays(){ const all=[...new Set(OWNED.flatMap(m=>SERIES[m].map(p=>p.day)))].sort(); DAYS=[]; DI={};
-  if(!all.length){ N=0; return; } let d=all[0]; const last=all[all.length-1]>TODAY?all[all.length-1]:TODAY;
-  while(d<=last){ DI[d]=DAYS.length; DAYS.push(d); d=addDays(d,1); } N=DAYS.length; }
-const arrOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.rank; }); return a; };
-const valOf=pts=>{ const a=new Array(N).fill(null); pts.forEach(p=>{ if(DI[p.day]!=null) a[DI[p.day]]=p.value; }); return a; };
-/* the move over the last seven readings */
+// The mock's glyphs and its word for an index: 100 is your usual, ten points one step.
+const UP = '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M6 2L11 10H1z" fill="#5fc4b4"/></svg>';
+const DOWN = '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M6 10L1 2h10z" fill="#c9695c"/></svg>';
+const FLAT = '<svg viewBox="0 0 12 12" width="12" height="12"><rect x="1" y="5" width="10" height="2" fill="#e6e3dc"/></svg>';
+const word = r => r==null?{w:'',cls:''}:r>=110?{w:UP,cls:'pos'}:r<=90?{w:DOWN,cls:'neg'}:{w:FLAT,cls:''};
+const COLS = ['#e6e3dc','#5fc4b4','#c9a25a','#8d959a','#7f8a90'];
+const sgn = v => (v>=0?'+':'')+(Math.round(v*10)/10);
+const num = v => Number.isInteger(v) ? String(v) : Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v*100)/100);
+// the pad's own name rule, the same as pad.html
+const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+function remember(m){ try { localStorage.setItem('wire.pad.metric', m); } catch (e) {} }
+function remembered(){ try { return localStorage.getItem('wire.pad.metric'); } catch (e) { return null; } }
+
+// ---- what the ledger says. every number below comes from you-reader.js ----
+const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
+let ALL = [], RULES = {}, COMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {};
+let SEL = YOU_ID, FOCUS = null, BAND = false, GPICK = new Set();   // FOCUS: { c, m } a commit and a measure, { c, m:null } a commit on the goal, { c:null, m } a measure
+let D0 = 0, N = 0;   // the first day the chart can reach, as a day number, and how many days it holds
+
+async function load(){
+  const [all, rules, commits, goals] = await Promise.all([readMetrics(db), readRules(db), readCommits(db), readGoals(db)]);
+  const rows = all.length ? await readDays(db, all) : [];
+  ALL = all; RULES = rules; COMMITS = commits; GOALS = goals;
+  SERIES = rankSeries(rows, rules); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
+  LAST = {}; for (const r of rows) LAST[r.metric] = r;                // readDays is oldest first
+  const { data: u } = await db.from('events').select('metric, unit').eq('event_type', 'measurement').not('unit', 'is', null).order('occurred_at', { ascending: true }).limit(20000);
+  UNITS = {}; for (const r of u || []) UNITS[r.metric] = r.unit;
+  // the last 90 days, reaching back further only to hold a reading or a commit's before
+  const t = dayNum(TODAY); let lo = t - 89;
+  for (const m of OWNED) lo = Math.min(lo, dayNum(SERIES[m][0].day));
+  for (const c of COMMITS){ const s = dayNum(c.from), e = Math.min(dayNum(c.to || TODAY), t); lo = Math.min(lo, s - Math.max(2, e - s + 1)); }
+  D0 = lo; N = t - lo + 1;
+  if (!(SEL === YOU_ID || GOALS.some(g => g.id === SEL))) SEL = YOU_ID;
+  if (FOCUS && FOCUS.c && !COMMITS.some(c => c.id === FOCUS.c)) FOCUS = null;
+}
+const dstr = n => new Date(n * 864e5).toISOString().slice(0, 10);
+const arrOf = pts => { const a = new Array(N).fill(null); for (const p of pts){ const i = dayNum(p.day) - D0; if (i >= 0 && i < N) a[i] = p.rank; } return a; };
+// YOU is the goal made of every declared stock
+const cur = () => SEL === YOU_ID ? { id: YOU_ID, name: 'YOU', measures: OWNED, target: null } : GOALS.find(g => g.id === SEL);
+const pointsOf = g => g.id === YOU_ID ? YOU : goalSeries(g, SERIES);
+const say = m => { $('err').textContent = m || ''; };
+
+function render(){ const g = cur(); $('eyebrow').textContent = g.name; drawRail(); drawHero(g); draw(); drawLines(); }
+function draw(){ const g = cur(); drawTiles(g); drawRules(g); drawLevers(g); drawChart(g); }
+
+// ---- the rail: YOU, then every goal. a name, the index, a glyph, the line ----
 function moveOf(pts){ if(pts.length<8) return null; return Math.round((pts[pts.length-1].rank-pts[pts.length-8].rank)*10)/10; }
-function pinDay(t){ const ms=scoredOf(t); DAYPIN=ms.length?Math.max(0,...ms.map(m=>DI[lastPt(SERIES[m]).day]??0)):0; }
-function say(m){ $('msg').innerHTML=m?`<p class="err">${esc(m)}</p>`:''; }
-const note=id=>(m,kind)=>{ const el=$(id); el.textContent=m||''; el.className='msg'+(kind?' '+kind:''); };
-const pmsg=note('padmsg'), cmsg=note('cmmsg'), gmsg=note('goalmsg');
-
-/* the focus: a commit, and one of the goal's measures or the goal itself. the chart closes in on the
-   days it ran and the same number of days before, which is exactly what testCommit compares */
-function focusOf(t){ const c=FOCUS&&COMMITS.find(x=>x.id===FOCUS.c); if(!c||!N) return null;
-  const d0=dayNum(DAYS[0]), s=dayNum(c.from)-d0, e=Math.min(dayNum(c.to||TODAY)-d0,N-1); if(e<0) return null;
-  const dur=Math.max(2,e-s+1); return {c,m:FOCUS.m&&SERIES[FOCUS.m]?FOCUS.m:null,s,e,i0:Math.max(0,s-dur),i1:Math.min(N-1,e)}; }
-const lineOf=t=>FO&&FO.m?SERIES[FO.m]:t.pts;
-const lineName=t=>FO&&FO.m?FO.m:t.name;
-
-function render(){ const t=cur(); FO=focusOf(t); X0=FO?FO.i0:0; X1=FO?FO.i1:Math.max(N-1,0);
-  drawTable(); head(t); drawStrip(t); drawChart(t); hookup(t); drawLevers(t); drawDayBoard(t,DAYPIN); drawRules(t); drawNotices(t); drawLines(); }
-
-/* ---------- the rail: YOU, then every goal. a number, a glyph, a line ---------- */
 function spark(pts){ const a=pts.slice(-45); if(a.length<3) return '<svg viewBox="0 0 60 28"></svg>';
   const v=a.map(p=>p.rank); let lo=Math.min(...v,100),hi=Math.max(...v,100); const span=(hi-lo)||1; const w=60,h=28;
   const d=a.map((p,i)=>(i?'L':'M')+(i*w/(a.length-1)).toFixed(1)+' '+(2+(hi-p.rank)*(h-4)/span).toFixed(1)).join(' ');
   const m=moveOf(pts); const col=(m!=null&&m<0)?'#c9695c':'#c9a25a';
   return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${(2+(hi-100)*(h-4)/span).toFixed(1)}" x2="${w}" y2="${(2+(hi-100)*(h-4)/span).toFixed(1)}" stroke="#2c363d" stroke-dasharray="2 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
-function drawTable(){
-  const row=(id,name,pts)=>{ const p=lastPt(pts), m=moveOf(pts), g=m==null?['&#183;','k']:m>0?['&#8593;','pos']:m<0?['&#8595;','neg']:['&#8594;','k'];
-    return `<tr class="row${id===sel?' on':''}" data-id="${esc(id)}" tabindex="0"><td class="nm">${esc(name)}</td><td class="r">${p?p.rank:'&#183;&#183;'}</td><td class="r ${g[1]}">${g[0]}</td><td>${spark(pts)}</td></tr>`; };
-  $('tbl').innerHTML=`<tbody>`+row(YOU_ID,'YOU',YOU)+GOALS.map(g=>row(g.id,g.name,goalSeries(g,SERIES))).join('')+`</tbody>`;
-  document.querySelectorAll('#tbl tr.row').forEach(el=>{ const go=()=>{ sel=el.dataset.id; FOCUS=null; OPEN=null; BAND=false; const t=cur(); pinDay(t); fillGoalLine(t); render(); };
-    el.onclick=go; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
+function drawRail(){
+  const row = (id, name, pts) => { const p = pts[pts.length-1], w = word(p ? p.rank : null);
+    return `<tr class="row${id === SEL ? ' on' : ''}" data-id="${esc(id)}" tabindex="0"><td class="nm">${esc(name)}</td><td class="r">${p ? p.rank : '&#183;'}</td><td class="g">${w.w}</td><td>${spark(pts)}</td></tr>`; };
+  $('tbl').innerHTML = row(YOU_ID, 'YOU', YOU) + GOALS.map(g => row(g.id, g.name, goalSeries(g, SERIES))).join('');
+}
+function pickGoal(id){ SEL = id; FOCUS = null; BAND = false; say(''); fillGoalLine(); render(); }
+
+// ---- hero ----
+function drawHero(g){
+  const pts = pointsOf(g), last = pts[pts.length-1], w = word(last ? last.rank : null);
+  let tg = '';
+  if (g.target){ const t = g.target, unit = UNITS[t.metric] ? ' ' + esc(UNITS[t.metric]) : '', lr = LAST[t.metric];
+    const shown = t.value != null ? num(t.value) : `${num(t.lo)}&#8211;${num(t.hi)}`;
+    if (!lr) tg = `<span>${shown}${unit}</span><b>&#183;</b><span></span><b>empty</b>`;
+    else { const now = Number(lr.mean), age = dayNum(TODAY) - dayNum(lr.day);
+      const gap = Math.round((t.value != null ? now - t.value : now < t.lo ? now - t.lo : now > t.hi ? now - t.hi : 0) * 100) / 100;
+      const g2 = age > STALE_DAYS ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+gap.toFixed(1)}</b>`;
+      tg = `<span>${shown}${unit}</span><b>${num(now)}</b><span>${lr.day.slice(5)}</span>${g2}`; } }
+  $('hero').innerHTML = `<div class="big ${w.cls}">${last ? last.rank : '&#183;'}</div>
+   <div class="side"><div class="l">${esc(g.name)}</div><div class="w ${w.cls}">${w.w}</div>${tg ? `<div class="tg">${tg}</div>` : ''}</div>`;
 }
 
-/* ---------- the number, the word, the target ---------- */
-function head(t){
-  const p=lastPt(t.pts), w=wordOfRank(p?p.rank:null);
-  $('sym').textContent=t.name; $('now').innerHTML=p?p.rank:'&#183;&#183;';
-  const el=$('delta'); el.innerHTML=w.w; el.style.color=w.cls==='pos'?'var(--teal)':w.cls==='neg'?'var(--leak)':'var(--muted)';
-  const tg=t.target, box=$('target'); if(!tg){ box.innerHTML=''; return; }
-  const lr=lastRaw(tg.metric), now=lr?Number(lr.mean):null, age=lr?dayNum(TODAY)-dayNum(lr.day):null;
-  const shown=tg.value!=null?tg.value:`${tg.lo}&#8211;${tg.hi}`;
-  if(now==null){ box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; empty`; return; }
-  if(age>STALE_DAYS){ box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; <b>${Math.round(now*100)/100}</b> &#183; ${lr.day.slice(5)} &#183; stale`; return; }
-  let gap;
-  if(tg.value!=null){ const g=Math.round((tg.value-now)*100)/100; gap=g>0?`<b>${g}</b> under`:g<0?`<b>${-g}</b> over`:'<b>met</b>'; }
-  else gap=now<tg.lo?`<b>${Math.round((tg.lo-now)*100)/100}</b> under`:now>tg.hi?`<b>${Math.round((now-tg.hi)*100)/100}</b> over`:'<b>inside</b>';
-  box.innerHTML=`<span class="lab">target</span> <b>${esc(tg.metric)}</b> ${shown} &#183; <b>${Math.round(now*100)/100}</b> &#183; ${lr.day.slice(5)} &#183; ${gap}`;
+// ---- measures, listed ----
+function drawTiles(g){
+  const weak = weakPoint(g, SERIES), today = dayNum(TODAY);
+  $('tiles').innerHTML = g.measures.map(m => { const pts = SERIES[m] || [], last = pts[pts.length-1], w = word(last ? last.rank : null), lr = LAST[m];
+    const p = arrOf(pts).slice(-30), vv = p.filter(v => v != null), lo = Math.min(...vv), hi = Math.max(...vv);
+    let path = '', on = false; p.forEach((v,j) => { if (v == null){ on = false; return; } const x = j*(120/29), y = 24-((v-lo)/((hi-lo)||1))*22; path += (on?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' '; on = true; });
+    const sel = FOCUS && !FOCUS.c && FOCUS.m === m, isWeak = weak && weak.metric === m;
+    const state = !SERIES[m] ? (RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : lr ? 'unscored' : 'empty') : today - dayNum(last.day) > STALE_DAYS ? 'stale' : '';
+    return `<div class="t ${w.cls} ${sel?'on':''} ${isWeak?'weak':''}" data-m="${esc(m)}"><div class="n">${esc(m)}</div><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>
+      <div class="w">${state ? `<span style="font:400 10px/1 var(--mono);color:var(--muted)">${state}</span>` : w.w}</div>
+      ${vv.length?`<svg viewBox="0 0 120 26" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="${w.cls==='pos'?'#5fc4b4':w.cls==='neg'?'#c9695c':'#5c656b'}" stroke-width="1.4"/></svg>`:`<svg viewBox="0 0 120 26"></svg>`}
+      ${isWeak?'<div class="wk">weak</div>':''}</div>`; }).join('');
+}
+// the rule of the focused measure: up, down, band, ignore. writeRule, the same row the rules have always been
+function drawRules(g){
+  const box = $('rules'), m = FOCUS && !FOCUS.c && g.measures.includes(FOCUS.m) ? FOCUS.m : null;
+  if (!m){ box.innerHTML = ''; return; }
+  const r = RULES[m], k = r && r.kind, b = kind => `<button type="button" data-k="${kind}" aria-pressed="${k === kind}">${kind}</button>`;
+  box.innerHTML = b('up') + b('down') + b('band') + b('ignore') + (BAND ? `<input id="lo" type="number" step="any" aria-label="low" value="${r && r.lo != null ? r.lo : ''}"><input id="hi" type="number" step="any" aria-label="high" value="${r && r.hi != null ? r.hi : ''}"><button type="button" data-k="save">set</button>` : '');
+  box.dataset.m = m;
+}
+async function setRule(m, kind){
+  if (kind === 'band'){ if (!BAND){ BAND = true; drawRules(cur()); } const el = $('lo'); if (el) el.focus(); return; }
+  let rule = { kind };
+  if (kind === 'save'){ const loEl = $('lo'), hiEl = $('hi'), ls = loEl.value.trim(), hs = hiEl.value.trim(), lo = Number(ls), hi = Number(hs);
+    if (!ls || !Number.isFinite(lo)){ bad(loEl); return; }
+    if (!hs || !Number.isFinite(hi) || hi <= lo){ bad(hiEl); return; }
+    rule = { kind: 'band', lo, hi }; }
+  else if (RULES[m] && RULES[m].kind === kind) return;          // already the rule, nothing to write
+  const { error } = await writeRule(db, m, rule); if (error){ say(error.message); return; }
+  BAND = false; say(''); await load(); render();
 }
 
-/* ---------- the day strip and the day read ---------- */
-function drawStrip(t){
-  const box=$('dstrip'); if(!N){ box.innerHTML=''; return; } const arr=arrOf(lineOf(t)); const seen={}; let lastM=-99, cells='', months=''; const span=X1-X0+1;
-  for(let i=X0;i<=X1;i++){ const d=DAYS[i], col=colour(arr[i]);
-    cells+=`<i data-i="${i}" class="${col?'':'e'}${i===DAYPIN?' on':''}" style="${col?`background:${col}`:''}" title="${d}"></i>`;
-    const m=d.slice(0,7); if(!(m in seen)){ seen[m]=1; if(i===X0||i-lastM>=span*0.06){ months+=`<span style="left:${((i-X0)/span*100).toFixed(2)}%">${MON[+m.slice(5)]}</span>`; lastM=i; } } }
-  box.innerHTML=`<div class="cells">${cells}</div><div class="months">${months}</div>`;
-  const cs=box.querySelector('.cells');
-  cs.querySelectorAll('i').forEach(el=>{ el.onclick=()=>{ DAYPIN=+el.dataset.i; drawDayBoard(t,DAYPIN); }; el.onpointerenter=()=>drawDayBoard(t,+el.dataset.i); });
-  cs.onpointerleave=()=>drawDayBoard(t,DAYPIN);
-  box.onkeydown=e=>{ if(e.key==='ArrowLeft'){ e.preventDefault(); DAYPIN=Math.max(X0,DAYPIN-1); drawDayBoard(t,DAYPIN); } if(e.key==='ArrowRight'){ e.preventDefault(); DAYPIN=Math.min(X1,DAYPIN+1); drawDayBoard(t,DAYPIN); } };
-}
-function runningOn(d){ const x=dayNum(d); return COMMITS.filter(c=>dayNum(c.from)<=x&&dayNum(c.to||TODAY)>=x); }
-/* the measures as they stood that day, best to worst. click one to set its rule */
-function drawDayBoard(t,i){
-  const box=$('dayboard'); if(!N||!t.measures.length){ box.innerHTML=''; return; } const d=DAYS[i], yv=arrOf(t.pts)[i], weak=weakPoint(t,SERIES);
-  const ks=t.measures.map(m=>{ const pts=SERIES[m]; const p=pts?pts.find(q=>q.day===d):null; const raw=pts?null:RAW.find(r=>r.metric===m&&r.day===d);
-    return {k:m,v:p?p.rank:null,raw:p?p.value:(raw?Number(raw.mean):null),scored:!!pts}; });
-  const have=ks.filter(x=>x.v!=null).sort((a,b)=>b.v-a.v), miss=ks.filter(x=>x.v==null);
-  const tile=(x,j)=>{ const col=colour(x.v); const lastp=(x.v==null&&SERIES[x.k])?lastPt(SERIES[x.k].filter(q=>q.day<d)):null; const w=wordOfRank(x.v);
-    const state=x.v!=null?`${w.w} &#183; ${Math.round(x.v)}`:!x.scored?(RULES[x.k]&&RULES[x.k].kind==='ignore'?'ignored':ALL.includes(x.k)?'unscored':'empty'):(lastp?'last '+lastp.day.slice(5):'empty');
-    return `<div class="mt${x.v==null?' na':''}${weak&&weak.metric===x.k?' wk':''}${OPEN===x.k?' open':''}" data-m="${esc(x.k)}" style="${col?`border-top-color:${col}`:''}">${have.length>1&&j===0?'<span class="lab" style="color:var(--teal)">top</span>':have.length>1&&j===have.length-1?'<span class="lab" style="color:var(--leak)">bottom</span>':''}<div class="r" style="${col?`color:${col}`:''}">${x.raw!=null?fmt(x.raw):'&#183;&#183;'}</div><div class="n">${esc(x.k)}</div><div class="raw">${state}</div></div>`; };
-  const run=runningOn(d);
-  box.innerHTML=`<div class="db">
-    <div class="dbh"><span class="dbd">${d}</span><span class="lab">${wd(d)}</span><span class="dbv">${esc(t.name)} <b>${yv==null?'&#183;&#183;':yv}</b></span></div>
-    <div class="dbm">${have.map(tile).join('')}${miss.map(x=>tile(x,-1)).join('')}</div>
-    ${run.length?`<div class="dbr"><span class="lab">running</span>${run.map(c=>`<b>${esc(c.name)}</b>`).join('')}</div>`:''}</div>`;
-  box.querySelectorAll('.mt').forEach(el=>el.onclick=()=>{ OPEN=OPEN===el.dataset.m?null:el.dataset.m; BAND=false; drawDayBoard(t,i); drawRules(t); });
-  document.querySelectorAll('#dstrip .cells i').forEach(el=>el.classList.toggle('on',+el.dataset.i===i));
-}
-/* rules: the same four, the same writeRule */
-function drawRules(t){
-  const box=$('rulebox'); if(!OPEN||!t.measures.includes(OPEN)){ box.innerHTML=''; return; }
-  const m=OPEN, r=RULES[m], k=r&&r.kind, b=(kind,text)=>`<button type="button" data-k="${kind}" aria-pressed="${k===kind}">${text}</button>`;
-  let h=`<div class="rules"><span class="lab rl">${esc(m)}</span>${b('up','up')}${b('down','down')}${b('band','band')}${b('ignore','ignore')}<button type="button" class="px" data-k="close" aria-label="close">&#215;</button></div>`;
-  if(BAND) h+=`<div class="band"><input id="lo" type="number" step="any" placeholder="low" value="${r&&r.lo!==undefined?r.lo:''}"><span class="lab">to</span><input id="hi" type="number" step="any" placeholder="high" value="${r&&r.hi!==undefined?r.hi:''}"><button type="button" class="bt go" data-k="save">set</button></div>`;
-  box.innerHTML=h; box.querySelectorAll('button[data-k]').forEach(bt=>bt.onclick=()=>setRule(m,bt.dataset.k));
-}
-async function setRule(metric,kind){
-  if(kind==='close'){ OPEN=null; BAND=false; const t=cur(); drawDayBoard(t,DAYPIN); drawRules(t); return; }
-  if(kind==='band'){ if(!BAND){ BAND=true; drawRules(cur()); } $('lo').focus(); return; }
-  let rule={kind};
-  if(kind==='save'){ const ls=$('lo').value.trim(), hs=$('hi').value.trim(), lo=Number(ls), hi=Number(hs);
-    if(!ls||!hs||!Number.isFinite(lo)||!Number.isFinite(hi)||hi<=lo){ say('low, then high'); return; } rule={kind:'band',lo,hi}; }
-  OPEN=null; BAND=false; const {error}=await writeRule(db,metric,rule); if(error){ say(error.message); return; }
-  say(''); await load(); render();
+// ---- the levers: every commit against every measure, each cell testCommit's ----
+const vcls = t => t.verdict === 'finding' ? (t.effect > 0 ? 'pos' : 'neg') : t.verdict === 'tangled' ? 'tan' : t.verdict === 'no finding' ? 'mid' : t.verdict === 'early' ? 'early' : '';
+const vdots = t => t.verdict === 'finding' || t.verdict === 'tangled' ? 3 : t.verdict === 'no finding' ? 1 : 0;
+function drawLevers(g){
+  const box = $('lv'), ms = g.measures, weak = weakPoint(g, SERIES), gp = pointsOf(g);
+  box.style.setProperty('--n', Math.max(1, ms.length)); box.classList.toggle('many', ms.length > 5);
+  let h = `<div class="row h"><div></div>${ms.map(m => `<div class="${weak && weak.metric === m ? 'weak' : ''}">${esc(m)}</div>`).join('')}<div></div></div>`;
+  h += COMMITS.map(c => { const tests = ms.map(m => SERIES[m] ? testCommit(SERIES[m], c, COMMITS, TODAY) : null), all = testCommit(gp, c, COMMITS, TODAY);
+    const rowCls = all.verdict === 'finding' ? (all.effect > 0 ? 'pos' : 'neg') : (all.verdict === 'early' || tests.some(t => t && t.verdict === 'early')) ? 'early' : '';
+    const on = FOCUS && FOCUS.c === c.id;
+    return `<div class="row l ${rowCls} ${on?'on':''}" data-c="${esc(c.id)}">
+      <div class="name"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${c.to?c.to.slice(5):'now'} &#183; <em>${c.days} d</em></span>${on && !c.to ? `<button type="button" class="end" data-end="${esc(c.id)}">end</button>` : ''}</div>
+      ${tests.map((t,j) => { const m = ms[j], sel = on && FOCUS.m === m, cl = t ? vcls(t) : '', n = t ? vdots(t) : 0;
+        const val = !t ? '&#183;' : t.verdict === 'early' ? `<small style="font:400 11px/1 var(--mono)">${t.needs} d</small>` : Number.isFinite(t.effect) ? sgn(t.effect) : '&#183;';
+        return `<div class="c ${sel?'sel':''}" data-m="${esc(m)}"><b class="${cl}">${val}</b><div class="dots ${cl}"><i class="${n>=1?'on':''}"></i><i class="${n>=2?'on':''}"></i><i class="${n>=3?'on':''}"></i></div></div>`; }).join('')}
+      <div class="sum">${all.verdict === 'finding' ? `<b class="${all.effect>=0?'pos':'neg'}">${sgn(all.effect)}</b>${all.effect>=0?UP:DOWN}` : '<b>&#183;</b>'}</div>
+    </div>`; }).join('');
+  if (weak) h += `<div class="next"><div class="k">next</div><b>${esc(weak.metric)} &#183; ${weak.rank}</b></div>`;
+  box.innerHTML = h;
 }
 
-/* ---------- the line ---------- */
-const W=1000,L=40,R=12,T=14,B=16; let H=300,AX=H-B; const px=i=>L+(i-X0)*(W-L-R)/Math.max(X1-X0,1);
-function fitChart(){ const w=$('c').getBoundingClientRect().width||1000; H=Math.round(1000*Math.max(220,Math.min(320,w*.32))/w); AX=H-B; $('c').setAttribute('viewBox',`0 0 ${W} ${H}`); }
-let YLO=80,YHI=120; const y=v=>T+(YHI-v)*(AX-T)/(YHI-YLO);
-const pathOf=v=>{let o='',pen=false;for(let i=X0;i<=X1;i++){const x=v[i];if(x==null){pen=false;continue;}o+=(pen?'L':'M')+px(i).toFixed(1)+' '+y(x).toFixed(1)+' ';pen=true;}return o;};
-function drawChart(t){
-  fitChart(); const arr=arrOf(lineOf(t)), vals=arr.slice(X0,X1+1).filter(v=>v!=null);
-  YLO=Math.floor((Math.min(...vals,100)-5)/10)*10; YHI=Math.ceil((Math.max(...vals,100)+5)/10)*10; if(!vals.length){YLO=80;YHI=120;}
-  const ticks=[]; for(let v=YLO;v<=YHI;v+=10) ticks.push(v);
-  const grid=ticks.map(v=>`<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W-R}" y2="${y(v).toFixed(1)}" stroke="${v===100?'#424b51':'#20272c'}" ${v===100?'stroke-dasharray="4 4"':''}/><text x="4" y="${(y(v)+3.5).toFixed(1)}" font-family="JetBrains Mono, monospace" font-size="10.5" fill="${v===100?'#b0b8bd':'#879198'}">${v}</text>`).join('');
-  /* every commit as a tick on the day it started. the focused one is solid, the rest fade while one is focused */
-  const marks=COMMITS.map(c=>{ const i=DI[c.from]; if(i==null||i<X0||i>X1) return ''; const on=FO&&FO.c===c;
-    return `<line x1="${px(i).toFixed(1)}" y1="${T}" x2="${px(i).toFixed(1)}" y2="${AX}" stroke="#c9a25a" stroke-width="${on?1.5:1}" ${on?'':'stroke-dasharray="2 3"'} opacity="${on?1:FO?.35:.6}"><title>${esc(c.name)} &#183; ${c.from}</title></line>`; }).join('');
-  let ov='';
-  if(FO){ const c=FO.c, r=testCommit(lineOf(t),c,COMMITS,TODAY), f=Math.max(FO.s,X0);
-    ov+=`<rect x="${px(f).toFixed(1)}" y="${T}" width="${Math.max(px(X1)-px(f),2).toFixed(1)}" height="${AX-T}" fill="#c9a25a" opacity=".06"/>`;
-    if(r.beforeMean!=null&&r.duringMean!=null){ const col=r.verdict==='finding'?(r.effect>0?'#c9a25a':'#c9695c'):'#9ba4a7';
-      ov+=`<line x1="${px(X0).toFixed(1)}" y1="${y(r.beforeMean).toFixed(1)}" x2="${px(f).toFixed(1)}" y2="${y(r.beforeMean).toFixed(1)}" stroke="#8d959a" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-      ov+=`<line x1="${px(f).toFixed(1)}" y1="${y(r.duringMean).toFixed(1)}" x2="${px(X1).toFixed(1)}" y2="${y(r.duringMean).toFixed(1)}" stroke="${col}" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-      ov+=`<line x1="${px(f).toFixed(1)}" y1="${y(r.beforeMean).toFixed(1)}" x2="${px(f).toFixed(1)}" y2="${y(r.duringMean).toFixed(1)}" stroke="${col}" stroke-width="1.5"/>`;
-      /* the trend: a straight line through the days it ran. it draws, it does not score */
-      let n=0,sx=0,sy=0,sxx=0,sxy=0; for(let i=f;i<=X1;i++){ const v=arr[i]; if(v==null) continue; n++; sx+=i; sy+=v; sxx+=i*i; sxy+=i*v; }
-      if(n>=MIN_DAYS&&n*sxx-sx*sx!==0){ const m=(n*sxy-sx*sy)/(n*sxx-sx*sx), b=(sy-m*sx)/n, y1=y(m*f+b), y2=y(m*X1+b), len=Math.hypot(px(X1)-px(f),y2-y1);
-        ov+=`<line class="trend" x1="${px(f).toFixed(1)}" y1="${y1.toFixed(1)}" x2="${px(X1).toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${col}" stroke-width="2.2" stroke-linecap="round" style="stroke-dasharray:${len.toFixed(1)};stroke-dashoffset:${len.toFixed(1)}"/>`; }
-      ov+=`<text class="pct" x="${W-R-8}" y="${T+30}" text-anchor="end" font-family="Manrope, Helvetica Neue, Arial, sans-serif" font-weight="500" font-size="32" letter-spacing="-.5" fill="${col}">${sgn(r.effect)}</text><text x="${W-R-8}" y="${T+44}" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="9" fill="#879198" letter-spacing="1.5">${r.before} &#183; ${r.during}</text>`; } }
-  $('c').innerHTML=grid+marks+ov+
-    `<path d="${pathOf(arr)}" fill="none" stroke="#e6e3dc" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
-    (()=>{ let i=X1; while(i>=X0&&arr[i]==null) i--; return i>=X0?`<circle cx="${px(i).toFixed(1)}" cy="${y(arr[i]).toFixed(1)}" r="3.2" fill="#c9a25a"/>`:''; })()+
-    `<line id="cur" x1="0" y1="${T}" x2="0" y2="${AX}" stroke="#c9a25a" stroke-width="1" opacity="0"/>`;
-  $('emptyBox').innerHTML=vals.length?'':`<div class="empty">0</div>`;
-  const st=$('stage'); st.classList.remove('fo'); void st.offsetWidth; if(FO) st.classList.add('fo');
-}
-function hookup(t){
-  const svg=$('c'), rd=$('rd'), arr=arrOf(lineOf(t)), val=valOf(lineOf(t)), name=lineName(t);
-  svg.onpointermove=e=>{ if(!N) return; const b=svg.getBoundingClientRect(); let i=X0+Math.round(((e.clientX-b.left)/b.width*W-L)/((W-L-R)/Math.max(X1-X0,1))); i=Math.max(X0,Math.min(X1,i));
-    const cl=$('cur'); if(cl){ cl.setAttribute('x1',px(i)); cl.setAttribute('x2',px(i)); cl.setAttribute('opacity','.5'); }
-    rd.innerHTML=`${DAYS[i]} &#8195; ${esc(name)} <b>${FO&&FO.m?(val[i]!=null?fmt(val[i]):'&#183;&#183;'):(arr[i]==null?'&#183;&#183;':arr[i])}</b>${arr[i]!=null?' &#8195; '+wordOfRank(arr[i]).w+' &#183; '+arr[i]:''}`; drawDayBoard(t,i); };
-  svg.onpointerleave=()=>{ const cl=$('cur'); if(cl) cl.setAttribute('opacity','0'); rd.innerHTML='&nbsp;'; drawDayBoard(t,DAYPIN); };
-}
-
-/* ---------- the levers: every commit against every measure of this goal ---------- */
-const clsOf=x=>x.verdict==='finding'?(x.effect>0?'pos':'neg'):x.verdict==='tangled'?'tan':x.verdict==='no finding'?'mid':'';
-const dotsOf=x=>x.verdict==='finding'||x.verdict==='tangled'?3:x.verdict==='no finding'?1:0;
-function drawLevers(t){
-  const box=$('lv'), ms=scoredOf(t), weak=weakPoint(t,SERIES); if(!COMMITS.length){ box.innerHTML=''; return; }
-  const cols=`grid-template-columns:minmax(150px,1.4fr) repeat(${ms.length},minmax(0,1fr)) 78px`;
-  let h=`<div class="row h" style="${cols}"><div></div>${ms.map(m=>`<div class="${weak&&weak.metric===m?'weak':''}">${esc(m)}</div>`).join('')}<div></div></div>`;
-  h+=COMMITS.map(c=>{ const r=testCommit(t.pts,c,COMMITS,TODAY), on=FOCUS&&FOCUS.c===c.id, rowCls=r.verdict==='finding'?(r.effect>0?'pos':'neg'):r.verdict==='early'?'early':'';
-    const cells=ms.map(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY), cl=clsOf(x), n=dotsOf(x), sel=on&&FOCUS.m===m;
-      const num=Number.isFinite(x.effect)?sgn(x.effect):x.verdict==='early'?`<small>${x.needs} d</small>`:'&#183;';
-      return `<div class="c${sel?' sel':''}" data-m="${esc(m)}"><b class="${cl}">${num}</b><div class="dots ${cl}"><i class="${n>=1?'on':''}"></i><i class="${n>=2?'on':''}"></i><i class="${n>=3?'on':''}"></i></div></div>`; }).join('');
-    const sc=r.verdict==='finding'?(r.effect>0?'pos':'neg'):'k';
-    const sum=Number.isFinite(r.effect)?`<b class="${sc==='k'?'':sc}">${sgn(r.effect)}</b><span class="${sc}">${r.effect>0?UP:r.effect<0?DOWN:FLAT}</span>`:'<b>&#183;</b>';
-    return `<div class="row l ${rowCls}${on?' on':''}" data-c="${esc(c.id)}" style="${cols}"><div class="name"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${c.to?c.to.slice(5):'now'} &#183; <em>${c.days} d</em>${c.to?'':`<button type="button" class="end" data-end="${esc(c.id)}">end</button>`}</span></div>${cells}<div class="sum">${sum}</div></div>`; }).join('');
-  if(weak) h+=`<div class="next"><div class="k">next</div><b>${esc(weak.metric)} &#183; ${weak.rank}</b></div>`;
-  box.innerHTML=h;
-}
-$('lv').onclick=async e=>{
-  const end=e.target.closest('[data-end]'); if(end){ e.stopPropagation(); if(await endCommit(end.dataset.end)){ await load(); render(); } return; }
-  const cell=e.target.closest('.c'), row=e.target.closest('.row.l'); if(!row) return; e.stopPropagation();
-  const c=row.dataset.c, m=cell?cell.dataset.m:null; FOCUS=(FOCUS&&FOCUS.c===c&&FOCUS.m===m)?null:{c,m}; render();
-};
-/* anywhere else returns */
-document.addEventListener('click',e=>{ if(e.target.closest('.lines,#lv,.notices,#tbl')) return; if(FOCUS){ FOCUS=null; render(); } });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&FOCUS){ FOCUS=null; render(); } });
-let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(N) render(); },150); });
-
-/* ---------- now: only what is true today, for this goal ---------- */
-function drawNotices(t){
-  const out=[], pts=t.pts, arr=arrOf(pts), ms=scoredOf(t);
-  if(pts.length>=14){ const now=pts[pts.length-1].rank, above=pts.filter(p=>p.rank>now).length, pct=above/pts.length*100;
-    if(pct>=90) out.push(['index',`<b class="neg">${now}</b> &#183; lowest <b>${Math.round(100-pct)||1}%</b>`,`n ${pts.length}`]);
-    else if(pct<=10) out.push(['index',`<b class="pos">${now}</b> &#183; highest <b>${Math.round(pct)||1}%</b>`,`n ${pts.length}`]); }
-  if(pts.length){ const ter=v=>v<90?'under 90':v<110?'near 100':'over 110'; let k=pts.length-1, run=1; while(k>0&&ter(pts[k-1].rank)===ter(pts[k].rank)){run++;k--;}
-    const tt=ter(pts[pts.length-1].rank); if(run>=3&&tt!=='near 100') out.push(['streak',`<b class="${tt==='over 110'?'pos':'neg'}">${tt}</b> &#183; <b>${run}</b>`,`since ${pts[k].day}`]); }
-  const today=dayNum(TODAY);
-  ms.forEach(m=>{ const p=lastPt(SERIES[m]); if(!p) return; const age=today-dayNum(p.day); if(age>STALE_DAYS) out.push([esc(m),`<b>${p.day}</b> &#183; <b class="neg">${age}</b> days`,'stale']); });
-  for(let i=1;i<N;i++){ if(arr[i]!=null&&arr[i-1]==null){ let j=i-1; while(j>=0&&arr[j]==null) j--; const g=i-j-1; if(g>=3&&(N-1-i)<=14&&j>=0) out.push(['quiet',`<b>${g}</b> days &#183; ${DAYS[j]} &#8594; ${DAYS[i]}`,'']); } }
-  let leads=0; const earning=[];
-  COMMITS.forEach(c=>{ const r=testCommit(pts,c,COMMITS,TODAY); if(r.verdict==='early') earning.push([c,r]);
-    ms.forEach(m=>{ const x=testCommit(SERIES[m],c,COMMITS,TODAY); if(!Number.isFinite(x.effect)) return; const raised=Math.round(SCAN_BAR*(x.bar/2)*10)/10; if(x.verdict!=='early'&&raised>0&&Math.abs(x.effect)>0&&Math.abs(x.effect)>=raised) leads++; }); });
-  if(leads) out.push(['scan',`<b class="pos">${leads}</b> lead${leads===1?'':'s'} &#183; bar ${SCAN_BAR}`,`${COMMITS.length} commits`]);
-  earning.forEach(([c,r])=>out.push([esc(c.name),`<b>${r.during}</b> during &#183; <b>${r.before}</b> before`,`${r.needs} more`,c.id]));
-  $('nowcount').textContent=out.length;
-  $('notices').innerHTML=out.map(([l,v,n,go],i)=>`<div class="nt${go?' go':''}" data-i="${i}"><span class="nl">${l}</span><span class="nv">${v}<span class="nn">${n}</span></span></div>`).join('');
-  document.querySelectorAll('#notices .nt.go').forEach(el=>el.onclick=()=>{ const go=out[+el.dataset.i][3]; FOCUS={c:go,m:null}; render(); });
+// ---- chart ----
+function drawChart(g){
+  const W=680,H=230,L=30,R=8,T=12,B=34, today = N-1;
+  let i0 = Math.max(0, today-89), i1 = today, lo = 80, hi = 120, f = -1;
+  const fm = FOCUS && FOCUS.m && SERIES[FOCUS.m] ? FOCUS.m : null;
+  const pts = fm ? SERIES[fm] : pointsOf(g), line = arrOf(pts);
+  const col = fm ? COLS[Math.max(0, g.measures.indexOf(fm)) % COLS.length] : '#e6e3dc';
+  const fc = FOCUS && FOCUS.c ? COMMITS.find(c => c.id === FOCUS.c) : null;
+  if (fc){ f = dayNum(fc.from) - D0; const tEnd = Math.min(dayNum(fc.to || TODAY), dayNum(TODAY)) - D0; const dur = Math.max(2, tEnd-f+1); i0 = Math.max(0, f-dur); i1 = Math.min(today, Math.max(tEnd, f)); }
+  { const vals = line.slice(i0,i1+1).filter(v=>v!=null); if (vals.length){ lo = Math.floor((Math.min(...vals)-3)/5)*5; hi = Math.ceil((Math.max(...vals)+3)/5)*5; } }
+  const x = i => L + (i-i0)*(W-L-R)/Math.max(1,i1-i0);
+  const y = v => T + (hi-v)/(hi-lo)*(H-T-B);
+  let s = `<defs><linearGradient id="gr" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".18"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient><clipPath id="box"><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/></clipPath></defs><g clip-path="url(#box)">`;
+  if (fc) s += `<rect x="${x(f)}" y="${T}" width="${Math.max(0, x(i1)-x(f))}" height="${H-T-B}" fill="#c9a25a" opacity=".06"/>`;
+  const step = (hi-lo) > 40 ? 10 : 5; let ylab='';
+  for (let v=lo; v<=hi; v+=step){ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${v===100?'#2c3a42':'#171c20'}" stroke-width="1"/>`; ylab += `<text x="0" y="${y(v)+3}" font-family="JetBrains Mono" font-size="8" fill="#5c656b">${v}</text>`; }
+  let area='', run=null; for (let i=i0;i<=i1+1;i++){ const v = i<=i1 ? line[i] : null;
+    if (v!=null){ if (run==null){ run=i; area += `M${x(i).toFixed(1)} ${H-B} `; } area += `L${x(i).toFixed(1)} ${y(v).toFixed(1)} `; } else if (run!=null){ area += `L${x(i-1).toFixed(1)} ${H-B} Z `; run=null; } }
+  if (area) s += `<path d="${area}" fill="url(#gr)"/>`;
+  COMMITS.forEach(d => { const i = dayNum(d.from) - D0; if (i<i0||i>i1) return; const on = fc && fc.id === d.id;
+    s += `<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${H-B+6}" stroke="#c9a25a" stroke-width="${on?1.5:1}" stroke-dasharray="${on?'':'2 3'}" opacity="${on?1:(fc?.35:.9)}"/>`; });
+  let path='', on=false; for (let i=i0;i<=i1;i++){ const v=line[i]; if (v==null){on=false;continue;} path += (on?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' '; on=true; }
+  s += `<path d="${path}" fill="none" stroke="${col}" stroke-width="1.8"/>`;
+  line.forEach((v,i)=>{ if (v==null||i<i0||i>i1) return; if ((i===0||line[i-1]==null)&&(i===N-1||line[i+1]==null)) s += `<circle cx="${x(i)}" cy="${y(v)}" r="1.6" fill="${col}"/>`; });
+  let last=i1; while (last>i0 && line[last]==null) last--; if (line[last]!=null) s += `<circle cx="${x(last)}" cy="${y(line[last])}" r="3" fill="${col}"/>`;
+  if (fc){
+    // the before and during means and the number are testCommit's; the gates stay, so an early test draws none of them
+    const r = testCommit(pts, fc, COMMITS, TODAY);
+    if (r.verdict === 'finding' || r.verdict === 'no finding' || r.verdict === 'tangled'){
+      const c = r.verdict === 'finding' ? (r.effect > 0 ? '#5fc4b4' : '#c9695c') : r.verdict === 'tangled' ? '#c9a25a' : '#e6e3dc';
+      s += `<line x1="${x(i0)}" x2="${x(f)}" y1="${y(r.beforeMean)}" y2="${y(r.beforeMean)}" stroke="#8d959a" stroke-width="1.5" stroke-dasharray="5 4"/><line x1="${x(f)}" x2="${x(i1)}" y1="${y(r.duringMean)}" y2="${y(r.duringMean)}" stroke="${c}" stroke-width="1.5" stroke-dasharray="5 4"/><line x1="${x(f)}" x2="${x(f)}" y1="${y(r.beforeMean)}" y2="${y(r.duringMean)}" stroke="${c}" stroke-width="1.5"/>`;
+      // the trend through the days it ran: a drawn shape only, the number beside it is testCommit's
+      let n=0,sx=0,sy=0,sxx=0,sxy=0; for (let i=f;i<=i1;i++){ const v=line[i]; if (v==null) continue; n++; sx+=i; sy+=v; sxx+=i*i; sxy+=i*v; }
+      if (n>=MIN_DAYS && n*sxx-sx*sx!==0){ const m=(n*sxy-sx*sy)/(n*sxx-sx*sx), b=(sy-m*sx)/n; const y1=y(m*f+b), y2=y(m*i1+b); const len=Math.hypot(x(i1)-x(f), y2-y1);
+        s += `<line class="trend" x1="${x(f)}" y1="${y1.toFixed(1)}" x2="${x(i1)}" y2="${y2.toFixed(1)}" stroke="${c}" stroke-width="2.2" stroke-linecap="round" style="stroke-dasharray:${len.toFixed(1)};stroke-dashoffset:${len.toFixed(1)}"/>`; }
+      s += `<text class="pct" x="${W-R-8}" y="${T+30}" text-anchor="end" font-family="Archivo, Helvetica Neue, Arial, sans-serif" font-weight="300" font-size="32" letter-spacing="-.5" fill="${c}">${sgn(r.effect)}</text><text x="${W-R-8}" y="${T+44}" text-anchor="end" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="1.5">${r.before} &#183; ${r.during}</text>`;
+    }
+  }
+  s += `</g>${ylab}`;
+  if (!fc){ for (let i=i0;i<=i1;i++){ const d = dstr(D0+i), first = d.endsWith('-01');
+      if (!first && i !== i0) continue;
+      if (!first){ let soon = false; for (let k=1;k<=10&&i+k<=i1;k++) if (dstr(D0+i+k).endsWith('-01')) soon = true; if (soon) continue; }
+      s += `<text x="${x(i)}" y="${H-2}" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="2">${MON[+d.slice(5,7)]}</text>`; } }
+  else s += `<text x="${L}" y="${H-2}" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="1">${dstr(D0+i0)}</text><text x="${W-R}" y="${H-2}" text-anchor="end" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="1">${dstr(D0+i1)}</text>`;
+  const svg = $('c'); svg.innerHTML = s;
+  const box = svg.parentElement; box.classList.remove('sw'); void box.offsetWidth; box.classList.add('sw');
 }
 
-/* ---------- the three lines ---------- */
+// ---- clicks, as the mock: a cell focuses that commit and measure, a row the goal, a tile the measure, anywhere else returns ----
+document.addEventListener('click', async e => {
+  const end = e.target.closest('[data-end]');
+  if (end){ if (await endCommit(end.dataset.end)){ await load(); render(); } return; }
+  const rule = e.target.closest('#rules button[data-k]');
+  if (rule){ setRule($('rules').dataset.m, rule.dataset.k); return; }
+  if (e.target.closest('.line, #rules, #out')) return;
+  const pick = e.target.closest('#tbl tr.row');
+  if (pick){ pickGoal(pick.dataset.id); return; }
+  const cell = e.target.closest('.c'); const row = e.target.closest('.row.l'); const tile = e.target.closest('.t');
+  if (row){ const c = row.dataset.c, m = cell ? cell.dataset.m : null; FOCUS = (FOCUS && FOCUS.c === c && FOCUS.m === m) ? null : { c, m }; }
+  else if (tile){ const m = tile.dataset.m; FOCUS = (FOCUS && !FOCUS.c && FOCUS.m === m) ? null : { c: null, m }; }
+  else if (!FOCUS) return;
+  else FOCUS = null;
+  BAND = false; draw();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && FOCUS){ FOCUS = null; BAND = false; draw(); } });
+$('tbl').addEventListener('keydown', e => { const r = e.target.closest('tr.row'); if (r && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); pickGoal(r.dataset.id); } });
+
+// ---- the three lines ----
+// a field that is wrong turns red until it is changed
+function bad(...els){ for (const el of els){ el.classList.add('bad'); const off = () => el.classList.remove('bad'); for (const ev of ['input','change','click']) el.addEventListener(ev, off, { once: true }); } if (els[0].focus) els[0].focus(); }
 function drawLines(){
-  const ps=$('pstock'), r=remembered(); const want=ps.dataset.ready?ps.value:(ALL.includes(r)?r:(ALL[0]||''));
-  ps.innerHTML=ALL.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')+`<option value="">+ new</option>`;
-  ps.value=ALL.includes(want)?want:''; ps.dataset.ready='1'; padNew();
-  const gt=$('gtm'), tw=gt.value; gt.innerHTML=`<option value="">none</option>`+ALL.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join(''); gt.value=ALL.includes(tw)?tw:'';
-  drawPicks(); if(!$('cfrom').value) $('cfrom').value=TODAY;
+  const ps = $('pstock'), r = remembered(), want = ps.dataset.ready ? ps.value : (ALL.includes(r) ? r : (ALL[0] || ''));
+  ps.innerHTML = ALL.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('') + `<option value="">+</option>`;
+  ps.value = ALL.includes(want) ? want : ''; ps.dataset.ready = '1'; padNew();
+  const gt = $('gtm'), tw = gt.value;
+  gt.innerHTML = `<option value="">none</option>` + ALL.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join(''); gt.value = ALL.includes(tw) ? tw : '';
+  drawPicks(); if (!$('cfrom').value) $('cfrom').value = TODAY;
 }
-function padNew(){ const fresh=$('pstock').value===''; $('pname').classList.toggle('hide',!fresh); $('punit').classList.toggle('hide',!fresh); }
-$('pstock').onchange=padNew;
-/* the pick list: every stock, scored ones first */
+function padNew(){ const fresh = $('pstock').value === ''; $('pname').hidden = !fresh; $('punit').hidden = !fresh; $('padf').classList.toggle('new', fresh); }
+$('pstock').onchange = padNew;
+// every stock, scored ones first
 function drawPicks(){
-  const names=[...new Set([...ALL,...GPICK])].sort((a,b)=>(!SERIES[a])-(!SERIES[b])||a.localeCompare(b));
-  const stateOf=m=>SERIES[m]?'scored':RULES[m]&&RULES[m].kind==='ignore'?'ignored':ALL.includes(m)?'unscored':'empty';
-  $('gpicks').innerHTML=names.map(m=>`<button type="button" data-m="${esc(m)}" class="${SERIES[m]?'':'off'}" aria-pressed="${GPICK.has(m)}" title="${stateOf(m)}">${esc(m)}</button>`).join('');
-  $('gpicks').querySelectorAll('button').forEach(b=>b.onclick=()=>{ const m=b.dataset.m; if(GPICK.has(m)) GPICK.delete(m); else GPICK.add(m); drawPicks(); });
+  const names = [...new Set([...ALL, ...GPICK])].sort((a,b) => (!SERIES[a]) - (!SERIES[b]) || a.localeCompare(b));
+  $('gpicks').innerHTML = names.map(m => `<button type="button" data-m="${esc(m)}" class="${SERIES[m] ? '' : 'off'}" aria-pressed="${GPICK.has(m)}">${esc(m)}</button>`).join('');
+  $('gpicks').querySelectorAll('button').forEach(b => b.onclick = () => { const m = b.dataset.m; if (GPICK.has(m)) GPICK.delete(m); else GPICK.add(m); drawPicks(); });
 }
-/* the goal line shows the goal on screen, so declaring it again is one edit and one click */
-function fillGoalLine(t){ drawLines(); const g=t.id===YOU_ID?null:t;
-  $('gname').value=g?g.name:''; $('gtm').value=g&&g.target?g.target.metric:'';
-  $('gtv').value=g&&g.target?(g.target.value!=null?String(g.target.value):`${g.target.lo} to ${g.target.hi}`):'';
-  GPICK=new Set(g?g.measures:[]); drawPicks(); }
+// the goal line holds the goal on screen, so declaring it again is one edit and one click
+function fillGoalLine(){ drawLines(); const g = SEL === YOU_ID ? null : cur();
+  $('gname').value = g ? g.name : ''; $('gtm').value = g && g.target ? g.target.metric : '';
+  $('gtv').value = g && g.target ? (g.target.value != null ? String(g.target.value) : `${g.target.lo} to ${g.target.hi}`) : '';
+  GPICK = new Set(g ? g.measures : []); drawPicks(); }
 
-/* the pad's line. a number is a reading, anything else is a note. the rows are pad.html's rows */
+// the pad's line. a number is a reading, anything else is a note. the rows are pad.html's rows
 async function lastUnit(metric){
-  const {data,error}=await db.from('events').select('value, unit, occurred_at').eq('metric',metric).eq('event_type','measurement').not('value','is',null).order('occurred_at',{ascending:false}).limit(7);
-  if(error){ pmsg(error.message,'bad'); return undefined; }
-  return (data.find(r=>r.unit)||{}).unit||null;
+  const { data, error } = await db.from('events').select('value, unit, occurred_at').eq('metric', metric).eq('event_type', 'measurement').not('value', 'is', null).order('occurred_at', { ascending: false }).limit(7);
+  if (error){ say(error.message); return undefined; }
+  return (data.find(r => r.unit) || {}).unit || null;
 }
-$('padf').addEventListener('submit',async e=>{ e.preventDefault();
-  const raw=$('pval').value.trim(); if(!raw){ pmsg('a number or a note','bad'); return; }
-  $('padd').disabled=true; pmsg('');
-  const n=Number(raw), isNumber=Number.isFinite(n);
-  let metric=$('pstock').value, unit=null;
-  if(metric===''){ metric=slug($('pname').value); if(!metric){ $('padd').disabled=false; pmsg('a name','bad'); $('pname').focus(); return; } unit=$('punit').value.trim()||null; }
-  else { unit=await lastUnit(metric); if(unit===undefined){ $('padd').disabled=false; return; } }
-  const row=isNumber
-    ? { occurred_at:new Date().toISOString(), metric, value:n, unit, source:'pad' }
-    : { occurred_at:new Date().toISOString(), metric, event_type:'note', value:null, source:'you', context:{ text:raw } };
-  const {error}=await db.from('events').insert(row); $('padd').disabled=false;
-  if(error){ pmsg(error.message,'bad'); return; }
-  $('pval').value=''; $('pname').value=''; $('punit').value=''; remember(metric);
-  pmsg(isNumber?`${n}${unit?' '+unit:''} added to ${metric}`:`note added to ${metric}`,'good');
-  await load(); render(); $('pstock').value=ALL.includes(metric)?metric:''; padNew();
+$('padf').addEventListener('submit', async e => { e.preventDefault(); say('');
+  const raw = $('pval').value.trim(); if (!raw){ bad($('pval')); return; }
+  $('padd').disabled = true;
+  const n = Number(raw), isNumber = Number.isFinite(n);
+  let metric = $('pstock').value, unit = null;
+  if (metric === ''){ metric = slug($('pname').value); if (!metric){ $('padd').disabled = false; bad($('pname')); return; } unit = $('punit').value.trim() || null; }
+  else { unit = await lastUnit(metric); if (unit === undefined){ $('padd').disabled = false; return; } }
+  const row = isNumber
+    ? { occurred_at: new Date().toISOString(), metric, value: n, unit, source: 'pad' }
+    : { occurred_at: new Date().toISOString(), metric, event_type: 'note', value: null, source: 'you', context: { text: raw } };
+  const { error } = await db.from('events').insert(row); $('padd').disabled = false;
+  if (error){ say(error.message); return; }
+  $('pval').value = ''; $('pname').value = ''; $('punit').value = ''; remember(metric);
+  await load(); render(); $('pstock').value = ALL.includes(metric) ? metric : ''; padNew();
 });
 
-/* the commit line. a start row, and an end row if it has ended. the rows are commit.html's rows */
-async function endCommit(id,to){
-  const day=to||TODAY;
-  const {error}=await db.from('events').insert({ occurred_at:new Date(day+'T12:00:00Z').toISOString(), metric:id, event_type:'commit_end', source:'you', context:{ to:day } });
-  if(error){ cmsg(error.message,'bad'); return false; }
+// the commit line. a start row, and an end row if it has ended. the rows are commit.html's rows
+async function endCommit(id, to){
+  const day = to || TODAY;
+  const { error } = await db.from('events').insert({ occurred_at: new Date(day + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit_end', source: 'you', context: { to: day } });
+  if (error){ say(error.message); return false; }
   return true;
 }
-$('cmf').addEventListener('submit',async e=>{ e.preventDefault();
-  const name=$('cwhat').value.trim(), from=$('cfrom').value, to=$('cto').value;
-  if(!name){ cmsg('a name','bad'); return; }
-  if(!from){ cmsg('a start date','bad'); return; }
-  if(from>TODAY){ cmsg('the start is in the future','bad'); return; }
-  if(to&&to<from){ cmsg('the end is before the start','bad'); return; }
-  const id=slugCommit(name);
-  if(COMMITS.some(c=>c.id===id)){ cmsg(`${id} exists · use a different name`,'bad'); return; }
-  $('cadd').disabled=true; cmsg('');
-  const {error}=await db.from('events').insert({ occurred_at:new Date(from+'T12:00:00Z').toISOString(), metric:id, event_type:'commit', source:'you', context:{ name, from } });
-  if(error){ $('cadd').disabled=false; cmsg(error.message,'bad'); return; }
-  if(to){ const ok=await endCommit(id,to); if(!ok){ $('cadd').disabled=false; return; } }
-  $('cadd').disabled=false; $('cwhat').value=''; $('cto').value=''; $('cfrom').value=TODAY;
-  cmsg(`${name} · ${from} → ${to||'today'} · added`,'good');
+$('cmf').addEventListener('submit', async e => { e.preventDefault(); say('');
+  const name = $('cwhat').value.trim(), from = $('cfrom').value, to = $('cto').value;
+  if (!name){ bad($('cwhat')); return; }
+  if (!from || from > TODAY){ bad($('cfrom')); return; }
+  if (to && to < from){ bad($('cto')); return; }
+  const id = slugCommit(name);
+  if (COMMITS.some(c => c.id === id)){ bad($('cwhat')); say('exists'); return; }
+  $('cadd').disabled = true;
+  const { error } = await db.from('events').insert({ occurred_at: new Date(from + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit', source: 'you', context: { name, from } });
+  if (error){ $('cadd').disabled = false; say(error.message); return; }
+  if (to){ const ok = await endCommit(id, to); if (!ok){ $('cadd').disabled = false; return; } }
+  $('cadd').disabled = false; $('cwhat').value = ''; $('cto').value = ''; $('cfrom').value = TODAY;
   await load(); render();
 });
 
-/* the goal line. a name, a target on one stock if you have one, and the stocks it is made of */
-function parseTarget(metric,text){
-  const s=text.trim(); if(!metric&&!s) return null;
-  if(!metric) throw 'pick the stock the target is on';
-  if(!s) throw 'a target value, or low to high';
-  const band=s.match(/^(-?\d+(?:\.\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:\.\d+)?)$/);
-  if(band){ const lo=Number(band[1]), hi=Number(band[2]); if(!(hi>lo)) throw 'low, then high'; return {metric,lo,hi}; }
-  const v=Number(s); if(!Number.isFinite(v)) throw 'a number, or low to high'; return {metric,value:v};
+// the goal line. a name, a target on one stock if there is one, and the stocks it is made of
+function parseTarget(){
+  const metric = $('gtm').value, s = $('gtv').value.trim();
+  if (!metric && !s) return { target: null };
+  if (!metric) return { bad: $('gtm') };
+  if (!s) return { bad: $('gtv') };
+  const band = s.match(/^(-?\d+(?:\.\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:\.\d+)?)$/);
+  if (band){ const lo = Number(band[1]), hi = Number(band[2]); return hi > lo ? { target: { metric, lo, hi } } : { bad: $('gtv') }; }
+  const v = Number(s); return Number.isFinite(v) ? { target: { metric, value: v } } : { bad: $('gtv') };
 }
-$('goalf').addEventListener('submit',async e=>{ e.preventDefault();
-  const name=$('gname').value.trim(); if(!name){ gmsg('a name','bad'); return; }
-  if(!slug(name)){ gmsg('a name with letters or digits','bad'); return; }
-  const measures=[...GPICK]; if(!measures.length){ gmsg('pick at least one stock','bad'); return; }
-  let target; try{ target=parseTarget($('gtm').value,$('gtv').value); }catch(m){ gmsg(m,'bad'); return; }
-  $('gadd').disabled=true; gmsg('');
-  const {error}=await writeGoal(db,name,measures,target); $('gadd').disabled=false;
-  if(error){ gmsg(error.message,'bad'); return; }
-  gmsg(`${name} · ${measures.length} measure${measures.length===1?'':'s'}${target?` · target ${target.metric} ${target.value!=null?target.value:`${target.lo} to ${target.hi}`}`:''} · declared`,'good');
-  sel=slugCommit(name); FOCUS=null; OPEN=null; BAND=false; await load(); const t=cur(); pinDay(t); fillGoalLine(t); render();
+$('goalf').addEventListener('submit', async e => { e.preventDefault(); say('');
+  const name = $('gname').value.trim(); if (!name || !slug(name)){ bad($('gname')); return; }
+  const measures = [...GPICK]; if (!measures.length){ bad($('gpicks')); return; }
+  const p = parseTarget(); if (p.bad){ bad(p.bad); return; }
+  $('gadd').disabled = true;
+  const { error } = await writeGoal(db, name, measures, p.target); $('gadd').disabled = false;
+  if (error){ say(error.message); return; }
+  SEL = slugCommit(name); FOCUS = null; BAND = false; await load(); fillGoalLine(); render();
 });
 
-/* ---------- load ---------- */
-async function load(){
-  const [all,rules,commits,goals]=await Promise.all([readMetrics(db),readRules(db),readCommits(db),readGoals(db)]);
-  const rows=await readDays(db,all); RAW=rows;
-  ALL=all; RULES=rules; COMMITS=commits; GOALS=goals; SERIES=rankSeries(rows,rules); OWNED=Object.keys(SERIES);
-  buildDays(); YOU=etfSeries(SERIES,OWNED);
-  if(!(sel===YOU_ID||GOALS.some(g=>g.id===sel))) sel=YOU_ID;
-  pinDay(cur());
-}
-$('out').onclick=async()=>{ await db.auth.signOut(); location.href='index.html'; };
-db.auth.getSession().then(async ({data})=>{
-  if(!data.session){ location.href='index.html'; return; }
-  try{
-    /* right after sign in the database can see a fresh token a second early and refuse it. once more, a moment later. */
-    try{ await load(); }catch(e){ if(!/jwt/i.test(e.message||'')) throw e; await new Promise(r=>setTimeout(r,1500)); await load(); }
-    fillGoalLine(cur()); render();
-  }catch(e){ say(e.message||String(e)); }
+$('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
+db.auth.getSession().then(async ({ data }) => {
+  if (!data.session){ location.href = 'index.html'; return; }
+  try {
+    // right after sign in the database can see a fresh token a second early and refuse it. once more, a moment later
+    try { await load(); } catch (e) { if (!/jwt/i.test(e.message || '')) throw e; await new Promise(r => setTimeout(r, 1500)); await load(); }
+    fillGoalLine(); render();
+  } catch (e) { say(e.message || String(e)); }
 });
 </script>
