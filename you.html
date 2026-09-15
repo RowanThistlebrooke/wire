@@ -164,9 +164,10 @@ svg{width:100%;height:auto;display:block}
 /* the levers grid holds as many measures as the goal has */
 .lv .row{grid-template-columns:minmax(150px,1.4fr) repeat(var(--n,5),minmax(0,1fr)) 78px}
 .lv.many .c b,.lv.many .sum b{font-size:20px}
-.lv .end{display:block;background:none;border:1px solid var(--edge2);color:var(--dim);font:400 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:4px 7px;margin-top:8px;cursor:pointer}
-.lv .end:hover{border-color:var(--teal);color:var(--teal)}
-@media (max-width:700px){.lv{overflow-x:auto}.lv .row{grid-template-columns:minmax(120px,1.2fr) repeat(var(--n,5),minmax(0,1fr)) 60px;min-width:calc(180px + var(--n,5) * 48px)}}
+.lv .end{background:none;border:0;padding:0;font:inherit;letter-spacing:inherit;color:var(--teal);cursor:pointer}
+.lv .end:hover{color:var(--ink)}
+.lv .end[disabled]{opacity:.35;cursor:default}
+@media (max-width:700px){.lv .row{grid-template-columns:minmax(120px,1.2fr) repeat(var(--n,5),minmax(0,1fr)) 60px}.lv.many{overflow-x:auto}.lv.many .row{min-width:calc(180px + var(--n) * 48px)}.lv.many .c b,.lv.many .sum b{font-size:18px}}
 
 /* a focused measure shows its rule */
 .rules{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
@@ -262,6 +263,7 @@ const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 let ALL = [], RULES = {}, COMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {};
 let SEL = YOU_ID, FOCUS = null, BAND = false, GPICK = new Set();   // FOCUS: { c, m } a commit and a measure, { c, m:null } a commit on the goal, { c:null, m } a measure
 let D0 = 0, N = 0;   // the first day the chart can reach, as a day number, and how many days it holds
+let RULING = false, ENDING = false;   // a rule row or an end row on its way: a double click writes one
 
 async function load(){
   const [all, rules, commits, goals] = await Promise.all([readMetrics(db), readRules(db), readCommits(db), readGoals(db)]);
@@ -269,8 +271,9 @@ async function load(){
   ALL = all; RULES = rules; COMMITS = commits; GOALS = goals;
   SERIES = rankSeries(rows, rules); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
   LAST = {}; for (const r of rows) LAST[r.metric] = r;                // readDays is oldest first
-  const { data: u } = await db.from('events').select('metric, unit').eq('event_type', 'measurement').not('unit', 'is', null).order('occurred_at', { ascending: true }).limit(20000);
-  UNITS = {}; for (const r of u || []) UNITS[r.metric] = r.unit;
+  const { data: u, error: ue } = await db.from('events').select('metric, unit').eq('event_type', 'measurement').not('unit', 'is', null).order('occurred_at', { ascending: false }).limit(20000);
+  if (ue) throw ue;
+  UNITS = {}; for (const r of u) if (!(r.metric in UNITS)) UNITS[r.metric] = r.unit;   // newest first, so the latest unit wins
   // the last 90 days, reaching back further only to hold a reading or a commit's before
   const t = dayNum(TODAY); let lo = t - 89;
   for (const m of OWNED) lo = Math.min(lo, dayNum(SERIES[m][0].day));
@@ -282,9 +285,12 @@ async function load(){
 const dstr = n => new Date(n * 864e5).toISOString().slice(0, 10);
 const arrOf = pts => { const a = new Array(N).fill(null); for (const p of pts){ const i = dayNum(p.day) - D0; if (i >= 0 && i < N) a[i] = p.rank; } return a; };
 // YOU is the goal made of every declared stock
-const cur = () => SEL === YOU_ID ? { id: YOU_ID, name: 'YOU', measures: OWNED, target: null } : GOALS.find(g => g.id === SEL);
+const youGoal = () => ({ id: YOU_ID, name: 'YOU', measures: OWNED, target: null });
+const cur = () => SEL === YOU_ID ? youGoal() : GOALS.find(g => g.id === SEL);
 const pointsOf = g => g.id === YOU_ID ? YOU : goalSeries(g, SERIES);
 const say = m => { $('err').textContent = m || ''; };
+// the reader draws no day on which a scored measure is stale, so while one is stale today the index is silent too
+const silent = g => g.measures.some(m => SERIES[m] && dayNum(TODAY) - dayNum(SERIES[m][SERIES[m].length-1].day) > STALE_DAYS);
 
 function render(){ const g = cur(); $('eyebrow').textContent = g.name; drawRail(); drawHero(g); draw(); drawLines(); }
 function draw(){ const g = cur(); drawTiles(g); drawRules(g); drawLevers(g); drawChart(g); }
@@ -297,22 +303,22 @@ function spark(pts){ const a=pts.slice(-45); if(a.length<3) return '<svg viewBox
   const m=moveOf(pts); const col=(m!=null&&m<0)?'#c9695c':'#c9a25a';
   return `<svg viewBox="0 0 ${w} ${h}"><line x1="0" y1="${(2+(hi-100)*(h-4)/span).toFixed(1)}" x2="${w}" y2="${(2+(hi-100)*(h-4)/span).toFixed(1)}" stroke="#2c363d" stroke-dasharray="2 3"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
 function drawRail(){
-  const row = (id, name, pts) => { const p = pts[pts.length-1], w = word(p ? p.rank : null);
-    return `<tr class="row${id === SEL ? ' on' : ''}" data-id="${esc(id)}" tabindex="0"><td class="nm">${esc(name)}</td><td class="r">${p ? p.rank : '&#183;'}</td><td class="g">${w.w}</td><td>${spark(pts)}</td></tr>`; };
-  $('tbl').innerHTML = row(YOU_ID, 'YOU', YOU) + GOALS.map(g => row(g.id, g.name, goalSeries(g, SERIES))).join('');
+  const row = (g, pts) => { const p = silent(g) ? null : pts[pts.length-1], w = word(p ? p.rank : null);
+    return `<tr class="row${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}" tabindex="0"><td class="nm">${esc(g.name)}</td><td class="r">${p ? p.rank : '&#183;'}</td><td class="g">${w.w}</td><td>${spark(pts)}</td></tr>`; };
+  $('tbl').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES))).join('');
 }
 function pickGoal(id){ SEL = id; FOCUS = null; BAND = false; say(''); fillGoalLine(); render(); }
 
 // ---- hero ----
 function drawHero(g){
-  const pts = pointsOf(g), last = pts[pts.length-1], w = word(last ? last.rank : null);
+  const pts = pointsOf(g), last = silent(g) ? null : pts[pts.length-1], w = word(last ? last.rank : null);
   let tg = '';
   if (g.target){ const t = g.target, unit = UNITS[t.metric] ? ' ' + esc(UNITS[t.metric]) : '', lr = LAST[t.metric];
     const shown = t.value != null ? num(t.value) : `${num(t.lo)}&#8211;${num(t.hi)}`;
     if (!lr) tg = `<span>${shown}${unit}</span><b>&#183;</b><span></span><b>empty</b>`;
     else { const now = Number(lr.mean), age = dayNum(TODAY) - dayNum(lr.day);
       const gap = Math.round((t.value != null ? now - t.value : now < t.lo ? now - t.lo : now > t.hi ? now - t.hi : 0) * 100) / 100;
-      const g2 = age > STALE_DAYS ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+gap.toFixed(1)}</b>`;
+      const g2 = age > STALE_DAYS ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+num(gap)}</b>`;
       tg = `<span>${shown}${unit}</span><b>${num(now)}</b><span>${lr.day.slice(5)}</span>${g2}`; } }
   $('hero').innerHTML = `<div class="big ${w.cls}">${last ? last.rank : '&#183;'}</div>
    <div class="side"><div class="l">${esc(g.name)}</div><div class="w ${w.cls}">${w.w}</div>${tg ? `<div class="tg">${tg}</div>` : ''}</div>`;
@@ -347,8 +353,11 @@ async function setRule(m, kind){
     if (!hs || !Number.isFinite(hi) || hi <= lo){ bad(hiEl); return; }
     rule = { kind: 'band', lo, hi }; }
   else if (RULES[m] && RULES[m].kind === kind) return;          // already the rule, nothing to write
-  const { error } = await writeRule(db, m, rule); if (error){ say(error.message); return; }
-  BAND = false; say(''); await load(); render();
+  if (RULING) return;
+  RULING = true;
+  try { const { error } = await writeRule(db, m, rule); if (error){ say(error.message); return; }
+    BAND = false; say(''); await load(); render(); }
+  finally { RULING = false; }
 }
 
 // ---- the levers: every commit against every measure, each cell testCommit's ----
@@ -362,7 +371,7 @@ function drawLevers(g){
     const rowCls = all.verdict === 'finding' ? (all.effect > 0 ? 'pos' : 'neg') : (all.verdict === 'early' || tests.some(t => t && t.verdict === 'early')) ? 'early' : '';
     const on = FOCUS && FOCUS.c === c.id;
     return `<div class="row l ${rowCls} ${on?'on':''}" data-c="${esc(c.id)}">
-      <div class="name"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${c.to?c.to.slice(5):'now'} &#183; <em>${c.days} d</em></span>${on && !c.to ? `<button type="button" class="end" data-end="${esc(c.id)}">end</button>` : ''}</div>
+      <div class="name"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${c.to ? c.to.slice(5) : on ? `<button type="button" class="end" data-end="${esc(c.id)}">end</button>` : 'now'} &#183; <em>${c.days} d</em></span></div>
       ${tests.map((t,j) => { const m = ms[j], sel = on && FOCUS.m === m, cl = t ? vcls(t) : '', n = t ? vdots(t) : 0;
         const val = !t ? '&#183;' : t.verdict === 'early' ? `<small style="font:400 11px/1 var(--mono)">${t.needs} d</small>` : Number.isFinite(t.effect) ? sgn(t.effect) : '&#183;';
         return `<div class="c ${sel?'sel':''}" data-m="${esc(m)}"><b class="${cl}">${val}</b><div class="dots ${cl}"><i class="${n>=1?'on':''}"></i><i class="${n>=2?'on':''}"></i><i class="${n>=3?'on':''}"></i></div></div>`; }).join('')}
@@ -413,6 +422,7 @@ function drawChart(g){
   s += `</g>${ylab}`;
   if (!fc){ for (let i=i0;i<=i1;i++){ const d = dstr(D0+i), first = d.endsWith('-01');
       if (!first && i !== i0) continue;
+      if (first && x(i) + 21 > W) continue;   // too near the edge to be read
       if (!first){ let soon = false; for (let k=1;k<=10&&i+k<=i1;k++) if (dstr(D0+i+k).endsWith('-01')) soon = true; if (soon) continue; }
       s += `<text x="${x(i)}" y="${H-2}" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="2">${MON[+d.slice(5,7)]}</text>`; } }
   else s += `<text x="${L}" y="${H-2}" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="1">${dstr(D0+i0)}</text><text x="${W-R}" y="${H-2}" text-anchor="end" font-family="JetBrains Mono" font-size="8" fill="#5c656b" letter-spacing="1">${dstr(D0+i1)}</text>`;
@@ -423,7 +433,9 @@ function drawChart(g){
 // ---- clicks, as the mock: a cell focuses that commit and measure, a row the goal, a tile the measure, anywhere else returns ----
 document.addEventListener('click', async e => {
   const end = e.target.closest('[data-end]');
-  if (end){ if (await endCommit(end.dataset.end)){ await load(); render(); } return; }
+  if (end){ if (ENDING) return; ENDING = true; end.disabled = true;
+    try { if (await endCommit(end.dataset.end)){ await load(); render(); } else end.disabled = false; } finally { ENDING = false; }
+    return; }
   const rule = e.target.closest('#rules button[data-k]');
   if (rule){ setRule($('rules').dataset.m, rule.dataset.k); return; }
   if (e.target.closest('.line, #rules, #out')) return;
@@ -456,10 +468,11 @@ $('pstock').onchange = padNew;
 function drawPicks(){
   const names = [...new Set([...ALL, ...GPICK])].sort((a,b) => (!SERIES[a]) - (!SERIES[b]) || a.localeCompare(b));
   $('gpicks').innerHTML = names.map(m => `<button type="button" data-m="${esc(m)}" class="${SERIES[m] ? '' : 'off'}" aria-pressed="${GPICK.has(m)}">${esc(m)}</button>`).join('');
-  $('gpicks').querySelectorAll('button').forEach(b => b.onclick = () => { const m = b.dataset.m; if (GPICK.has(m)) GPICK.delete(m); else GPICK.add(m); drawPicks(); });
+  // flipped in place: a redraw would take the button out of the page before its click reaches the document
+  $('gpicks').querySelectorAll('button').forEach(b => b.onclick = () => { const m = b.dataset.m; if (GPICK.has(m)) GPICK.delete(m); else GPICK.add(m); b.setAttribute('aria-pressed', GPICK.has(m)); });
 }
 // the goal line holds the goal on screen, so declaring it again is one edit and one click
-function fillGoalLine(){ drawLines(); const g = SEL === YOU_ID ? null : cur();
+function fillGoalLine(){ drawLines(); for (const id of ['gname', 'gtm', 'gtv', 'gpicks']) $(id).classList.remove('bad'); const g = SEL === YOU_ID ? null : cur();
   $('gname').value = g ? g.name : ''; $('gtm').value = g && g.target ? g.target.metric : '';
   $('gtv').value = g && g.target ? (g.target.value != null ? String(g.target.value) : `${g.target.lo} to ${g.target.hi}`) : '';
   GPICK = new Set(g ? g.measures : []); drawPicks(); }
@@ -503,7 +516,7 @@ $('cmf').addEventListener('submit', async e => { e.preventDefault(); say('');
   $('cadd').disabled = true;
   const { error } = await db.from('events').insert({ occurred_at: new Date(from + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit', source: 'you', context: { name, from } });
   if (error){ $('cadd').disabled = false; say(error.message); return; }
-  if (to){ const ok = await endCommit(id, to); if (!ok){ $('cadd').disabled = false; return; } }
+  if (to){ const ok = await endCommit(id, to); if (!ok){ $('cadd').disabled = false; await load(); render(); return; } }   // the start row is in, so a second add says exists
   $('cadd').disabled = false; $('cwhat').value = ''; $('cto').value = ''; $('cfrom').value = TODAY;
   await load(); render();
 });
@@ -523,9 +536,10 @@ $('goalf').addEventListener('submit', async e => { e.preventDefault(); say('');
   const measures = [...GPICK]; if (!measures.length){ bad($('gpicks')); return; }
   const p = parseTarget(); if (p.bad){ bad(p.bad); return; }
   $('gadd').disabled = true;
-  const { error } = await writeGoal(db, name, measures, p.target); $('gadd').disabled = false;
-  if (error){ say(error.message); return; }
-  SEL = slugCommit(name); FOCUS = null; BAND = false; await load(); fillGoalLine(); render();
+  try { const { error } = await writeGoal(db, name, measures, p.target);
+    if (error){ say(error.message); return; }
+    SEL = slugCommit(name); FOCUS = null; BAND = false; await load(); fillGoalLine(); render(); }
+  finally { $('gadd').disabled = false; }   // held through the reload, so the same goal is not written twice
 });
 
 $('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
