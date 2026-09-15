@@ -5,6 +5,13 @@
     }
   },
   "rewrites": [
-    { "source": "/api/mcp/:token", "destination": "/api/mcp?token=:token" }
+    {
+      "source": "/api/mcp/:token",
+      "destination": "/api/mcp?token=:token"
+    },
+    {
+      "source": "/api/config.js",
+      "destination": "/api/config"
+    }
   ]
 }
