@@ -38,10 +38,13 @@ out loud. Keep it that way.
 6. **The maths lives in one file.** `you-reader.js` is loaded by the
    website and read by the MCP server. Do not copy a formula into a second
    place. If a number needs changing, change it there.
-7. **No AI writes measurements, commits or rules.** It may write a note:
-   `event_type = 'note'`, `value` null, `source = 'claude'`, and the user
-   approves each one. Notes never appear on a page and never enter the
-   maths.
+7. **No AI writes a number it was not given.** Claude may write
+   measurements, commits, rules and goals through the MCP. It must print
+   the exact rows first and write only after the user says yes. Every row
+   it writes carries `source = 'claude'`. It may only transcribe a value
+   the user gave it in a message, a file or an image. It never estimates,
+   rounds, fills a gap or infers a value. If it cannot read a number it
+   says so. Notes keep their existing rule.
 
 ## The shape of the data
 
