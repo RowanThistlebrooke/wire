@@ -387,7 +387,9 @@ export function wireServer() {
     'goal',
     'Write a goal the user gave: a name, the stocks it is made of, and optionally a ' +
     'target on one stock, { metric, value } or { metric, lo, hi }. Declaring a name ' +
-    'again replaces it and the old row stays on the record; levers already on it are kept. Written through writeGoal, ' +
+    'again replaces it and the old row stays on the record. Levers are declared on the page, not here: ' +
+    'read goals, pass levers as that goal\'s levers minus any now named as measures, and put them ' +
+    'in the printed row; any other set is refused and nothing is written. Written through writeGoal, ' +
     'signed claude; print the goal to the user and get a yes before calling this.',
     {
       name: z.string(),
@@ -397,9 +399,10 @@ export function wireServer() {
         value: z.number().optional(),
         lo: z.number().optional(),
         hi: z.number().optional()
-      }).optional()
+      }).optional(),
+      levers: z.array(z.object({ metric: z.string(), lag: z.number() })).optional()
     },
-    async ({ name, measures, target }) => {
+    async ({ name, measures, target, levers: said = [] }) => {
       const title = name.trim();
       if (!slug(title)) return text({ error: 'no name' });
       if (new Set(measures).size !== measures.length) return text({ error: 'a measure is named twice' });
@@ -416,13 +419,18 @@ export function wireServer() {
           t = { metric: target.metric, lo: target.lo, hi: target.hi };
         else return text({ error: 'a target is { metric, value } or { metric, lo, hi } with hi above lo' });
       }
-      // levers are declared by the user on the page; a goal written here keeps the ones it has
+      // Levers are declared by the user on the page. The call must name exactly the ones the goal
+      // keeps, so they are in the row the user saw and said yes to; any other set writes nothing.
       const prev = (await R.readGoals(db)).find(g => g.id === R.slugCommit(title));
       const levers = prev ? prev.levers.filter(l => !measures.includes(l.metric)) : [];
+      const dropped = prev ? prev.levers.filter(l => measures.includes(l.metric)) : [];
+      const key = ls => ls.map(l => JSON.stringify([l.metric, l.lag])).sort().join('\n');   // each lever on its own, so no name can pass for two
+      if (key(said) !== key(levers))
+        return text({ error: 'levers must be exactly the ones this goal keeps; print them in the row and call again', keeps: levers, dropped });
       const { error } = await R.writeGoal(asClaude, title, measures, t, levers);
       const context = { name: title, measures, ...(t ? { target: t } : {}), ...(levers.length ? { levers } : {}) };
       return text(error ? { error: error.message }
-                        : { written: { metric: R.slugCommit(title), event_type: 'goal', source: 'claude', context } });
+                        : { written: { metric: R.slugCommit(title), event_type: 'goal', source: 'claude', context }, ...(dropped.length ? { dropped } : {}) });
     }
   );
 
