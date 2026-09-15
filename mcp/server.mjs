@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
+import { code, keys, table, version } from './health.mjs';
 
 const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
@@ -108,7 +109,30 @@ const dayOf = iso => zurich.format(new Date(Date.parse(iso) - 6 * 3600e3));
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
 export function wireServer() {
-  const server = new McpServer({ name: 'wire', version: '1.0.0' });
+  const server = new McpServer({ name: 'wire', version: version() || '0.0.0' });
+
+  server.tool(
+    'health',
+    'Whether this wire is up to date, its table is the right shape, and its settings are in place. ' +
+    'code compares this copy\'s version with the one on GitHub. table checks the columns the code reads, ' +
+    'day_of and day_metrics, names what is missing or the wrong shape, and hands over the exact SQL that ' +
+    'puts it right, to run in the Supabase SQL editor. keys names the settings that are not set, never a ' +
+    'value. It writes nothing.',
+    {},
+    async () => {
+      const k = keys();
+      const ledger = !k.wrong && k.missing.every(n => n === 'WIRE_TOKEN');
+      const [c, t] = await Promise.all([
+        code(),
+        ledger ? signIn().then(() => table(db), e => ({ ok: null, error: e.message }))
+               : { ok: null, say: 'not checked until the keys are set' }
+      ]);
+      const { sql, ...rest } = t;
+      const out = text({ code: c, table: sql ? { ...rest, sql: 'the next block, exact' } : rest, keys: k });
+      if (sql) out.content.push({ type: 'text', text: sql });
+      return out;
+    }
+  );
 
   server.tool(
     'stocks',

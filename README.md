@@ -41,6 +41,7 @@ and will stay that way.
 | `api/config.mjs` | hands the pages your Supabase address and publishable key, from Vercel's environment |
 | `pull/github.mjs` | pulls your commit count every morning |
 | `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
+| `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
 
 ## Set it up
 
