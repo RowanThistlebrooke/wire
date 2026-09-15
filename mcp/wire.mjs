@@ -24,7 +24,8 @@ const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
   return { readMetrics, readRules, readDays, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
-           readGoals, goalSeries, weakPoint, writeRule, writeGoal };`)();
+           readGoals, goalSeries, weakPoint, writeRule, writeGoal,
+           scanLead, scanCommit, crossTest, crossGrid };`)();
 
 const db = createClient(WIRE_URL, WIRE_KEY);
 
@@ -54,7 +55,7 @@ async function load() {
     [R.readMetrics(db), R.readRules(db), R.readCommits(db)]);
   const rows = await R.readDays(db, all);
   const series = R.rankSeries(rows, rules);
-  return { all, rules, commits, series };
+  return { all, rules, commits, series, rows };
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -122,6 +123,7 @@ server.tool(
           day: last ? last.day : null,
           target: g.target,
           measures: g.measures,
+          levers: g.levers,
           weak_point: weak ? { metric: weak.metric, index: weak.rank, day: weak.day } : null
         };
       })
@@ -215,6 +217,24 @@ server.tool(
     const { error } = await db.from('events').insert(row);
     if (error) return text({ error: error.message });
     return text({ remembered: row });
+  }
+);
+
+server.tool(
+  'cross',
+  'Every lever of every goal against that goal\'s outcomes, the outcome read the lever\'s declared ' +
+  'days later: after the days the lever was higher than the rest of its week, against after the days ' +
+  'it was lower. A scan: leads at a raised bar, never findings. before means the outcome had already ' +
+  'moved the day before, so the lever is not why.',
+  {},
+  async () => {
+    const { series, rows } = await load();
+    const grid = R.crossGrid(await R.readGoals(db), rows, series, today());
+    for (const b of grid.blocks) for (const l of b.levers) for (const o of Object.keys(l.cells)) {
+      const { pairs, ...rest } = l.cells[o];
+      l.cells[o] = { ...rest, pairs: pairs.length };
+    }
+    return text(grid);
   }
 );
 
@@ -353,7 +373,7 @@ server.tool(
   'goal',
   'Write a goal the user gave: a name, the stocks it is made of, and optionally a ' +
   'target on one stock, { metric, value } or { metric, lo, hi }. Declaring a name ' +
-  'again replaces it and the old row stays on the record. Written through writeGoal, ' +
+  'again replaces it and the old row stays on the record; levers already on it are kept. Written through writeGoal, ' +
   'signed claude; print the goal to the user and get a yes before calling this.',
   {
     name: z.string(),
@@ -382,8 +402,11 @@ server.tool(
         t = { metric: target.metric, lo: target.lo, hi: target.hi };
       else return text({ error: 'a target is { metric, value } or { metric, lo, hi } with hi above lo' });
     }
-    const { error } = await R.writeGoal(asClaude, title, measures, t);
-    const context = t ? { name: title, measures, target: t } : { name: title, measures };
+    // levers are declared by the user on the page; a goal written here keeps the ones it has
+    const prev = (await R.readGoals(db)).find(g => g.id === R.slugCommit(title));
+    const levers = prev ? prev.levers.filter(l => !measures.includes(l.metric)) : [];
+    const { error } = await R.writeGoal(asClaude, title, measures, t, levers);
+    const context = { name: title, measures, ...(t ? { target: t } : {}), ...(levers.length ? { levers } : {}) };
     return text(error ? { error: error.message }
                       : { written: { metric: R.slugCommit(title), event_type: 'goal', source: 'claude', context } });
   }
