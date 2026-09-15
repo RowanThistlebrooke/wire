@@ -326,12 +326,161 @@ function scanCommit(seriesByMetric, commit, commits, todayStr) {
 }
 
 
+// ---- levers against outcomes: a scan too ----
+//
+// A goal names its outcomes, the stocks it is made of, and can name levers:
+// stocks you move, each read a declared 1 or 2 days later. Every lever is
+// read against every outcome of its own goal, and the question is only
+// this: after the days the lever read higher than the rest of its week, was
+// the outcome's index different from after the days it read lower?
+//
+// It is a scan, so the answer is a lead, never a finding. A lead becomes a
+// finding the one way the Wire has: make it a commit and let testCommit judge.
+//
+// What keeps a coincidence from reading as a lead:
+//   - Weekdays are levelled first and each week is split at its own level,
+//     so a Monday rhythm or a channel that grows for months is not a lever.
+//   - Each finished week counts once. The week still running does not
+//     count, so a day that arrives never flips an earlier one.
+//   - The bar starts at SCAN_BAR and rises with every question the goals
+//     have ever asked, and with how few weeks there are.
+//   - The same test runs against the outcome a day earlier, a reading the
+//     lever could not have caused. If that clears the bar the same way, the
+//     answer is 'before': the outcome moved first, so the lever is not why.
+
+const LAGS = [1, 2];
+
+// Two-sided tail of Student's t, exact for whole degrees of freedom.
+function tTail(t, df) {
+  const th = Math.atan(Math.abs(t) / Math.sqrt(df)), c2 = Math.cos(th) ** 2, s = Math.sin(th);
+  if (df === 1) return 1 - 2 * th / Math.PI;
+  let term, sum;
+  if (df % 2) {
+    term = sum = Math.cos(th);
+    for (let k = 3; k <= df - 2; k += 2) { term *= c2 * (k - 1) / k; sum += term; }
+    return 1 - 2 / Math.PI * (th + s * sum);
+  }
+  term = sum = 1;
+  for (let k = 2; k <= df - 2; k += 2) { term *= c2 * (k - 1) / k; sum += term; }
+  return 1 - s * sum;
+}
+
+// The bar for `asked` questions at df: the chance of any false lead among
+// all of them stays at one in twenty. Never below SCAN_BAR.
+function crossBar(asked, df) {
+  const p = 1 / (20 * Math.max(1, asked));
+  let z = SCAN_BAR;
+  while (df >= 1 && tTail(z, df) > p) z = Math.round((z + 0.1) * 10) / 10;
+  return z;
+}
+
+const weekOf = t => Math.floor((t + 3) / 7);       // Monday to Sunday
+const weekdayOf = t => (t + 3) % 7;
+
+// Pair each lever day with the outcome `lag` days later, level both by
+// weekday, and split each finished week at its own level. A day with no
+// reading on either side is simply not in the test.
+function crossSplit(leverRows, outcomeAt, lag, openWeek) {
+  const pairs = [];
+  for (const r of leverRows) {
+    const t = dayNum(r.day);
+    if (weekOf(t) >= openWeek) continue;
+    const o = outcomeAt.get(t + lag);
+    if (!o) continue;
+    pairs.push({ day: r.day, next: o.day, t, value: Number(r.mean), rank: o.rank, side: null });
+  }
+  const level = val => {
+    const sum = {}, n = {};
+    for (const p of pairs) { const k = weekdayOf(p.t); sum[k] = (sum[k] || 0) + val(p); n[k] = (n[k] || 0) + 1; }
+    return p => val(p) - sum[weekdayOf(p.t)] / n[weekdayOf(p.t)];
+  };
+  const lv = level(p => p.value), ov = level(p => p.rank);
+  const weeks = new Map();
+  for (const p of pairs) {
+    p.lv = lv(p); p.ov = ov(p);
+    const w = weekOf(p.t);
+    if (!weeks.has(w)) weeks.set(w, []);
+    weeks.get(w).push(p);
+  }
+  const diffs = [];
+  let high = 0, low = 0;
+  for (const ps of weeks.values()) {
+    const m = mean(ps.map(p => p.lv));
+    const h = ps.filter(p => p.lv > m + 1e-9), l = ps.filter(p => p.lv < m - 1e-9);
+    if (!h.length || !l.length) continue;          // a week with no high or no low day says nothing
+    h.forEach(p => p.side = 'high');
+    l.forEach(p => p.side = 'low');
+    diffs.push(mean(h.map(p => p.ov)) - mean(l.map(p => p.ov)));
+    high += h.length; low += l.length;
+  }
+  return { pairs, diffs, high, low };
+}
+
+// One lever against one outcome. The effect is in the outcome's index
+// points: + is better by its rule, - is worse.
+function crossTest(leverRows, outcomePoints, lag, asked, todayStr) {
+  const at = new Map(outcomePoints.map(p => [dayNum(p.day), p]));
+  const open = weekOf(dayNum(todayStr));
+  const s = crossSplit(leverRows, at, lag, open);
+  const out = { lag, pairs: s.pairs, high: s.high, low: s.low, weeks: s.diffs.length };
+  if (!s.diffs.length) { out.verdict = 'empty'; return out; }
+
+  const e = mean(s.diffs);
+  const base = mean(s.pairs.filter(p => p.side).map(p => p.rank));
+  out.effect = Math.round(e * 10) / 10;
+  out.highMean = Math.round((base + e / 2) * 10) / 10;       // drawn exactly the effect apart
+  out.lowMean = Math.round((base - e / 2) * 10) / 10;
+
+  // The numbers are always shown. Only the verdict is gated.
+  if (s.high < MIN_DAYS || s.low < MIN_DAYS) { out.verdict = 'early'; return out; }
+
+  const se = standardError(s.diffs);
+  out.z = crossBar(asked, s.diffs.length - 1);
+  out.raised = Number.isFinite(se) ? Math.round(out.z * se * 10) / 10 : null;
+  // decided on the unrounded numbers; the rounded ones are only for showing
+  if (!(Number.isFinite(se) && se > 0 && Math.abs(e) >= out.z * se)) { out.verdict = 'no lead'; return out; }
+
+  const b = crossSplit(leverRows, at, lag - 1, open);
+  const bse = standardError(b.diffs), be = b.diffs.length ? mean(b.diffs) : 0;
+  out.before = b.diffs.length ? Math.round(be * 10) / 10 : null;
+  const moved = b.high >= MIN_DAYS && b.low >= MIN_DAYS && Number.isFinite(bse) && bse > 0 &&
+                Math.sign(be) === Math.sign(e) && Math.abs(be) >= crossBar(asked, b.diffs.length - 1) * bse;
+  out.verdict = moved ? 'before' : 'lead';
+  return out;
+}
+
+// Every lever of every goal against that goal's outcomes. Every question a
+// goal has ever asked counts toward the bar, even after it was changed, so
+// trying lags until something lights up is paid for.
+function crossGrid(goals, rows, series, todayStr) {
+  const asked = goals.reduce((n, g) => n + g.asked.length, 0);
+  const byMetric = {};
+  for (const r of rows) {
+    if (!byMetric[r.metric]) byMetric[r.metric] = [];
+    byMetric[r.metric].push(r);
+  }
+  const blocks = goals.filter(g => g.levers.length).map(g => ({
+    id: g.id, name: g.name, outcomes: g.measures,
+    levers: g.levers.map(l => ({
+      metric: l.metric, lag: l.lag,
+      cells: Object.fromEntries(g.measures.filter(o => series[o])
+        .map(o => [o, crossTest(byMetric[l.metric] || [], series[o], l.lag, asked, todayStr)]))
+    }))
+  }));
+  const leads = blocks.reduce((n, b) => n + b.levers.reduce((k, l) =>
+    k + Object.values(l.cells).filter(c => c.verdict === 'lead').length, 0), 0);
+  return { asked, leads, blocks };
+}
+
+
 // ---- goals: what the stocks are for ----
 //
 // A goal names the measures it is made of, and can name a target on one
 // of them. It is an event like a rule: the latest row per goal wins and
 // the older ones stay on the record. A goal has no readings of its own.
 // Its line is YOU drawn over only its measures, by exactly the same rules.
+// It can also name levers, stocks you move, which are read against its
+// measures by crossGrid and never enter its line.
 
 async function readGoals(db) {
   const { data, error } = await db
@@ -345,11 +494,25 @@ async function readGoals(db) {
   for (const r of data) {
     const c = r.context || {};
     const t = c.target;
+    const measures = Array.isArray(c.measures) ? c.measures.filter(m => typeof m === 'string') : [];
+    // a lever is a stock and a lag, not one of this goal's own measures, named once
+    const levers = [];
+    for (const l of Array.isArray(c.levers) ? c.levers : [])
+      if (l && typeof l.metric === 'string' && LAGS.includes(l.lag) &&
+          !measures.includes(l.metric) && !levers.some(x => x.metric === l.metric))
+        levers.push({ metric: l.metric, lag: l.lag });
+    // every question this goal has ever asked, kept after it changes
+    const asked = byId.has(r.metric) ? byId.get(r.metric).asked : [];
+    for (const l of levers) for (const m of measures)
+      if (!asked.some(a => a.metric === l.metric && a.lag === l.lag && a.outcome === m))
+        asked.push({ metric: l.metric, lag: l.lag, outcome: m });
     byId.set(r.metric, {
       id: r.metric,
       name: typeof c.name === 'string' && c.name ? c.name : r.metric,
       target: t && typeof t.metric === 'string' ? t : null,
-      measures: Array.isArray(c.measures) ? c.measures.filter(m => typeof m === 'string') : [],
+      measures,
+      levers,
+      asked,
       declared: r.occurred_at
     });
   }
@@ -357,9 +520,11 @@ async function readGoals(db) {
 }
 
 // target is optional: { metric, value } or { metric, lo, hi }.
-async function writeGoal(db, name, measures, target) {
+// levers is optional: [{ metric, lag }], stocks you move, read lag days later.
+async function writeGoal(db, name, measures, target, levers) {
   const context = { name, measures };
   if (target) context.target = target;
+  if (levers && levers.length) context.levers = levers.map(l => ({ metric: l.metric, lag: l.lag }));
   return db.from('events').insert({
     occurred_at: new Date().toISOString(),
     metric: slugCommit(name),
