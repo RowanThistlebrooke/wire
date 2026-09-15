@@ -55,6 +55,9 @@ out loud. Keep it that way.
   so the latest one wins and the old ones stay on the record.
 - A **commit** is something done. It has a start and an end, not a value.
   `event_type = 'commit'`, ended by a `commit_end`.
+- **Notes** are rows with event_type 'note'. They never appear on a page and
+  never enter the maths. A note you wrote on the pad (source 'you') always
+  beats one the AI wrote (source 'claude'), whatever the date.
 - **YOU** is not a row. It is the average of every index you own, per day,
   drawn only on days where every live stock is fresh.
 - The **index** is 100 at the frozen baseline, which is the first thirty
@@ -78,5 +81,5 @@ before guessing. Do not propose three possible causes. Find the one.
 
 No React, no Next, no Tailwind, no bundler, no TypeScript, no ORM, no
 state library. If a change needs one of those, the change is wrong for
-this project. No analytics, no tracking, no telemetry. No AI that writes
+this project. No analytics, no tracking, no telemetry. No AI that invents
 rows. No "smart" defaults that guess what a metric means.
