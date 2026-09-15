@@ -268,6 +268,72 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
   .line.c4,.line.new{grid-template-columns:1fr 1fr}
 }
 </style>
+<style>
+/* the goal laid out as one screen: its name and target beside the index, the target, the chart, then the measures beside the weak point */
+#goalview{container-type:inline-size}
+.gv-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;column-gap:18px}
+.gv-top .head{margin-left:auto}
+.gv-h{font:400 9.5px/1 var(--mono);letter-spacing:.2em;color:var(--muted);margin:0 0 14px}
+.gv-col .gv-h:not(:first-child){margin-top:26px}
+.tg.gv-tgt:not(:empty){display:block;margin-top:26px}
+.gv-tr{display:grid;grid-template-columns:max-content max-content minmax(40px,1fr) max-content max-content max-content;gap:12px 14px;align-items:center}
+.gv-tr > i{font-style:normal}
+.gv-tr > span{color:var(--muted)}
+.gv-bar{position:relative;display:block;height:3px;background:var(--edge2)}
+.gv-bar em{position:absolute;left:0;top:0;bottom:0;background:var(--dim)}
+.gv-bar em.pos{background:var(--teal)}
+.gv-bar s{position:absolute;top:-4px;bottom:-4px;width:1px;margin-left:-1px;background:var(--ink)}
+.gv-bar.gv-old{height:0;background:none;border-top:1px dashed var(--leak)}
+.gv-bar.gv-old em{display:none}
+.gv-tr.gv-old > i,.gv-tr.gv-old > span{color:var(--leak)}
+.gv-under{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;column-gap:14px}
+.gv-under .rules{margin-top:6px}
+.gv-under .ranges{margin-left:auto}
+.gv-cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:34px 40px;margin-top:22px;border-top:1px solid var(--edge);padding-top:22px}
+.gv-cols:not(:has(.node,.cr,.gv-h)){display:none}
+.gv-col{min-width:0}
+.gv-col .flow{margin-top:0;padding:0;column-gap:28px;grid-template-columns:minmax(0,1fr) auto}
+.gv-ms{display:grid;grid-template-columns:minmax(0,max-content) max-content minmax(28px,1fr) max-content;column-gap:10px;align-items:center;min-width:0;position:relative}
+.gv-ms > .gv-h,.gv-ms > .node.s{grid-column:1/-1;justify-self:start}
+.gv-ms > .node.s{padding:6px 8px 5px 0}
+.gv-ms > .node.m{grid-column:1/-1;display:grid;grid-template-columns:subgrid;margin-left:12px;padding:6px 8px;max-width:none}
+.gv-ms .node.m b{text-align:right}
+.gv-b{display:flex;align-items:center;gap:8px;min-width:0}
+.gv-b u{display:block;height:3px;background:var(--muted);text-decoration:none}
+.gv-b u.gv-d{flex:1;min-width:12px;height:0;background:none;border-top:1px dashed var(--edge2)}
+.gv-i{display:flex;align-items:center;justify-content:flex-end;gap:6px;font:400 13px/1 var(--mono);color:var(--ink);white-space:nowrap}
+.gv-ms .node.m.off .gv-i{color:var(--muted)}
+.gv-ms .node.m.weak .nm,.gv-ms .node.m.weak .gv-i{color:var(--amber)}
+.gv-ms .node.m.weak .gv-b u{background:var(--amber)}
+.gv-ms .node.m.gv-st .nm,.gv-ms .node.m.gv-st .gv-i,.gv-ms .node.m.gv-st .gv-b i{color:var(--leak)}
+.gv-ms .node.m.gv-st .gv-b u.gv-d{border-top-color:var(--leak)}
+.gv-gl{position:relative;align-self:center}
+.gv-wn{font:300 26px/1.1 var(--ui);letter-spacing:-.01em;color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big.gv-wv{font-size:60px;color:var(--amber);margin-top:10px}
+.gv-col .cm{margin-top:0}
+.gv-col .cm:empty{display:none}
+.gv-col .ce{flex-wrap:wrap;row-gap:5px}
+.gv-col .ce i{white-space:nowrap}
+.cr.mid .ce i{color:var(--muted)}
+.gv-col .cm:empty + #gvl:not(:empty){border-top:1px solid var(--edge)}
+.gv-under .rules{flex:1 1 auto}
+@container (min-width:760px){
+  .gv-col .cr{grid-template-columns:minmax(0,1fr) 72px 70px;gap:10px}
+  .gv-col .cr .mini{width:72px}
+  .gv-col .ce b{font-size:20px}
+  .gv-col .cn b{white-space:normal;overflow-wrap:break-word}
+  .gv-col .cn span{overflow:hidden;text-overflow:ellipsis}
+}
+@container (max-width:759px){.gv-cols{grid-template-columns:minmax(0,1fr)}}
+@container (max-width:520px){
+  .gv-ms{grid-template-columns:max-content minmax(28px,1fr) max-content}
+  .gv-ms > .node.m{row-gap:6px}
+  .gv-ms > .node.m .nm{grid-column:1/-1;overflow:visible}
+  .gv-col .flow{column-gap:22px}
+  .gv-tr{grid-template-columns:max-content minmax(30px,1fr) max-content max-content max-content}
+  .gv-tr > i{grid-column:1/-1}
+}
+</style>
 
 <div class="app">
   <nav class="rail" id="rail" aria-label="goals"></nav>
@@ -279,17 +345,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
     </div>
 
     <div id="goalview">
-    <div class="head"><div class="big" id="bn">&#183;</div><div class="hs"><b id="bc"></b><span id="bd"></span></div></div>
-    <div class="tg" id="tg"></div>
-
-    <div class="flow" id="flow"></div>
-    <div class="rules" id="rules"></div>
+    <div class="gv-top"><div class="tg" id="gaim"></div><div class="head"><div class="big" id="bn">&#183;</div><div class="hs"><b id="bc"></b><span id="bd"></span></div></div></div>
+    <div class="tg gv-tgt" id="tg"></div>
 
     <div class="chart" id="chart"><svg id="c" aria-label="chart"></svg></div>
-    <div class="ranges" id="ranges"></div>
+    <div class="gv-under"><div class="rules" id="rules"></div><div class="ranges" id="ranges"></div></div>
     <div class="cross" id="cross"></div>
 
-    <div class="cm" id="cm"></div>
+    <div class="gv-cols">
+      <div class="gv-col"><div class="flow" id="flow"></div></div>
+      <div class="gv-col"><div id="gvw"></div><div class="cm" id="cm"></div><div id="gvl"></div></div>
+    </div>
 
     <form class="line" id="padf">
       <input id="pval" type="text" placeholder="82.1" autocomplete="off" spellcheck="false">
@@ -383,6 +449,7 @@ const listOf = g => g.id === YOU_ID ? ALL : g.measures;   // YOU lists every sto
 const say = m => { $('err').textContent = m || ''; };
 // the reader draws no day on which a scored stock is stale, so while one is stale today the index is silent too
 const stale = m => !!SERIES[m] && dayNum(TODAY) - dayNum(SERIES[m][SERIES[m].length-1].day) > STALE_DAYS;
+const since = day => dayNum(TODAY) - dayNum(day);   // days since a reading, as a stale stock and the target show it
 const silent = g => g.measures.some(stale);
 const shown = () => FX && SERIES[FX.o] ? FX.o : FM && SERIES[FM] ? FM : null;   // the stock the chart shows: a picked outcome, or a picked scored stock
 const cellOf = x => { const b = CROSS && CROSS.blocks.find(b => b.id === x.g), l = b && b.levers.find(l => l.metric === x.l), c = l && l.cells[x.o]; return c ? { b, l, c } : null; };
@@ -391,7 +458,7 @@ function render(){ drawRail(); drawLines(); if (SHOWLEDGER) showLedger(); else d
 function draw(anim = true){ const g = cur(), m = shown();
   const fx = FX && cellOf(FX);
   if (!SHOWLEDGER) $('eyebrow').textContent = g.name + (fx ? ` · ${FX.o} · ${FX.l} +${fx.l.lag} d` : m ? ' · ' + m : '');
-  drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); }
+  drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); drawWeak(g); }
 
 // ---- goals, listed like stocks: name, the line, the index and its move ----
 function moveOf(pts){ if (pts.length < 8) return null; return Math.round((pts[pts.length-1].rank - pts[pts.length-8].rank) * 10) / 10; }
@@ -422,44 +489,54 @@ function drawHead(hi){
   $('bd').textContent = day || '';
 }
 function drawTarget(g){
-  let tg = '';
+  let aim = '', tg = '', old = false;
   if (g.target){ const t = g.target, unit = UNITS[t.metric] ? ' ' + esc(UNITS[t.metric]) : '', lr = LAST[t.metric];
-    const aim = t.value != null ? num(t.value) : `${num(t.lo)}&#8211;${num(t.hi)}`;
-    if (!lr) tg = `<span>${aim}${unit}</span><b>empty</b>`;
-    else { const now = Number(lr.mean), age = dayNum(TODAY) - dayNum(lr.day);
+    const a = t.value != null ? num(t.value) : `${num(t.lo)}&#8211;${num(t.hi)}`;
+    aim = `<span>${a}${unit}</span>`;
+    if (!lr) tg = `<i>${esc(t.metric)}</i><span>${a}${unit}</span><b>empty</b>`;
+    else { const now = Number(lr.mean), age = since(lr.day); old = age > STALE_DAYS;
       const gap = Math.round((t.value != null ? now - t.value : now < t.lo ? now - t.lo : now > t.hi ? now - t.hi : 0) * 100) / 100;
-      const g2 = age > STALE_DAYS ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+num(gap)}</b>`;
-      tg = `<span>${aim}${unit}</span><b>${num(now)}</b><span>${lr.day.slice(5)}</span>${g2}`; } }
-  $('tg').innerHTML = tg;
+      const g2 = old ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+num(gap)}</b>`;
+      // the reading and the target drawn on one scale from zero: a picture of the two numbers, not a new one
+      const top = Math.max(now, t.value != null ? t.value : t.hi), at = v => (Math.max(0, Math.min(1, v / top)) * 100).toFixed(1);
+      const bar = top > 0 && now >= 0 ? `<span class="gv-bar${old ? ' gv-old' : ''}"><em class="${gap === 0 ? 'pos' : ''}" style="width:${at(now)}%"></em>${(t.value != null ? [t.value] : [t.lo, t.hi]).map(v => `<s style="left:${at(v)}%"></s>`).join('')}</span>` : '<span></span>';
+      tg = `<i>${esc(t.metric)}</i><b>${num(now)}</b>${bar}<b>${a}</b><span>${lr.day.slice(5)} &#183; ${age} d</span>${g2}`; }
+    tg = `<p class="gv-h">TARGET</p><div class="gv-tr${old ? ' gv-old' : ''}">${tg}</div>`; }
+  $('gaim').innerHTML = aim; $('tg').innerHTML = tg;
 }
 
 // ---- what is counted: sources, the stocks they write, the goal those stocks make ----
-const FLOW_ROWS = 6;   // up to this many stocks, a row each; past it, a row per source
+const FLOW_ROWS = 6;   // up to this many stocks, full names; past it, a source's shared prefix is left off
 function drawFlow(g){
   const ms = listOf(g), weak = weakPoint(g, SERIES), f = $('flow');
   if (!ms.length){ f.innerHTML = ''; f.classList.remove('grouped'); return; }
   const state = m => { const s = SERIES[m]; if (!s) return RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : LAST[m] ? 'unscored' : 'empty'; return stale(m) ? 'stale' : ''; };
-  const chip = (m, label) => { const st = state(m), pts = SERIES[m] || [], last = pts[pts.length-1], lr = LAST[m];
-    return `<button type="button" class="node m${st ? ' off' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${st ? `<i>${st}</i>` : `<span class="gl">${word(last.rank).w}</span>`}</button>`; };
+  // a bar per fresh stock, on one scale that holds 100, padded the way the chart pads its own
+  const ranks = ms.filter(m => SERIES[m] && !stale(m)).map(m => SERIES[m][SERIES[m].length-1].rank);
+  let lo = Math.min(100, ...ranks), hi = Math.max(100, ...ranks); const pad = Math.max(2, (hi - lo) * .16); lo -= pad; hi += pad;
+  const chip = (m, label, k) => { const st = state(m), pts = SERIES[m] || [], last = pts[pts.length-1], lr = LAST[m];
+    const bar = st ? `<span class="gv-b"><u class="gv-d"></u><i>${st}</i></span>` : `<span class="gv-b"><u style="width:${((last.rank - lo) / (hi - lo) * 100).toFixed(1)}%"></u></span>`;
+    const idx = st === 'stale' ? `${since(lr.day)} d` : st ? '&#8212;' : `${last.rank}<span class="gl">${word(last.rank).w}</span>`;
+    return `<button type="button" class="node m${st ? ' off' : ''}${st === 'stale' ? ' gv-st' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" data-k="${k}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${bar}<span class="gv-i">${idx}</span></button>`; };
   const gp = pointsOf(g), gl = silent(g) ? null : gp[gp.length-1];
-  const goal = style => `<div class="col gl"${style}><button type="button" class="node g" data-goalnode>${esc(g.name)}<b class="${word(gl ? gl.rank : null).cls}">${gl ? gl.rank : '&#183;'}</b></button></div>`;
   const grouped = ms.length > FLOW_ROWS;
   f.classList.toggle('grouped', grouped);
-  if (!grouped){
-    const srcs = [...new Set(ms.flatMap(m => SOURCES[m] || []))];
-    f.innerHTML = `<svg class="wires" id="wires"></svg>
-      <div class="col src">${srcs.map(s => `<div class="node s" data-s="${esc(s)}">${esc(s)}</div>`).join('')}</div>
-      <div class="col ms">${ms.map(m => chip(m, m)).join('')}</div>${goal('')}`;
-  } else {
-    // many stocks: a row per source with its stocks side by side, so the flow grows with sources, not with stocks
-    const by = new Map(); for (const m of ms){ const s = (SOURCES[m] || [])[0] || ''; if (!by.has(s)) by.set(s, []); by.get(s).push(m); }
-    const order = [...by.keys()].sort((a, b) => (a === '') - (b === '') || by.get(b).length - by.get(a).length || a.localeCompare(b));
-    // the row already names its source, so a prefix every stock in it shares is left off; the full name is on hover
-    const cut = list => { const p = list[0].split('_')[0] + '_'; return list.length > 1 && list.every(m => m.startsWith(p) && m.length > p.length) ? m => m.slice(p.length) : m => m; };
-    f.innerHTML = `<svg class="wires" id="wires"></svg>` + order.map((s, i) => { const list = by.get(s), c = cut(list);
-      return `<div class="node s" data-s="${esc(s)}" style="grid-row:${i + 1}">${esc(s || '·')}</div><div class="grp" data-s="${esc(s)}" style="grid-row:${i + 1}">${list.map(m => chip(m, c(m))).join('')}</div>`; }).join('')
-      + goal(` style="grid-row:1 / span ${order.length}"`);
-  }
+  // the stocks under the source that writes them. scored ones by their index, stale last, a source placed by its first stock; the rest, the sources with the most stocks first
+  const tip = m => SERIES[m][SERIES[m].length-1].rank, byIndex = (a, b) => stale(a) - stale(b) || tip(a) - tip(b);
+  const bySource = (list, order) => { const by = new Map(); for (const m of list){ const s = (SOURCES[m] || [])[0] || ''; if (!by.has(s)) by.set(s, []); by.get(s).push(m); }
+    if (order) for (const l of by.values()) l.sort(order);
+    return [...by.keys()].sort((a, b) => (a === '') - (b === '') || (order ? order(by.get(a)[0], by.get(b)[0]) : by.get(b).length - by.get(a).length) || a.localeCompare(b)).map(s => [s, by.get(s)]); };
+  // the source names its stocks, so past six a prefix every stock under it shares is left off; the full name is on hover
+  const cut = list => { const p = list[0].split('_')[0] + '_'; return grouped && list.length > 1 && list.every(m => m.startsWith(p) && m.length > p.length) ? m => m.slice(p.length) : m => m; };
+  let k = 0;
+  const block = (list, order) => bySource(list, order).map(([s, list]) => { const c = cut(list), i = k++;
+    return `<div class="node s" data-s="${esc(s)}" data-k="${i}">${esc(s || '·')}</div>` + list.map(m => chip(m, c(m), i)).join(''); }).join('');
+  const scored = ms.filter(m => SERIES[m]), none = ms.filter(m => !SERIES[m]);
+  // up to six stocks every source is drawn, as before; past six, the source a stock names first
+  const named = new Set(ms.map(m => (SOURCES[m] || [])[0] || ''));
+  const also = list => { if (grouped) return ''; let h = ''; for (const m of list) for (const s of (SOURCES[m] || []).slice(1)) if (!named.has(s)){ named.add(s); h += `<div class="node s" data-s="${esc(s)}" data-k="${k++}" data-o>${esc(s)}</div>`; } return h; };
+  f.innerHTML = `<svg class="wires" id="wires"></svg><div class="gv-ms">${scored.length ? '<p class="gv-h">MEASURES</p>' + block(scored, byIndex) + also(scored) : ''}${none.length ? '<p class="gv-h">NO DOOR</p>' + block(none) + also(none) : ''}</div>`
+    + `<div class="gv-gl"><button type="button" class="node g" data-goalnode>${esc(g.name)}<b class="${word(gl ? gl.rank : null).cls}">${gl ? gl.rank : '&#183;'}</b></button></div>`;
   wire();
 }
 function wire(){
@@ -467,21 +544,17 @@ function wire(){
   const b = f.getBoundingClientRect(); svg.setAttribute('viewBox', `0 0 ${b.width} ${b.height}`);
   const at = (el, right) => { const r = el.getBoundingClientRect(); return [(right ? r.right : r.left) - b.left, r.top + r.height / 2 - b.top]; };
   const curve = ([x1, y1], [x2, y2]) => { const mx = (x1 + x2) / 2; return `M${x1.toFixed(1)} ${y1.toFixed(1)}C${mx.toFixed(1)} ${y1.toFixed(1)} ${mx.toFixed(1)} ${y2.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`; };
-  const goal = f.querySelector('[data-goalnode]'), srcs = [...f.querySelectorAll('.node.s')], grps = [...f.querySelectorAll('.grp')];
+  // a source's wire runs down under its name and turns into each stock it writes
+  const elbow = (sn, n) => { const r = sn.getBoundingClientRect(), [x1, y1] = at(n, false), x = r.left - b.left + (sn.hasAttribute('data-o') ? 8 : 3), below = y1 > r.top - b.top, y0 = (below ? r.bottom : r.top) - b.top + (below ? -3 : 3), d = below ? 1 : -1, q = Math.max(0, Math.min(5, x1 - x, Math.abs(y1 - y0)));
+    return `M${x.toFixed(1)} ${y0.toFixed(1)}L${x.toFixed(1)} ${(y1 - d * q).toFixed(1)}Q${x.toFixed(1)} ${y1.toFixed(1)} ${(x + q).toFixed(1)} ${y1.toFixed(1)}L${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  const goal = f.querySelector('[data-goalnode]'), srcs = [...f.querySelectorAll('.node.s')];
   // a wire out to the goal: dots move on what is counted, dashes on what is not
   const out = (from, off, cls) => { const d = curve(from, at(goal, false)); return off ? `<path class="off" d="${d}"/>` : `<path class="${cls}" d="${d}"/><path class="live ${cls}" d="${d}"/>`; };
-  // a row that wraps is as wide as its column, so its wire leaves from its rightmost stock, not from the column's edge
-  const end = (el, chips) => { const r = el.getBoundingClientRect(); return [Math.max(...chips.map(c => c.getBoundingClientRect().right)) - b.left, r.top + r.height / 2 - b.top]; };
   const tone = els => els.some(n => n.classList.contains('on')) ? 'on' : els.some(n => n.classList.contains('weak')) ? 'weak' : '';
   let s = '';
-  if (grps.length) for (const gEl of grps){
-    const chips = [...gEl.querySelectorAll('.node.m')], off = chips.every(n => n.classList.contains('off')), sn = srcs.find(x => x.dataset.s === gEl.dataset.s);
-    if (sn && gEl.dataset.s) s += `<path class="${off ? 'off' : ''}" d="${curve(at(sn, true), at(gEl, false))}"/>`;
-    s += out(end(gEl, chips), off, tone(chips));
-  }
-  else f.querySelectorAll('.node.m').forEach(n => {
+  f.querySelectorAll('.node.m').forEach(n => {
     const off = n.classList.contains('off');
-    for (const src of SOURCES[n.dataset.m] || []){ const sn = srcs.find(x => x.dataset.s === src); if (sn) s += `<path class="${off ? 'off' : ''}" d="${curve(at(sn, true), at(n, false))}"/>`; }
+    for (const src of SOURCES[n.dataset.m] || []){ const sn = srcs.find(x => x.dataset.s === src && x.dataset.k === n.dataset.k) || srcs.find(x => x.dataset.s === src); if (sn) s += `<path class="${off ? 'off' : ''}" d="${elbow(sn, n)}"/>`; }
     s += out(at(n, true), off, tone([n]));
   });
   svg.innerHTML = s;
@@ -573,6 +646,8 @@ function drawChart(anim){
       + `<line x1="0" x2="${W - R}" y1="${y(c.highMean).toFixed(1)}" y2="${y(c.highMean).toFixed(1)}" stroke="${hc}" stroke-width="1.4" stroke-dasharray="5 4"/>`; }
   if (fx && fx.c.verdict !== 'empty'){ const c = fx.c, ec = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : c.verdict === 'early' ? '#5c656b' : '#e6e3dc';
     s += `<text class="eff" x="${W - R - 6}" y="${T + 30}" text-anchor="end" style="fill:${ec}">${sgn(c.effect)}</text><text x="${W - R - 6}" y="${T + 46}" text-anchor="end">${c.high} &#183; ${c.low}${c.verdict === 'before' ? ' &#183; before' : ''}</text>`; }
+  if (!fc && !fx && li >= 0 && li < today && i1 === today && (m ? stale(m) : silent(g))){ const X = x(li).toFixed(1);
+    s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...(m ? [m] : g.measures.filter(stale)).map(x => since(LAST[x].day)))} d</text>`; }
   if (li >= 0){ const X = x(li).toFixed(1), Y = tagY.toFixed(1);
     s += `<circle class="pulse" cx="${X}" cy="${Y}" r="9" fill="${col}"/><circle cx="${X}" cy="${Y}" r="3.2" fill="${col}"/><text class="tag" x="${W - R + 10}" y="${(tagY + 3.5).toFixed(1)}" style="fill:${col}">${line[li]}</text>`; }
   s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text><g id="hov"></g>`;
@@ -626,6 +701,16 @@ function leadRows(g){
   return rows.map(({ l, o, c }) => { const on = FX && FX.g === b.id && FX.l === l.metric && FX.o === o;
     return `<div class="cr lead${on ? ' on' : ''}" data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"><div class="cn"><b>${esc(l.metric)} &#8594; ${esc(o)}</b><span>+${l.lag} d &#183; ${c.high} &#183; ${c.low}</span></div>${miniX(c)}<div class="ce"><i>lead</i><b class="${c.effect > 0 ? 'pos' : 'neg'}">${sgn(c.effect)}</b></div></div>`; }).join('');
 }
+// on a goal's page, its levers that have no lead: each one on the weak point, or on the first measure it has pairs with, and crossGrid's word for it
+function leverRows(g){
+  const b = g.id !== YOU_ID && CROSS && CROSS.blocks.find(b => b.id === g.id);
+  if (!b) return '';
+  const weak = weakPoint(g, SERIES);
+  return b.levers.filter(l => !Object.values(l.cells).some(c => c.verdict === 'lead')).map(l => {
+    const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty'), c = o ? l.cells[o] : null;
+    const on = c && FX && FX.g === b.id && FX.l === l.metric && FX.o === o, cls = !c ? '' : c.verdict === 'early' ? 'early' : c.verdict === 'before' ? 'tan' : 'mid';
+    return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
+}
 // the outcome over its last sixty pairs, amber ticks after the lever's high days
 function miniX(c){
   const ps = c.pairs.slice(-60), W = 130, H = 34;
@@ -637,7 +722,7 @@ function drawCommits(){
   const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(pts);
   $('cm').innerHTML = leadRows(g) + COMMITS.map(c => { const r = testCommit(pts, c, COMMITS, TODAY), on = FC === c.id, cl = vcls(r);
     const val = !Number.isFinite(r.effect) ? '&#183;' : sgn(r.effect);
-    const st = r.verdict === 'early' ? `${r.needs} d` : r.verdict === 'tangled' ? 'tangled' : '';
+    const st = r.verdict === 'early' ? `${r.needs} d` : r.verdict === 'tangled' ? 'tangled' : r.verdict === 'no finding' ? '&lt; 2 se' : '';
     const glyph = r.verdict === 'finding' ? (r.effect > 0 ? UP : DOWN) : '';
     const end = !c.to && on ? `<button type="button" class="end" data-end="${esc(c.id)}">end</button>` : c.to ? c.to.slice(5) : 'now';
     return `<div class="cr ${cl}${on ? ' on' : ''}" data-c="${esc(c.id)}">
@@ -645,6 +730,12 @@ function drawCommits(){
       ${mini(line, c, r)}
       <div class="ce">${st ? `<i>${st}</i>` : ''}${glyph}<b class="${cl}">${val}</b></div>
     </div>`; }).join('');
+  $('gvl').innerHTML = leverRows(g);
+}
+// the goal's weak point, weakPoint's measure and its index, over the rows that move it
+function drawWeak(g){
+  const w = weakPoint(g, SERIES);
+  $('gvw').innerHTML = (w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '') + ($('cm').children.length || $('gvl').children.length ? '<p class="gv-h">WHAT MOVES IT</p>' : '');
 }
 
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
@@ -727,6 +818,9 @@ function drawLedger(){
 }
 
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----
+// a focus is drawn on the chart: when the row clicked sits far below it, the chart comes back into view
+const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+  if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', async e => {
   const end = e.target.closest('[data-end]');
   if (end){ if (ENDING) return; ENDING = true; end.disabled = true;
@@ -744,12 +838,12 @@ document.addEventListener('click', async e => {
   const gr = e.target.closest('.rail [data-id]');
   if (gr){ pickGoal(gr.dataset.id); return; }
   const xr = e.target.closest('[data-x]');   // a cell on YOU, or a lead row on a goal's page
-  if (xr){ const [g, l, o] = xr.dataset.x.split('|'); FX = FX && FX.g === g && FX.l === l && FX.o === o ? null : { g, l, o }; FC = null; FM = null; BAND = false; draw(); return; }
+  if (xr){ const [g, l, o] = xr.dataset.x.split('|'); FX = FX && FX.g === g && FX.l === l && FX.o === o ? null : { g, l, o }; FC = null; FM = null; BAND = false; draw(); if (FX) seeChart(); return; }
   const mn = e.target.closest('.flow .node.m');
   if (mn){ FM = FM === mn.dataset.m ? null : mn.dataset.m; FX = null; BAND = false; draw(); return; }
   if (e.target.closest('[data-goalnode]')){ if (FM || FX){ FM = null; FX = null; BAND = false; draw(); } return; }
   const cr = e.target.closest('.cr');
-  if (cr){ if (FX){ FM = FX.o; FX = null; } FC = FC === cr.dataset.c ? null : cr.dataset.c; draw(); return; }   // the outcome stays on the chart
+  if (cr){ if (FX){ FM = FX.o; FX = null; } FC = FC === cr.dataset.c ? null : cr.dataset.c; draw(); if (FC) seeChart(); return; }   // the outcome stays on the chart
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; BAND = false; draw(); }
 });
