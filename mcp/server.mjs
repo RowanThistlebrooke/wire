@@ -17,8 +17,9 @@ import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
 
-const { WIRE_URL, WIRE_KEY, WIRE_EMAIL, WIRE_PASSWORD } = process.env;
+const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
 // One source of truth. The browser loads this file with a script tag;
 // here we read the same text and pull the functions out of it.
@@ -45,7 +46,11 @@ const asClaude = {
 // kept, so the next question tries again.
 let authed = null;
 function signIn() {
-  db = db || createClient(WIRE_URL, WIRE_KEY);
+  if (!db) {
+    // the address and a publishable key only; a secret or service_role key would step around row level security
+    if (!isPublishable(publishableKey())) throw new Error('WIRE_KEY is not a publishable key');
+    db = createClient(supabaseUrl(), publishableKey());
+  }
   authed = authed || db.auth.signInWithPassword({
     email: WIRE_EMAIL, password: WIRE_PASSWORD
   }).then(({ error }) => {
