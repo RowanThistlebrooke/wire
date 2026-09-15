@@ -251,9 +251,12 @@ export function wireServer() {
   server.tool(
     'cross',
     'Every lever of every goal against that goal\'s outcomes, the outcome read the lever\'s declared ' +
-    'days later: after the days the lever was higher than the rest of its week, against after the days ' +
-    'it was lower. A scan: leads at a raised bar, never findings. before means the outcome had already ' +
-    'moved the day before, so the lever is not why.',
+    'days later: after the days the lever read above its usual for that weekday, against after the days ' +
+    'it read below, each day weighted by how far it was from usual. A scan: leads at a raised bar, never ' +
+    'findings. before means the outcome already differed on the lever\'s own day, so this lever cannot be ' +
+    'told apart from it. highMean and lowMean are the plain average outcome after the high days and after ' +
+    'the low days; effect is what decides, and for a lever with more than two values it is larger than ' +
+    'their gap. A habit that always falls on the same weekdays never reads as a lead.',
     {},
     async () => {
       const { series, rows } = await load();

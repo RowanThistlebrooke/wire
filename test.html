@@ -101,11 +101,11 @@ const pointsOf = k => k === 'YOU' ? YOU : (SERIES[k] || []);
 // The verdict is the Wire's. The number is never hidden, only the confidence changes.
 function cell(c, k) {
   const r = testCommit(pointsOf(k), c, COMMITS, TODAY);
-  const { lead } = scanLead(r);   // the raised bar is the reader's, the one scan.html uses
+  const { lead, unconfident } = scanLead(r);   // the raised bar and the one standard error line are the reader's
   let cls = 'wait', word = '', n = r.effect;
   if (r.verdict === 'finding') { cls = r.effect > 0 ? 'up' : 'down'; word = 'confident'; }
   else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'confident · tangled'; }
-  else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead · unconfident' : (r.bar > 0 && Math.abs(r.effect) >= r.bar / 2 ? 'unconfident' : 'very unconfident'); }
+  else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead · unconfident' : (unconfident ? 'unconfident' : 'very unconfident'); }
   else if (r.verdict === 'early') { cls = 'wait'; word = `very unconfident · ${r.needs} more days`; }
   else if (r.duringMean != null) { n = Math.round((r.duringMean - 100) * 10) / 10; cls = 'wait'; word = 'vs your usual · 0 before'; }
   else { cls = 'wait'; word = '0 readings'; }

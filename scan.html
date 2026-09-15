@@ -96,9 +96,7 @@ let COMMITS = [], SERIES = {}, PICK = null;
 function trust(r) {
   if (r.lead) return ['lead', 'lead'];
   if (r.verdict === 'early') return [`very unconfident · ${r.needs} more days`, ''];
-  if (r.verdict === 'tangled') return ['confident · tangled', ''];
-  if (r.verdict === 'finding') return ['confident', ''];
-  if (r.bar > 0 && Math.abs(r.effect) >= r.bar / 2) return ['unconfident', ''];
+  if (scanLead(r).unconfident) return ['unconfident', ''];
   return ['very unconfident', ''];
 }
 
