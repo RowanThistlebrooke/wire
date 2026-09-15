@@ -747,7 +747,7 @@ document.addEventListener('click', async e => {
   if (mn){ FM = FM === mn.dataset.m ? null : mn.dataset.m; FX = null; BAND = false; draw(); return; }
   if (e.target.closest('[data-goalnode]')){ if (FM || FX){ FM = null; FX = null; BAND = false; draw(); } return; }
   const cr = e.target.closest('.cr');
-  if (cr){ FC = FC === cr.dataset.c ? null : cr.dataset.c; FX = null; draw(); return; }
+  if (cr){ if (FX){ FM = FX.o; FX = null; } FC = FC === cr.dataset.c ? null : cr.dataset.c; draw(); return; }   // the outcome stays on the chart
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; BAND = false; draw(); }
 });
@@ -853,7 +853,7 @@ $('goalf').addEventListener('submit', async e => { e.preventDefault(); say('');
   $('gadd').disabled = true;
   try { const { error } = await writeGoal(db, name, measures, p.target, [...GLEVER].map(([metric, lag]) => ({ metric, lag })));
     if (error){ say(error.message); return; }
-    SEL = slugCommit(name); FM = null; FC = null; BAND = false; await load(); fillGoalLine(); render(); }
+    SEL = slugCommit(name); FM = null; FC = null; FX = null; BAND = false; await load(); fillGoalLine(); render(); }
   finally { $('gadd').disabled = false; }   // held through the reload, so the same goal is not written twice
 });
 
