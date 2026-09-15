@@ -648,7 +648,8 @@ function drawCommits(){
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
 // notes are counted here and nothing more: their text is never read by a page
 const laneOf = s => s === 'claude' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';
-const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes'];   // the tools in mcp/wire.mjs; remember is its one write
+const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes', 'cross'];   // the tools in mcp/wire.mjs that read
+const MCP_WRITES = ['record', 'did', 'rule', 'goal', 'remember'];   // and the ones that write, every row signed claude
 const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note'];
 const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' };
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -706,15 +707,15 @@ function drawLedger(){
   };
   const lane = l => {
     const srcs = inLane(l), last = srcs.map(s => lastSrc[s]).sort().pop();
-    let body;
-    if (l === 'mcp') body = `<div class="lrow"><span class="k">reads</span>${MCP_READS.map(n => `<span class="chip">${n}</span>`).join('')}</div>
-      <div class="lrow"><span class="k">writes</span><span class="chip on">remember</span><span class="arrow">&#8594;</span><span class="chip">note</span><b class="cnt">${fmt(bySrc.claude || 0)}</b></div>`;
-    else body = srcs.map(s => {
+    const mcpRows = l !== 'mcp' ? '' : `<div class="lrow"><span class="k">reads</span>${MCP_READS.map(n => `<span class="chip">${n}</span>`).join('')}</div>
+      <div class="lrow"><span class="k">writes</span>${MCP_WRITES.map(n => `<span class="chip on">${n}</span>`).join('')}<b class="cnt">${fmt(bySrc.claude || 0)}</b></div>`;
+    let body = srcs.map(s => {
       const ms = Object.keys(stocks).filter(m => stocks[m][s]).sort(), kinds = {};
       for (const r of rows) if (r.source === s && r.event_type && r.event_type !== 'measurement') kinds[r.event_type] = (kinds[r.event_type] || 0) + 1;
       return `<div class="src"><div class="sh"><span>${esc(s)}</span><b>${fmt(bySrc[s])}</b><em>${String(lastSrc[s]).slice(5, 10)}</em></div>
         <div class="grid">${ms.map(m => box(m, s)).join('')}${TYPES.filter(k => k !== 'measurement' && kinds[k]).map(k => `<div class="lb count"><span class="ln1"><span class="nm">${k}</span></span><b>${fmt(kinds[k])}</b><span class="meta">rows</span></div>`).join('')}</div></div>`;
-    }).join('') || '<div class="empty">0</div>';
+    }).join('');
+    body = mcpRows + (body || (mcpRows ? '' : '<div class="empty">0</div>'));
     return `<section class="lane"><div class="lh"><div class="lt">${l}</div><b>${fmt(total(l))}</b><span>rows</span>${last ? `<em>${String(last).slice(5, 10)}</em>` : ''}</div>${body}</section>`;
   };
   // the ledger itself, newest first: every row is a line that is never changed
