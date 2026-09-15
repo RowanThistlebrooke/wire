@@ -294,6 +294,38 @@ function testCommit(points, commit, commits, todayStr) {
 }
 
 
+// ---- the scan: one commit against everything ----
+//
+// The declared test asks one question at the ordinary bar, and its answer
+// is a finding. The scan asks every question you own at once, and its
+// answers are only leads.
+//
+// The bar has to go up. Check fifteen stocks at two standard errors and
+// roughly one of them clears it by pure chance. At 3.3 the chance of any
+// single false alarm across a normal ledger drops to about one in twenty,
+// which is the same protection the declared test had to begin with.
+const SCAN_BAR = 3.3;
+
+// A testCommit result read at the raised bar. A stock that never varies has
+// a bar of zero, and zero clears zero: no movement is not a lead.
+function scanLead(r) {
+  if (r.effect === undefined || r.bar == null) return { raised: null, lead: false };
+  const raised = Math.round(SCAN_BAR * (r.bar / 2) * 10) / 10;   // bar was 2 standard errors
+  return { raised, lead: r.verdict !== 'early' && raised > 0 && Math.abs(r.effect) > 0 && Math.abs(r.effect) >= raised };
+}
+
+function scanCommit(seriesByMetric, commit, commits, todayStr) {
+  const rows = [];
+  for (const metric of Object.keys(seriesByMetric)) {
+    const r = testCommit(seriesByMetric[metric], commit, commits, todayStr);
+    if (r.effect === undefined) { rows.push({ metric, ...r, lead: false }); continue; }
+    const { raised, lead } = scanLead(r);
+    rows.push({ metric, ...r, raised, lead });
+  }
+  return rows.sort((a, b) => Math.abs(b.effect || 0) - Math.abs(a.effect || 0));
+}
+
+
 // ---- goals: what the stocks are for ----
 //
 // A goal names the measures it is made of, and can name a target on one

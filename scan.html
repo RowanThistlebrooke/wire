@@ -90,33 +90,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const sgn = v => (v >= 0 ? '+' : '') + (Math.round(v * 10) / 10);
 let COMMITS = [], SERIES = {}, PICK = null;
 
-// ---- the scan: one commit against everything ----
-//
-// The declared test asks one question at the ordinary bar, and its answer
-// is a finding. The scan asks every question you own at once, and its
-// answers are only leads.
-//
-// The bar has to go up. Check fifteen stocks at two standard errors and
-// roughly one of them clears it by pure chance. At 3.3 the chance of any
-// single false alarm across a normal ledger drops to about one in twenty,
-// which is the same protection the declared test had to begin with.
-const SCAN_BAR = 3.3;
-
-function scanCommit(seriesByMetric, commit, commits, todayStr) {
-  const rows = [];
-  for (const metric of Object.keys(seriesByMetric)) {
-    const r = testCommit(seriesByMetric[metric], commit, commits, todayStr);
-    if (r.effect === undefined) { rows.push({ metric, ...r, lead: false }); continue; }
-    const se = r.bar / 2;                       // bar was 2 standard errors
-    const raised = Math.round(SCAN_BAR * se * 10) / 10;
-    // A stock that never varies has a bar of zero, and zero clears zero.
-    // No movement is not a lead.
-    const lead = r.verdict !== 'early' && raised > 0 &&
-                 Math.abs(r.effect) > 0 && Math.abs(r.effect) >= raised;
-    rows.push({ metric, ...r, raised, lead });
-  }
-  return rows.sort((a, b) => Math.abs(b.effect || 0) - Math.abs(a.effect || 0));
-}
+// the scan itself, scanCommit and its raised bar, lives in you-reader.js
 
 // under every number, how much to trust it
 function trust(r) {

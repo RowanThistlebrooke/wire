@@ -90,7 +90,6 @@ td.cell.on .v{text-decoration:underline;text-underline-offset:5px;text-decoratio
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TODAY = new Date().toISOString().slice(0, 10);
-const SCAN_BAR = 3.3;
 const sgn = v => (v >= 0 ? '+' : '') + (Math.round(v * 10) / 10);
 const $ = id => document.getElementById(id);
 function say(m) { $('msg').innerHTML = `<p class="empty" style="color:var(--leak)">${esc(m)}</p>`; }
@@ -102,8 +101,7 @@ const pointsOf = k => k === 'YOU' ? YOU : (SERIES[k] || []);
 // The verdict is the Wire's. The number is never hidden, only the confidence changes.
 function cell(c, k) {
   const r = testCommit(pointsOf(k), c, COMMITS, TODAY);
-  const raised = r.bar != null ? Math.round(SCAN_BAR * (r.bar / 2) * 10) / 10 : null;
-  const lead = r.effect != null && r.verdict !== 'early' && raised > 0 && Math.abs(r.effect) > 0 && Math.abs(r.effect) >= raised;
+  const { lead } = scanLead(r);   // the raised bar is the reader's, the one scan.html uses
   let cls = 'wait', word = '', n = r.effect;
   if (r.verdict === 'finding') { cls = r.effect > 0 ? 'up' : 'down'; word = 'confident'; }
   else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'confident · tangled'; }
