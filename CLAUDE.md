@@ -29,8 +29,8 @@ out loud. Keep it that way.
 4. **Secrets.** The publishable key is safe in the browser because row
    level security protects the rows. The service_role key is not, and must
    never appear in this repo, in a page, in a log, or in a chat. Secrets
-   go in GitHub repository secrets or in a config file on the user's own
-   machine.
+   go in GitHub repository secrets, in Vercel environment variables, or in
+   a config file on the user's own machine.
 5. **The gates stay.** Under `MIN_DAYS` on either side, or an effect
    smaller than two standard errors, the test says so. A scan across many
    stocks uses the raised bar and returns leads, never findings. Do not
