@@ -1,3 +1,4 @@
 .DS_Store
 mcp/node_modules/
 .playwright-mcp/
+node_modules/

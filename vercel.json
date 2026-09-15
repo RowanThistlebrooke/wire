@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/mcp.mjs": {
+      "includeFiles": "you-reader.js"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/mcp/:token", "destination": "/api/mcp?token=:token" }
+  ]
+}
