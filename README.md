@@ -42,6 +42,7 @@ and will stay that way.
 | `pull/github.mjs` | pulls your commit count every morning |
 | `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
+| `api/setup.mjs` | a walkthrough for Claude, one step at a time, for Whop license holders; it has no door to any ledger |
 
 ## Set it up
 

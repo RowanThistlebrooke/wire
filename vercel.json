@@ -2,6 +2,9 @@
   "functions": {
     "api/mcp.mjs": {
       "includeFiles": "{you-reader.js,package.json,sql/01_the_table.sql}"
+    },
+    "api/setup.mjs": {
+      "includeFiles": "sql/01_the_table.sql"
     }
   },
   "rewrites": [
