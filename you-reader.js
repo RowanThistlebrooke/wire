@@ -344,8 +344,8 @@ function scanCommit(seriesByMetric, commit, commits, todayStr) {
 // A goal names its outcomes, the stocks it is made of, and can name levers:
 // stocks you move, each read a declared 1 or 2 days later. Every lever is
 // read against every outcome of its own goal, and the question is only
-// this: after the days the lever read above its usual for that weekday, was
-// the outcome's index different from after the days it read below?
+// this: after the days the lever read above its usual, was the outcome's
+// index different from after the days it read below?
 //
 // It is a scan, so the answer is a lead, never a finding. A lead becomes a
 // finding the one way the Wire has: make it a commit and let testCommit judge.
@@ -356,23 +356,27 @@ function scanCommit(seriesByMetric, commit, commits, todayStr) {
 // What keeps a coincidence from reading as a lead:
 //   - Weekdays are levelled first and each outcome is read against the four
 //     weeks around it, so a Monday rhythm or a channel that grows for months
-//     is not a lever. A day after seven days of the same reading says nothing.
+//     is not a lever. A habit that starts, stops or moves to another day is
+//     read inside its own stretches; blocks of work weeks, seasons and rotas
+//     against the nearest weeks of the same weekday.
+//   - A lever that moves with a whole busy week is read against the other
+//     days of its week, and the outcome on the lever's own day and the day
+//     before are taken out, so a busy week or an illness that moves both is
+//     not taken for the lever.
 //   - Each finished week is one block of the standard error, and every
-//     outcome read comes from a finished week, so the week still running
-//     changes nothing.
+//     reading comes from a finished week, so the week still running changes
+//     nothing.
 //   - The bar starts at SCAN_BAR and rises with every question the goals
 //     have ever asked, and with how few weeks there are.
-//   - Inside the weeks, the days the lever read above its own seven days
-//     before must differ from the days it read below, the same way, by two
-//     standard errors.
-//   - The same test runs against the outcome on the lever's own day, a
-//     reading the lever could not have caused. If that clears the bar the
-//     same way, the answer is 'before': the outcome already differed on the
-//     lever's day, so this lever cannot be told apart from it.
+//   - The same reading runs against the outcome on the lever's own day, which
+//     the lever could not have caused. If that is as large, the answer is
+//     'before': the outcome already differed on the lever's day, so this
+//     lever cannot be told apart from it.
 //
-// What it cannot see: a habit that always falls on the same weekdays, like
-// both weekend nights every week, is all weekday once weekdays are levelled,
-// so it never reads as a lead.
+// What no data can answer: a lever that reads the same on every one of its
+// weekdays every week, like a drink on every single Saturday, is the week
+// itself. Its verdict is 'fixed': change it for a few weeks as a commit,
+// and testCommit can answer.
 
 const LAGS = [1, 2];
 
@@ -403,22 +407,47 @@ function crossBar(asked, df) {
 const weekOf = t => Math.floor((t + 3) / 7);       // Monday to Sunday
 const weekdayOf = t => (t + 3) % 7;
 
-// Pair each lever day with the outcome `lag` days later and level both by
-// weekday. A pair counts only when its outcome is in a finished week. A day
-// with no reading on either side is simply not in the test.
+// Pair each lever day with the outcome `lag` days later. A pair counts only
+// when its outcome is in a finished week, and every reading that levels it
+// comes from a finished week too. A day with no reading is simply not there.
 //
-// A day is high when the lever read above its usual level for that weekday,
-// low when below, and it counts by how far: a day far above weighs more than
-// a day just above. A day that follows seven days of exactly the same
-// reading says nothing: nobody was moving the lever. Each outcome is read
-// against the four weeks around it, so a slow drift is not taken for the lever.
+// The lever is read against its usual level for that weekday. When a
+// weekday's reading tends to repeat the week before, something slower than
+// the lever is moving it.
 //
-// Two differences come out. The first is every high day against every low
-// day, weighted by distance, with each finished week as one block of its
-// standard error. For a lever with two values it is the plain difference.
-// The second stays inside each week and reads high and low against the
-// lever's own seven days before, on weekdays the lever ever moved.
-function crossSplit(leverRows, outcomeAt, lag, openWeek) {
+// If one or two changes of level on each weekday account for that (a habit
+// that starts, stops, thins out or moves to another day) and most of the
+// lever's movement is left inside the stretches between them, the lever is
+// still read against its usual level, unless that reading comes out beyond
+// the one inside the stretches by two standard errors: then the stretches
+// are doing it, and each day is read only against its own stretch.
+//
+// Otherwise (blocks of work weeks, a season, a rota) each day is read only
+// against the nearest readings of its own weekday, about two weeks either
+// side, and a day where those readings sit on one side of the lever's middle
+// and then switch to the other side and stay is a switch, not a week the
+// lever moved, so it is left out.
+//
+// Each day is then read against the other days of its own week, leaving out
+// the days next to its outcome, so a busy week that moves the lever and the
+// outcome together cancels.
+//
+// The outcome is read against its weekday and the four weeks around it. When
+// the lever is read against its usual level, the outcome on the lever's own
+// day and the day before are taken out inside the estimate: whatever they
+// explain is not the lever's.
+//
+// The effect is the outcome's change for each unit of the lever, times the
+// lever's usual distance between a high and a low day. For a lever with two
+// values it is the plain difference. Each finished week is one block of its
+// standard error.
+//
+// When the lever read against its usual level moves on several days of the
+// same week together, the effect is read once more with each day against
+// only the other days of its week that the lever moves, each scaled to its
+// weekday's own spread. If the first reading comes out beyond that one by two
+// standard errors, the week is doing it, not the day: `apart`.
+function crossSplit(leverRows, outcomeAt, lag, openWeek, adjust = lag ? [0, -1] : [], control = []) {
   const pairs = [];
   for (const r of leverRows) {
     const t = dayNum(r.day);
@@ -427,44 +456,155 @@ function crossSplit(leverRows, outcomeAt, lag, openWeek) {
     if (!o) continue;
     pairs.push({ day: r.day, next: o.day, t, value: Number(r.mean), rank: o.rank, side: null });
   }
-  const level = val => {
-    const sum = {}, n = {};
-    for (const p of pairs) { const k = weekdayOf(p.t); sum[k] = (sum[k] || 0) + val(p); n[k] = (n[k] || 0) + 1; }
-    return p => val(p) - sum[weekdayOf(p.t)] / n[weekdayOf(p.t)];
+  const L = new Map(), O = new Map();
+  for (const r of leverRows) { const t = dayNum(r.day); if (weekOf(t) < openWeek) L.set(t, Number(r.mean)); }
+  for (const [t, p] of outcomeAt) if (weekOf(t) < openWeek) O.set(t, p.rank);
+  const level = m => {
+    const s = [0, 0, 0, 0, 0, 0, 0], n = [0, 0, 0, 0, 0, 0, 0], d = new Map();
+    for (const [t, v] of m) { s[weekdayOf(t)] += v; n[weekdayOf(t)]++; }
+    for (const [t, v] of m) d.set(t, v - s[weekdayOf(t)] / n[weekdayOf(t)]);
+    return d;
   };
-  const lv = level(p => p.value), ov = level(p => p.rank);
-  const byDay = new Map(pairs.map(p => [p.t, p]));
-  const first = {}, moved = {};
-  for (const p of pairs) {
-    p.lv = lv(p); p.ov = ov(p);
-    const k = weekdayOf(p.t);
-    if (!(k in first)) first[k] = p.value; else if (p.value !== first[k]) moved[k] = true;
+  const ld = level(L), od = level(O), ol = new Map();
+  for (const [t, v] of od) { let s = 0, n = 0; for (let k = -14; k <= 14; k++) if (od.has(t + k)) { s += od.get(t + k); n++; } ol.set(t, v - s / n); }
+
+  // does a weekday's reading tend to repeat the week before?
+  const repeats = dev => {
+    let same = 0, all = 0;
+    for (const [t, v] of dev) { all += v * v; if (dev.has(t + 7)) same += v * dev.get(t + 7); }
+    return all > 0 && same / all > 0.15;
+  };
+  const local = repeats(ld);
+
+  // each weekday split into at most three stretches, each read against its own mean
+  let stretch = null;
+  if (local) {
+    const days = [[], [], [], [], [], [], []], dev = new Map();
+    for (const t of [...L.keys()].sort((a, b) => a - b)) days[weekdayOf(t)].push(t);
+    let inside = 0, whole = 0;
+    for (const ts of days) {
+      const n = ts.length;
+      if (!n) continue;
+      const c = [0], c2 = [0];
+      for (const t of ts) { const x = L.get(t); c.push(c[c.length - 1] + x); c2.push(c2[c2.length - 1] + x * x); }
+      const sse = (a, b) => Math.max(0, c2[b] - c2[a] - (c[b] - c[a]) ** 2 / (b - a));
+      const score = (e, m) => n * Math.log(Math.max(e, 1e-9) / n) + 3 * m * Math.log(n);
+      const all = sse(0, n);
+      let best = all, cuts = [];
+      if (all > 1e-9) {
+        let s = score(all, 0);
+        for (let i = 4; i <= n - 4; i++) {
+          const e = sse(0, i) + sse(i, n);
+          if (score(e, 1) < s) { s = score(e, 1); best = e; cuts = [i]; }
+          for (let j = i + 4; j <= n - 4; j++) {
+            const e2 = sse(0, i) + sse(i, j) + sse(j, n);
+            if (score(e2, 2) < s) { s = score(e2, 2); best = e2; cuts = [i, j]; }
+          }
+        }
+      }
+      inside += best; whole += all;
+      const bounds = [0, ...cuts, n];
+      for (let k = 0; k + 1 < bounds.length; k++) {
+        const a = bounds[k], b = bounds[k + 1], mu = (c[b] - c[a]) / (b - a);
+        for (let i = a; i < b; i++) dev.set(ts[i], L.get(ts[i]) - mu);
+      }
+    }
+    if (!repeats(dev) && inside >= 0.4 * whole) stretch = dev;
   }
-  const weeks = new Map();
-  let high = 0, low = 0;
-  for (const p of pairs) {
-    let same = true, before = 0, nb = 0, around = 0, na = 0;
-    for (let k = 1; k <= 7; k++) { const q = byDay.get(p.t - k); if (!q || q.value !== p.value) same = false; if (q) { before += q.lv; nb++; } }
-    if (same) continue;
-    for (let k = -14; k <= 14; k++) { const q = byDay.get(p.t + k); if (q) { around += q.ov; na++; } }
-    const oc = p.ov - around / na, d = moved[weekdayOf(p.t)] && nb ? p.lv - before / nb : 0;
-    p.side = p.lv > 1e-9 ? 'high' : p.lv < -1e-9 ? 'low' : null;
-    const inWeek = d > 1e-9 ? 'high' : d < -1e-9 ? 'low' : null;
-    if (!p.side && !inWeek) continue;
-    const w = weekOf(p.t);
-    if (!weeks.has(w)) weeks.set(w, { lean: 0, far: 0, inHigh: [], inLow: [] });
-    const wk = weeks.get(w);
-    if (p.side) { wk.lean += 2 * p.lv * oc; wk.far += Math.abs(p.lv); if (p.side === 'high') high++; else low++; }
-    if (inWeek === 'high') wk.inHigh.push(oc);
-    if (inWeek === 'low') wk.inLow.push(oc);
+
+  const sorted = [...L.values()].sort((a, b) => a - b), middle = sorted[sorted.length >> 1];
+  const nearest = (t, want, far) => {
+    const got = [[0, L.get(t)]];
+    for (let j = 1; j <= far && got.length < want; j++) for (const d of [-j, j]) if (L.has(t + 7 * d)) got.push([d, L.get(t + 7 * d)]);
+    return got.sort((a, b) => a[0] - b[0]).map(g => g[1]);
+  };
+  const near = t => {
+    if (!L.has(t)) return undefined;
+    const sides = nearest(t, 7, 7).map(v => Math.sign(v - middle));
+    let turns = 0, at = 0;
+    for (let i = 1; i < sides.length; i++) if (sides[i] !== sides[i - 1]) { turns++; at = i; }
+    if (turns === 1 && at >= 2 && sides.length - at >= 2) return undefined;
+    return L.get(t) - mean(nearest(t, 5, 6));
+  };
+
+  const dot = (x, y) => x.reduce((a, v, i) => a + v * y[i], 0);
+  // the effect for an instrument zz over rows; res is what the outcome leaves once the effect is out
+  const solve = (rows, zz, clean = v => v) => {
+    const ls = rows.map(r => r.l), oc = rows.map(r => r.oc);
+    const den = dot(zz, ls), beta = dot(zz, oc) / den, res = clean(oc.map((x, i) => x - beta * ls[i]));
+    const lean = new Map(), far = new Map();
+    rows.forEach((r, i) => { lean.set(r.w, (lean.get(r.w) || 0) + zz[i] * res[i] / den); far.set(r.w, (far.get(r.w) || 0) + Math.abs(zz[i])); });
+    const weeks = [...far.values()].filter(x => x > 1e-9).length, spread = [...lean.values()].reduce((a, x) => a + x * x, 0);
+    const se = weeks > 1 && den > 1e-9 && spread > 0 ? Math.sqrt(weeks / (weeks - 1) * spread) : Infinity;
+    return { rows, beta, lean, weeks, se };
+  };
+  // the lever read one way, each day against the other days of its week, the days next to its outcome left out
+  const read = (lever, adj) => {
+    const rows = [];
+    for (const p of pairs) {
+      const z = lever(p.t), extra = adj.map(d => ol.get(p.t + d)).concat(control.map(d => lever(p.t + d)));
+      if (z === undefined || extra.some(v => v === undefined)) continue;
+      rows.push({ p, t: p.t, w: weekOf(p.t), z, l: ld.get(p.t), oc: ol.get(p.t + lag), extra });
+    }
+    const byWeek = new Map();
+    for (const r of rows) { if (!byWeek.has(r.w)) byWeek.set(r.w, []); byWeek.get(r.w).push(r); }
+    const inWeek = get => rows.map(r => {
+      const xs = byWeek.get(r.w).filter(q => q.t !== r.t && (q.t < r.t + lag - 1 || q.t > r.t + lag + 1)).map(get);
+      return get(r) - (xs.length ? mean(xs) : 0);
+    });
+    const basis = [];
+    for (let j = 0; j < adj.length + control.length; j++) {
+      let v = inWeek(r => r.extra[j]);
+      for (const b of basis) { const c = dot(v, b) / dot(b, b); v = v.map((x, i) => x - c * b[i]); }
+      if (dot(v, v) > 1e-9) basis.push(v);
+    }
+    const without = v => { for (const b of basis) { const c = dot(v, b) / dot(b, b); v = v.map((x, i) => x - c * b[i]); } return v; };
+    return Object.assign(solve(rows, without(inWeek(r => r.z)), without), { byWeek });
+  };
+  // how far one reading's effect lies beyond another's, toward its own sign, in standard errors of the difference
+  const beyond = (x, y) => {
+    if (!Number.isFinite(x.se) || !Number.isFinite(y.se)) return 0;
+    const ws = new Set([...x.lean.keys(), ...y.lean.keys()]);
+    let s2 = 0;
+    for (const w of ws) s2 += ((x.lean.get(w) || 0) - (y.lean.get(w) || 0)) ** 2;
+    return s2 > 0 ? Math.sign(x.beta) * (x.beta - y.beta) / Math.sqrt(ws.size / (ws.size - 1) * s2) : 0;
+  };
+
+  let usual = !local || !!stretch;
+  let e = usual ? read(t => ld.get(t), adjust) : read(near, []);
+  if (stretch) { const w = read(t => stretch.get(t), []); if (beyond(e, w) >= 2) { e = w; usual = false; } }
+
+  for (const r of e.rows) r.p.side = r.z > 1e-9 ? 'high' : r.z < -1e-9 ? 'low' : null;
+  const high = e.rows.filter(r => r.p.side === 'high').length, low = e.rows.filter(r => r.p.side === 'low').length;
+
+  // do the lever's days move together inside weeks? then read each day against only the other days of its week the lever moves
+  let apart = false;
+  if (usual) {
+    const size = [0, 0, 0, 0, 0, 0, 0], n = [0, 0, 0, 0, 0, 0, 0];
+    for (const r of e.rows) { size[weekdayOf(r.t)] += r.z * r.z; n[weekdayOf(r.t)]++; }
+    for (let k = 0; k < 7; k++) size[k] = n[k] > 1 ? Math.sqrt(size[k] / n[k]) : 0;
+    const moves = r => size[weekdayOf(r.t)] > 1e-9, scaled = r => r.z / size[weekdayOf(r.t)];
+    let together = 0, alone = 0;
+    for (const rs of e.byWeek.values()) {
+      const xs = rs.filter(moves).map(scaled);
+      if (xs.length < 2) continue;
+      const s = xs.reduce((a, x) => a + x, 0), s2 = xs.reduce((a, x) => a + x * x, 0);
+      together += s * s - s2; alone += (xs.length - 1) * s2;
+    }
+    if (alone > 0 && together >= 0.1 * alone) {
+      const zw = e.rows.map(r => {
+        if (!moves(r)) return 0;
+        const xs = e.byWeek.get(r.w).filter(q => q.t !== r.t && (q.t < r.t + lag - 1 || q.t > r.t + lag) && moves(q)).map(scaled);
+        return xs.length ? r.z - size[weekdayOf(r.t)] * mean(xs) : 0;
+      });
+      const w = solve(e.rows, zw);
+      apart = w.se <= 2 * e.se && beyond(e, w) >= 2;
+    }
   }
-  const sum = xs => xs.reduce((a, x) => a + x, 0);
-  const all = [...weeks.values()].filter(w => w.far > 0);
-  const effect = sum(all.map(w => w.lean)) / sum(all.map(w => w.far)), far = sum(all.map(w => w.far));
-  const n = all.length, parts = all.map(w => (w.lean - effect * w.far) / far);
-  const se = n > 1 ? Math.sqrt(n / (n - 1) * sum(parts.map(x => x * x))) : Infinity;
-  const inWeek = [...weeks.values()].filter(w => w.inHigh.length && w.inLow.length).map(w => mean(w.inHigh) - mean(w.inLow));
-  return { pairs, high, low, weeks: n, effect, se, inWeek };
+
+  const ls = e.rows.map(r => r.l);
+  const k = 2 * dot(ls, ls) / ls.reduce((a, x) => a + Math.abs(x), 0);
+  return { pairs, high, low, weeks: e.weeks, effect: k * e.beta, se: k * e.se, apart };
 }
 
 // One lever against one outcome. The effect is in the outcome's index
@@ -474,9 +614,13 @@ function crossTest(leverRows, outcomePoints, lag, asked, todayStr) {
   const open = weekOf(dayNum(todayStr));
   const s = crossSplit(leverRows, at, lag, open);
   const out = { lag, pairs: s.pairs, high: s.high, low: s.low, weeks: s.weeks };
+  // fixed: on each of its weekdays the lever read the same every time, in at least three weeks each, and not the
+  // same on all of them. The lever is the week itself, and nothing in these days can tell it from the week's rhythm.
+  const fixedWeek = pairs => { const seen = {}, n = {}; for (const p of pairs) { const k = weekdayOf(p.t); n[k] = (n[k] || 0) + 1; if (!(k in seen)) seen[k] = p.value; else if (seen[k] !== p.value) return false; } return new Set(Object.values(seen)).size > 1 && Object.values(n).every(c => c >= 3); };
+  if (fixedWeek(s.pairs)) { out.verdict = 'fixed'; return out; }
   if (!s.high || !s.low) { out.verdict = 'empty'; return out; }
 
-  const e = s.effect;
+  const e = Number.isFinite(s.effect) ? s.effect : 0;
   out.effect = Math.round(e * 10) / 10;
   // the plain average outcome after the high days and after the low days, for drawing; the effect decides
   const avg = side => { const r = s.pairs.filter(p => p.side === side).map(p => p.rank); return r.length ? Math.round(mean(r) * 10) / 10 : null; };
@@ -490,14 +634,17 @@ function crossTest(leverRows, outcomePoints, lag, asked, todayStr) {
   out.raised = Number.isFinite(s.se) ? Math.round(out.z * s.se * 10) / 10 : null;
   // decided on the unrounded numbers; the rounded ones are only for showing
   if (!(Number.isFinite(s.se) && s.se > 0 && Math.abs(e) >= out.z * s.se)) { out.verdict = 'no lead'; return out; }
-  // inside the weeks the lever moved, high days must differ from low days the same way, by two standard errors
-  const me = mean(s.inWeek), mse = standardError(s.inWeek);
-  if (!(Number.isFinite(mse) && Math.sign(me) === Math.sign(e) && Math.abs(me) >= 2 * mse)) { out.verdict = 'no lead'; return out; }
+  // the week moved the lever and the outcome, not the day
+  if (s.apart) { out.verdict = 'no lead'; return out; }
 
-  const b = crossSplit(leverRows, at, 0, open);                // the outcome on the lever's own day
-  out.before = b.high && b.low ? Math.round(b.effect * 10) / 10 : null;
-  const moved = b.high >= MIN_DAYS && b.low >= MIN_DAYS && Number.isFinite(b.se) && b.se > 0 &&
-                Math.sign(b.effect) === Math.sign(e) && Math.abs(b.effect) >= crossBar(asked, b.weeks - 1) * b.se;
+  // The same reading against the outcome on the lever's own day, which the
+  // lever could not have caused. If that is as large, less one standard
+  // error, or still clears two standard errors once the lever's day before is
+  // taken out, the outcome had already moved: 'before'.
+  const b = crossSplit(leverRows, at, 0, open), c = crossSplit(leverRows, at, 0, open, [], [-1]);
+  out.before = b.high && b.low && Number.isFinite(b.effect) ? Math.round(b.effect * 10) / 10 : null;
+  const agrees = x => x.high >= MIN_DAYS && x.low >= MIN_DAYS && Number.isFinite(x.se) && x.se > 0 && Math.sign(x.effect) === Math.sign(e);
+  const moved = (agrees(b) && Math.abs(b.effect) >= Math.abs(e) - s.se) || (agrees(c) && Math.abs(c.effect) >= 2 * c.se);
   out.verdict = moved ? 'before' : 'lead';
   return out;
 }

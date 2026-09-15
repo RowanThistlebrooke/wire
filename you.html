@@ -644,7 +644,8 @@ function drawChart(anim){
   if (xm){ const c = fx.c, hc = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : '#e6e3dc';
     s += `<line x1="0" x2="${W - R}" y1="${y(c.lowMean).toFixed(1)}" y2="${y(c.lowMean).toFixed(1)}" stroke="#8d959a" stroke-width="1.2" stroke-dasharray="5 4"/>`
       + `<line x1="0" x2="${W - R}" y1="${y(c.highMean).toFixed(1)}" y2="${y(c.highMean).toFixed(1)}" stroke="${hc}" stroke-width="1.4" stroke-dasharray="5 4"/>`; }
-  if (fx && fx.c.verdict !== 'empty'){ const c = fx.c, ec = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : c.verdict === 'early' ? '#5c656b' : '#e6e3dc';
+  if (fx && fx.c.verdict === 'fixed') s += `<text x="${W - R - 6}" y="${T + 46}" text-anchor="end">fixed</text>`;
+  if (fx && fx.c.verdict !== 'empty' && fx.c.verdict !== 'fixed'){ const c = fx.c, ec = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : c.verdict === 'early' ? '#5c656b' : '#e6e3dc';
     s += `<text class="eff" x="${W - R - 6}" y="${T + 30}" text-anchor="end" style="fill:${ec}">${sgn(c.effect)}</text><text x="${W - R - 6}" y="${T + 46}" text-anchor="end">${c.high} &#183; ${c.low}${c.verdict === 'before' ? ' &#183; before' : ''}</text>`; }
   if (!fc && !fx && li >= 0 && li < today && i1 === today && (m ? stale(m) : silent(g))){ const X = x(li).toFixed(1);
     s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...(m ? [m] : g.measures.filter(stale)).map(x => since(LAST[x].day)))} d</text>`; }
@@ -685,9 +686,9 @@ function drawCross(g){
   const cell = (b, l, o) => { const c = l.cells[o];
     if (!c || c.verdict === 'empty') return '<td>&#183;</td>';
     const on = FX && FX.g === b.id && FX.l === l.metric && FX.o === o;
-    const cls = c.verdict === 'lead' ? (c.effect > 0 ? 'pos' : 'neg') : c.verdict === 'early' ? 'early' : c.verdict === 'before' ? 'bef' : '';
-    const sub = c.verdict === 'early' ? `<i>${c.high} &#183; ${c.low}</i>` : c.verdict === 'before' ? '<i>before</i>' : '';
-    return `<td><button type="button" class="xc ${cls}${on ? ' on' : ''}" data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}">${sgn(c.effect)}${sub}</button></td>`; };
+    const cls = c.verdict === 'lead' ? (c.effect > 0 ? 'pos' : 'neg') : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'bef' : '';
+    const sub = c.verdict === 'early' ? `<i>${c.high} &#183; ${c.low}</i>` : c.verdict === 'before' ? '<i>before</i>' : c.verdict === 'fixed' ? '<i>fixed</i>' : '';
+    return `<td><button type="button" class="xc ${cls}${on ? ' on' : ''}" data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}">${c.verdict === 'fixed' ? '&#183;' : sgn(c.effect)}${sub}</button></td>`; };
   box.innerHTML = CROSS.blocks.map(b => `<table><caption>${esc(b.name)}</caption><thead><tr><th></th>${b.outcomes.map(o => `<th class="${SERIES[o] ? '' : 'mute'}">${esc(o).replace(/_/g, '_<wbr>')}</th>`).join('')}</tr></thead>
     <tbody>${b.levers.map(l => `<tr><th>${esc(l.metric)}<small>+${l.lag} d</small></th>${b.outcomes.map(o => cell(b, l, o)).join('')}</tr>`).join('')}</tbody></table>`).join('')
     + `<div class="types"><span>leads<b>${CROSS.leads}</b></span><span>asked<b>${CROSS.asked}</b></span></div>`;
@@ -708,8 +709,8 @@ function leverRows(g){
   const weak = weakPoint(g, SERIES);
   return b.levers.filter(l => !Object.values(l.cells).some(c => c.verdict === 'lead')).map(l => {
     const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty'), c = o ? l.cells[o] : null;
-    const on = c && FX && FX.g === b.id && FX.l === l.metric && FX.o === o, cls = !c ? '' : c.verdict === 'early' ? 'early' : c.verdict === 'before' ? 'tan' : 'mid';
-    return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
+    const on = c && FX && FX.g === b.id && FX.l === l.metric && FX.o === o, cls = !c ? '' : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'tan' : 'mid';
+    return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c && c.effect !== undefined ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
 }
 // the outcome over its last sixty pairs, amber ticks after the lever's high days
 function miniX(c){
