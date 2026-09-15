@@ -38,23 +38,44 @@ and will stay that way.
 | `test.html` | did one commit move one stock |
 | `scan.html` | that commit against everything, at a raised bar |
 | `you-reader.js` | all the maths, in one file |
-| `nav.js` | the links between pages |
-| `config.js` | your two Supabase values, and the only personal file |
+| `api/config.mjs` | hands the pages your Supabase address and publishable key, from Vercel's environment |
 | `pull/github.mjs` | pulls your commit count every morning |
-| `mcp/wire.mjs` | lets your AI read the ledger, and only read it |
+| `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
 
 ## Set it up
 
-1. Make a Supabase project. Run `sql/01_the_table.sql` in the SQL editor.
-2. Authentication, Users, Add user. Tick auto confirm.
-3. Copy `config.example.js` to `config.js` and paste your Project URL and
-   your **publishable** key. Never the service_role key.
-4. Import this repo on Vercel. No framework preset, no build command.
-5. Open the site, sign in, and add a reading.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRowanThistlebrooke%2Fwire&project-name=wire&repository-name=wire&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%2C%22protocol%22%3A%22storage%22%7D%5D)
 
-For the automatic puller, add five repository secrets under Settings,
-Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`, `WIRE_EMAIL`,
-`WIRE_PASSWORD`, `GH_TOKEN`.
+1. **Click the button.** Vercel copies this repo to your GitHub, creates a
+   Supabase project for it, puts that project's address and publishable
+   key into your Vercel project, and deploys. You type nothing.
+2. **Make the table and your login.** In Vercel, open your project,
+   Storage, Supabase, Open in Supabase. In the SQL editor run
+   `sql/01_the_table.sql`. Then Authentication, Users, Add user, and tick
+   auto confirm.
+3. **Add your first reading.** Open your site, sign in as that user, and
+   type a number on the pad.
+
+The button cannot run the SQL, cannot make your login, and cannot make up
+a secret for you. Those stay with you on purpose.
+
+**Already have a Supabase project?** Skip the Supabase step on Vercel and
+add `WIRE_URL` (the project URL) and `WIRE_KEY` (the **publishable** key,
+never the secret or service_role key) under Settings, Environment
+Variables, then redeploy. The site refuses to hand out any key that is not
+a publishable key.
+
+**To let Claude use it**, add three more under Settings, Environment
+Variables, and redeploy: `WIRE_EMAIL` and `WIRE_PASSWORD` (the user you
+made in step 2) and `WIRE_TOKEN` (a long random string you make, for
+example with `openssl rand -hex 32`). In claude.ai, add a custom connector
+at `https://<your site>/api/mcp`, choose No sign-in, and add the header
+`authorization` with the value `Bearer ` followed by your token.
+
+**For the automatic puller**, add five repository secrets on GitHub under
+Settings, Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`,
+`WIRE_EMAIL`, `WIRE_PASSWORD`, `GH_TOKEN`. GitHub cannot see Vercel's
+variables, so these are typed again here.
 
 ## Rules this project does not break
 
@@ -62,8 +83,8 @@ Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`, `WIRE_EMAIL`,
 - No invented data. Not for demos, not for tests, not to make a chart
   look better. The table cannot be cleaned afterwards.
 - The service_role key never appears in this repo, in a page, or in a
-  chat. Secrets live in GitHub Settings or in a config file on your own
-  machine.
+  chat. Secrets live in GitHub Settings, in Vercel's environment
+  variables, or in a config file on your own machine.
 - When it cannot know, it says nothing. Silence is a feature and it is
   the reason any of the numbers are worth reading.
 
