@@ -144,11 +144,23 @@ async function ledger() {
   }).catch(e => { throw new Error('sign in failed: ' + e.message); });
   const headers = { apikey, ...bearer(keep(session.access_token)), 'content-type': 'application/json' };
   keep(session.refresh_token);
+  const dayOf = at => call(`${url}/rest/v1/rpc/day_of`, { method: 'POST', headers, body: JSON.stringify({ ts: at }) });
+  const moments = new Map();
 
   return {
     // The ledger's own day, from day_of in the database. Not worked out twice.
-    async today(at) {
-      return call(`${url}/rest/v1/rpc/day_of`, { method: 'POST', headers, body: JSON.stringify({ ts: at }) });
+    today: dayOf,
+    // A platform's day goes in at a moment day_of puts on that same date, noon UTC when it does, so it
+    // lands on that day in day_metrics whatever timezone the ledger keeps.
+    async moment(day) {
+      if (!moments.has(day)) moments.set(day, (async () => {
+        for (const h of [12, 20, 4]) {
+          const ts = new Date(Date.parse(`${day}T00:00:00Z`) + h * 3600e3).toISOString();
+          if (await dayOf(ts) === day) return ts;
+        }
+        throw new Error(`day_of puts none of the moments tried on ${day}`);
+      })());
+      return moments.get(day);
     },
     // Every (source_id, metric) this source already holds from FIRST on.
     async have(source) {
@@ -198,7 +210,7 @@ async function youtube() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error(`unexpected day ${day}`);
     YT_METRICS.forEach(([metric, unit], i) => {
       if (!Number.isFinite(values[i])) { empty++; return; }
-      rows.push({ occurred_at: `${day}T12:00:00Z`, metric, value: values[i], unit, source: 'youtube', source_id: day });
+      rows.push({ occurred_at: day, metric, value: values[i], unit, source: 'youtube', source_id: day });
     });
   }
   return { rows, empty };
@@ -240,7 +252,7 @@ async function instagram(today, at) {
     if (got.reach !== v.value) throw new Error(`the days did not line up on ${day}`);
     for (const [metric, value, unit] of [['ig_reach', v.value, 'accounts'], ['ig_profile_views', got.profile_views, 'views']]) {
       if (!Number.isFinite(value)) { empty++; continue; }
-      rows.push({ occurred_at: `${day}T12:00:00Z`, metric, value, unit, source: 'instagram', source_id: day });
+      rows.push({ occurred_at: day, metric, value, unit, source: 'instagram', source_id: day });
     }
   }
 
@@ -375,6 +387,8 @@ for (const [label, source, pull] of jobs) {
     // check keeps a repeat from failing the whole insert.
     const have = await db.have(source);
     const fresh = rows.filter(r => !have.has(`${r.source_id}|${r.metric}`));
+    // a platform's day row carries its date until the ledger says which moment falls on that day
+    for (const r of fresh) if (/^\d{4}-\d{2}-\d{2}$/.test(r.occurred_at)) r.occurred_at = await db.moment(r.occurred_at);
     const note = `${rows.length - fresh.length} already there` + (empty ? `, ${empty} empty values skipped` : '');
     if (DRY) {
       for (const r of fresh) say(`  ${r.source_id}  ${r.metric.padEnd(24)} ${r.value} ${r.unit}`);

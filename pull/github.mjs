@@ -18,7 +18,20 @@ const { error: signInError } = await db.auth.signInWithPassword({
 });
 if (signInError) throw new Error('sign in failed: ' + signInError.message);
 
+// A date here is GitHub's day: a UTC calendar day, yesterday or older, so its count is finished.
 const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+// The row goes in at a moment the ledger's own day_of puts on that same date, so the count lands on
+// that day in day_metrics whatever timezone the ledger keeps. Noon UTC first, as before.
+async function momentOn(date) {
+  for (const h of [12, 20, 4]) {
+    const ts = new Date(Date.parse(date + 'T00:00:00Z') + h * 36e5).toISOString();
+    const { data, error } = await db.rpc('day_of', { ts });
+    if (error) throw new Error('day_of failed: ' + error.message);
+    if (data === date) return ts;
+  }
+  throw new Error(`day_of puts none of the moments tried on ${date}`);
+}
 
 async function commitsOn(date) {
   const q = `author:${GH_USER}+author-date:${date}`;
@@ -40,7 +53,7 @@ for (let n = 1; n <= DAYS; n++) {
   const date = day(n);
   const count = await commitsOn(date);
   rows.push({
-    occurred_at: `${date}T12:00:00Z`,
+    occurred_at: await momentOn(date),
     metric: 'gh_commits',
     value: count,
     unit: 'commits',

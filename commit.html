@@ -92,7 +92,9 @@ a{color:inherit;text-decoration:none}
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const TODAY = new Date().toISOString().slice(0, 10);
+let TODAY = null;   // the ledger's day now, from day_of through readDay, set by load() before anything uses it
+// a start is in the future only past both the ledger's day and today on this computer's own calendar
+const latestDay = () => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10); return TODAY && TODAY > d ? TODAY : d; };
 const $ = id => document.getElementById(id);
 function say(m, kind) { const el = $('msg'); el.textContent = m || ''; el.className = 'msg' + (kind ? ' ' + kind : ''); }
 
@@ -109,11 +111,11 @@ function draw() {
   box.querySelectorAll('.end').forEach(b => b.onclick = () => endCommit(b.dataset.id));
 }
 
-async function load() { COMMITS = await readCommits(db); draw(); }
+async function load() { TODAY = await readDay(db); COMMITS = await readCommits(db, TODAY); draw(); }
 
 // The end is a second row. The start is never touched.
 async function endCommit(id, to) {
-  const day = to || TODAY;
+  const c = COMMITS.find(x => x.id === id), day = to || (c && c.from > TODAY ? c.from : TODAY);   // never before its start, which can be a local today the ledger has not reached
   const { error } = await db.from('events').insert({
     occurred_at: new Date(day + 'T12:00:00Z').toISOString(),
     metric: id,
@@ -130,7 +132,7 @@ $('f').addEventListener('submit', async e => {
   const name = $('what').value.trim(), from = $('from').value, to = $('to').value;
   if (!name) { say('a name', 'bad'); return; }
   if (!from) { say('a start date', 'bad'); return; }
-  if (from > TODAY) { say('the start is in the future', 'bad'); return; }
+  if (from > latestDay()) { say('the start is in the future', 'bad'); return; }
   if (to && to < from) { say('the end is before the start', 'bad'); return; }
   const id = slugCommit(name);
   if (COMMITS.some(c => c.id === id)) { say(`${id} exists · use a different name`, 'bad'); return; }
@@ -154,7 +156,7 @@ $('out').onclick = async () => { await db.auth.signOut(); location.href = 'index
 
 db.auth.getSession().then(async ({ data }) => {
   if (!data.session) { location.href = 'index.html'; return; }
-  $('from').value = TODAY;
   try { await load(); } catch (e) { say(e.message || String(e), 'bad'); }
+  if (TODAY && !$('from').value) $('from').value = TODAY;
 });
 </script>

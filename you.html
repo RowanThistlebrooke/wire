@@ -325,7 +325,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const TODAY = new Date().toISOString().slice(0, 10);
+let TODAY = null;   // the ledger's day now, from day_of through readDay, set by load() before anything draws
+// a start is in the future only past both the ledger's day and today on this computer's own calendar
+const latestDay = () => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10); return TODAY && TODAY > d ? TODAY : d; };
 
 // glyphs, and the word for an index: 100 is your usual, ten points one step
 const UP = '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M6 2L11 10H1z" fill="#5fc4b4"/></svg>';
@@ -350,9 +352,9 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
-  const [all, rules, commits, goals] = await Promise.all([readMetrics(db), readRules(db), readCommits(db), readGoals(db)]);
-  const rows = all.length ? await readDays(db, all) : [];
-  ALL = all; RULES = rules; COMMITS = commits; GOALS = goals;
+  const [today, all, rules, goals] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db)]);
+  const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
+  TODAY = today; ALL = all; RULES = rules; COMMITS = commits; GOALS = goals;
   SERIES = rankSeries(rows, rules); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
   CROSS = crossGrid(GOALS, rows, SERIES, TODAY);
@@ -816,7 +818,7 @@ $('padf').addEventListener('submit', async e => { e.preventDefault(); say('');
 
 // the commit line. a start row, and an end row if it has ended. the rows are commit.html's rows
 async function endCommit(id, to){
-  const day = to || TODAY;
+  const c = COMMITS.find(x => x.id === id), day = to || (c && c.from > TODAY ? c.from : TODAY);   // never before its start, which can be a local today the ledger has not reached
   const { error } = await db.from('events').insert({ occurred_at: new Date(day + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit_end', source: 'you', context: { to: day } });
   if (error){ say(error.message); return false; }
   return true;
@@ -824,7 +826,7 @@ async function endCommit(id, to){
 $('cmf').addEventListener('submit', async e => { e.preventDefault(); say('');
   const name = $('cwhat').value.trim(), from = $('cfrom').value, to = $('cto').value;
   if (!name){ bad($('cwhat')); return; }
-  if (!from || from > TODAY){ bad($('cfrom')); return; }
+  if (!from || from > latestDay()){ bad($('cfrom')); return; }
   if (to && to < from){ bad($('cto')); return; }
   const id = slugCommit(name);
   if (COMMITS.some(c => c.id === id)){ bad($('cwhat')); say('exists'); return; }

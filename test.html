@@ -89,7 +89,7 @@ td.cell.on .v{text-decoration:underline;text-underline-offset:5px;text-decoratio
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const TODAY = new Date().toISOString().slice(0, 10);
+let TODAY = null;   // the ledger's day now, from day_of through readDay, set by load() before anything draws
 const sgn = v => (v >= 0 ? '+' : '') + (Math.round(v * 10) / 10);
 const $ = id => document.getElementById(id);
 function say(m) { $('msg').innerHTML = `<p class="empty" style="color:var(--leak)">${esc(m)}</p>`; }
@@ -141,9 +141,9 @@ function drawRead() {
 }
 
 async function load() {
-  const [all, rules, commits] = await Promise.all([readMetrics(db), readRules(db), readCommits(db)]);
-  const rows = await readDays(db, all);
-  COMMITS = commits; SERIES = rankSeries(rows, rules); YOU = etfSeries(SERIES, Object.keys(SERIES));
+  const [today, all, rules] = await Promise.all([readDay(db), readMetrics(db), readRules(db)]);
+  const [commits, rows] = await Promise.all([readCommits(db, today), readDays(db, all)]);
+  TODAY = today; COMMITS = commits; SERIES = rankSeries(rows, rules); YOU = etfSeries(SERIES, Object.keys(SERIES));
   COLS = ['YOU', ...Object.keys(SERIES)];
 }
 

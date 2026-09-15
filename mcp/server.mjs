@@ -26,7 +26,7 @@ const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 // here we read the same text and pull the functions out of it.
 const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
-  return { readMetrics, readRules, readDays, rankSeries, etfSeries,
+  return { readMetrics, readRules, readDays, readDay, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            scanLead, scanCommit, crossTest, crossGrid };`)();
@@ -60,17 +60,33 @@ function signIn() {
   return authed;
 }
 
-// The readers come first. The writers are at the end.
-async function load() {
-  await signIn();
-  const [all, rules, commits] = await Promise.all(
-    [R.readMetrics(db), R.readRules(db), R.readCommits(db)]);
-  const rows = await R.readDays(db, all);
-  const series = R.rankSeries(rows, rules);
-  return { all, rules, commits, series, rows };
+// The ledger's day for a moment, now unless one is given. It is defined once, by day_of in the
+// database, in the owner's timezone, and here it is only ever asked for. When day_of cannot be
+// read the answer says so, and health names what is missing.
+const ledgerDay = ts => R.readDay(db, ts).catch(e => {
+  throw new Error(`the ledger's day cannot be read from day_of: ${e.message}. health names what is missing`);
+});
+// A moment that day_of puts on this date, or null. Noon UTC, as commits are, unless the ledger's day
+// there is another date, as it is west of UTC-6, where noon UTC is still before 6am: then 8pm UTC if
+// noon was the day before, 4am UTC if it was the day after. day_of confirms the one it gives.
+async function momentOn(date) {
+  const at = h => new Date(Date.parse(date + 'T00:00:00Z') + h * 3600e3).toISOString();
+  const noon = at(12), d = await ledgerDay(noon);
+  if (d === date) return noon;
+  const other = at(d < date ? 20 : 4);
+  return (await ledgerDay(other)) === date ? other : null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The readers come first. The writers are at the end. The ledger's day and the commits are read only
+// for the questions that use them, so a question about stocks never waits on day_of or fails with it.
+async function load({ day = false } = {}) {
+  await signIn();
+  const [today, all, rules] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db)]);
+  const [commits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
+  const series = R.rankSeries(rows, rules);
+  return { all, rules, commits, series, rows, today };
+}
+
 const text = o => ({ content: [{ type: 'text', text: JSON.stringify(o, null, 2) }] });
 
 // Notes are rows with event_type 'note'. They never appear on a page and
@@ -102,9 +118,21 @@ const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(s + 'T00:00:00Z').t
 const isStamp = s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s) && Number.isFinite(Date.parse(s));
 // the pad's name rule: lower case, anything else an underscore
 const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-// the ledger's day, as day_of in sql/01_the_table.sql has it: Zurich time less six hours
-const zurich = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit' });
-const dayOf = iso => zurich.format(new Date(Date.parse(iso) - 6 * 3600e3));
+// the latest date that is today somewhere on Earth: the date at UTC+14, the zone furthest ahead. A date
+// past it is in the future for everyone; a date up to it is someone's today or already past
+const lastDay = () => new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10);
+// every task, at most n running at once; the first failure stops the rest and is thrown
+async function few(tasks, n = 8) {
+  const out = []; let next = 0;
+  const lane = async () => {
+    while (next < tasks.length) {
+      const i = next++;
+      try { out[i] = await tasks[i](); } catch (e) { next = tasks.length; throw e; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, lane));
+  return out;
+}
 
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
@@ -207,7 +235,7 @@ export function wireServer() {
     'What you did. Each one has a start and an end, not a value.',
     {},
     async () => {
-      const { commits } = await load();
+      const { commits } = await load({ day: true });
       return text({ commits });
     }
   );
@@ -218,14 +246,14 @@ export function wireServer() {
     'same number of days straight before. Refuses to answer when it cannot know.',
     { commit: z.string(), metric: z.string() },
     async ({ commit, metric }) => {
-      const { commits, series } = await load();
+      const { commits, series, today } = await load({ day: true });
       const c = commits.find(x => x.id === commit || x.name === commit);
       if (!c) return text({ error: `no commit called ${commit}` });
       const points = metric === 'YOU'
         ? R.etfSeries(series, Object.keys(series))
         : series[metric];
       if (!points) return text({ error: `no stock called ${metric}` });
-      const r = R.testCommit(points, c, commits, today());
+      const r = R.testCommit(points, c, commits, today);
       return text({ commit: c.name, metric, ...r });
     }
   );
@@ -283,8 +311,8 @@ export function wireServer() {
     'their gap. A habit that always falls on the same weekdays never reads as a lead.',
     {},
     async () => {
-      const { series, rows } = await load();
-      const grid = R.crossGrid(await R.readGoals(db), rows, series, today());
+      const { series, rows, today } = await load({ day: true });
+      const grid = R.crossGrid(await R.readGoals(db), rows, series, today);
       for (const b of grid.blocks) for (const l of b.levers) for (const o of Object.keys(l.cells)) {
         const { pairs, ...rest } = l.cells[o];
         l.cells[o] = { ...rest, pairs: pairs.length };
@@ -298,7 +326,8 @@ export function wireServer() {
     'Write readings the user gave: one events row each, event_type measurement, ' +
     'source claude, source_id the metric and the ledger day joined by a colon, so ' +
     'the same reading twice lands once. occurred_at is a timestamp with its zone, or ' +
-    'a date, which is written at noon UTC as commits are. If any row cannot be read, ' +
+    'a date, which is written at noon UTC as commits are, or at the hour of that date ' +
+    'day_of puts on it where noon UTC is on another ledger day. If any row cannot be read, ' +
     'nothing is written; print every row to the user and get a yes before calling this. ' +
     'Never call it with a value you were not given.',
     {
@@ -310,22 +339,39 @@ export function wireServer() {
       })).min(1)
     },
     async ({ rows }) => {
-      const out = [], refused = [];
+      const read = [], refused = [];
       for (const r of rows) {
-        const metric = slug(r.metric);
-        const at = isDay(r.occurred_at) ? r.occurred_at + 'T12:00:00Z' : isStamp(r.occurred_at) ? r.occurred_at : null;
+        const metric = slug(r.metric), date = isDay(r.occurred_at) ? r.occurred_at : null;
+        const stamp = !date && isStamp(r.occurred_at) ? new Date(Date.parse(r.occurred_at)).toISOString() : null;
         if (!metric) { refused.push({ ...r, why: 'no metric name' }); continue; }
         if (!Number.isFinite(r.value)) { refused.push({ ...r, why: 'the value is not a number' }); continue; }
-        if (!at) { refused.push({ ...r, why: 'occurred_at is not a date or a timestamp with a zone' }); continue; }
-        if (Date.parse(at) > Date.now() + 5 * 60e3) { refused.push({ ...r, why: 'occurred_at is in the future' }); continue; }
-        const occurred_at = new Date(Date.parse(at)).toISOString();
-        out.push({ occurred_at, metric, value: r.value, unit: r.unit || null, source: 'claude',
-                   source_id: `${metric}:${dayOf(occurred_at)}`, event_type: 'measurement' });
+        if (!date && !stamp) { refused.push({ ...r, why: 'occurred_at is not a date or a timestamp with a zone' }); continue; }
+        // a date is refused only when it is not today anywhere; a timestamp is one moment, with five minutes for a slow clock
+        if (date ? date > lastDay() : Date.parse(stamp) > Date.now() + 5 * 60e3) { refused.push({ ...r, why: 'occurred_at is in the future' }); continue; }
+        read.push({ r, date, stamp, metric, value: r.value, unit: r.unit || null });
       }
       if (refused.length) return text({ error: 'nothing written', refused });
 
-      // the same metric on the same day, already in the ledger or twice in this call, lands once
+      // The day in source_id is the ledger's, from day_of, a few questions at a time. A timestamp's day is
+      // day_of of it. A date is its own day, written at a moment day_of puts on it. If a day cannot be read,
+      // or no moment tried is on the date, nothing is written.
       await signIn();
+      const dates = [...new Set(read.filter(x => x.date).map(x => x.date))];
+      const stamps = [...new Set(read.filter(x => x.stamp).map(x => x.stamp))];
+      let moment, dayAt;
+      try {
+        const got = await few([...dates.map(d => () => momentOn(d)), ...stamps.map(ts => () => ledgerDay(ts))]);
+        moment = new Map(dates.map((d, i) => [d, got[i]]));
+        dayAt = new Map(stamps.map((ts, i) => [ts, got[dates.length + i]]));
+      } catch (e) { return text({ error: 'nothing written', why: e.message }); }
+      for (const x of read) if (x.date && !moment.get(x.date)) refused.push({ ...x.r, why: 'day_of puts none of the moments tried on this date' });
+      if (refused.length) return text({ error: 'nothing written', refused });
+      const out = read.map(x => ({
+        occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
+        source: 'claude', source_id: `${x.metric}:${x.date || dayAt.get(x.stamp)}`, event_type: 'measurement'
+      }));
+
+      // the same metric on the same day, already in the ledger or twice in this call, lands once
       const { data: have, error: e1 } = await db.from('events')
         .select('metric, source_id').eq('source', 'claude')
         .in('source_id', out.map(r => r.source_id)).limit(20000);
@@ -356,12 +402,12 @@ export function wireServer() {
       if (!slug(title)) return text({ error: 'no name' });
       if (!isDay(from)) return text({ error: 'from is not a date, YYYY-MM-DD' });
       if (to !== undefined && !isDay(to)) return text({ error: 'to is not a date, YYYY-MM-DD' });
-      if (from > today()) return text({ error: 'the start is in the future' });
+      if (from > lastDay()) return text({ error: 'the start is in the future' });
       if (to && to < from) return text({ error: 'the end is before the start' });
       await signIn();
       const endRow = () => ({ occurred_at: new Date(to + 'T12:00:00Z').toISOString(), metric: id,
                               event_type: 'commit_end', source: 'claude', context: { to } });
-      const have = (await R.readCommits(db)).find(c => c.id === id);
+      const have = (await R.readCommits(db, await ledgerDay())).find(c => c.id === id);
       if (have) {
         if (!to) return text({ error: `${id} exists` });
         if (have.to) return text({ error: `${id} already ended ${have.to}` });

@@ -49,6 +49,16 @@ async function readDays(db, metrics) {
   return data;
 }
 
+// The ledger's day for a moment, now unless another is given. The day is
+// defined once, by day_of in the database: your timezone, ending at 6am.
+// The pages and the MCP ask for it here and never work it out themselves.
+async function readDay(db, ts = new Date().toISOString()) {
+  const { data, error } = await db.rpc('day_of', { ts });
+  if (error) throw error;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('day_of does not return a date');
+  return data;
+}
+
 // A band turns a value into how far outside the band it is.
 // Inside the band is zero, and zero is as good as it gets.
 // Over and under are equally wrong, which is the truth about sleep.
@@ -167,7 +177,9 @@ function coverage(series, members) {
 const slugCommit = s =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'commit';
 
-async function readCommits(db) {
+// today is the ledger's day, from readDay: a running commit counts its days up to it. A start that is
+// already today somewhere but not yet in the ledger's own day has run 0 days, never fewer.
+async function readCommits(db, today) {
   const { data, error } = await db
     .from('events')
     .select('metric, context, event_type, occurred_at')
@@ -184,9 +196,8 @@ async function readCommits(db) {
       byId[r.metric].to = r.context.to;          // latest end wins
     }
   }
-  const today = new Date().toISOString().slice(0, 10);
   return Object.values(byId)
-    .map(c => ({ ...c, days: dayNum(c.to || today) - dayNum(c.from) + 1 }))
+    .map(c => ({ ...c, days: Math.max(0, dayNum(c.to || today) - dayNum(c.from) + 1) }))
     .sort((a, b) => b.from.localeCompare(a.from));
 }
 
