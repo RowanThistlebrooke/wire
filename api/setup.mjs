@@ -18,10 +18,14 @@ const TABLE_SQL = readFileSync(new URL('../sql/01_the_table.sql', import.meta.ur
 
 // ---- the gate: a Whop license key, checked against Whop's API ----
 // GET /api/v1/memberships/{id} takes a membership id or a license key. A key
-// passes only when Whop returns that same license key on a membership that is
-// active, trialing, or canceling (paid until its period ends).
+// passes only when Whop returns that same license key on a membership that
+// still has access. Whop's own SDK says what each status means: active and
+// trialing grant access, completed is a one-time purchase that keeps it (so a
+// one-time buyer's key reads completed from the first day), past_due is the
+// grace period after a failed payment, canceling is paid to the end of its
+// period; canceled, expired, unresolved and drafted do not.
 const WHOP = 'https://api.whop.com/api/v1/memberships/';
-const ACCESS = new Set(['active', 'trialing', 'canceling']);
+const ACCESS = new Set(['active', 'trialing', 'completed', 'past_due', 'canceling']);
 const checked = new Map();   // key -> answer for ten minutes, so each step does not ask Whop again
 
 async function licensed(raw) {
