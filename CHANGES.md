@@ -3,6 +3,42 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a stock that has outgrown its baseline says so.** The index
+  scores a reading in tenths of that stock's own ordinary variation, and a
+  total that grows leaves that unit behind: a channel that did four watch
+  minutes a day across its first thirty readings and does three hundred now
+  varies by a hundred and fifty, not by two, so an ordinary day reads
+  thousands of points from 100 and never moves again. Backfilling a year of
+  totals is what produces it, and the number it produces looks like a
+  reading. The gate now asks a second question beside the spread: does the
+  unit still describe the stock. A stock that varies eight times as much now
+  as across its first thirty readings has no index, in the page, the MCP and
+  every goal alike, and says which stock, how many times, and what to do:
+  track a rate, which has a level to vary around, or start the stock clean
+  under a new name. The test reads the variation and never the level, so a
+  stock that simply got better keeps its number and its index stays open at
+  the top, which is the whole point of an index over a percentile. It is one
+  sided: a stock that went quiet reads flat against its old unit, and that is
+  true. The baseline itself is untouched and never rebuilt, because a
+  baseline that moves to meet the reading measures nothing.
+- **16 Sep 2026, a CSV is read row by row.** Every YouTube Studio export
+  begins with a Total row, and a file is never refused because one line of
+  it cannot be read. Both CSV doors read every row they can, skip the ones
+  they cannot, and say how many were skipped and why, one reason at a
+  time: a date cell that is not a date (Total), a time still to come, a
+  line with more cells than the header, a cell that is not a number, a
+  stock given two values at one time. A date that day_of cannot place
+  skips only its own readings, where it used to stop the whole file, and a
+  row the table refuses for what it holds is skipped and counted while the
+  rest land; only a failure that is not about one row, the connection or
+  the sign in, still stops a write. A number column is any column holding
+  a number at all, so a column a real export leaves blank on most days,
+  such as estimated revenue, is offered in the drop; import.html shows it
+  unticked. A zip dropped whole is named as a zip. Tested against real
+  Studio exports rather than invented files: the Date export lands every
+  dated row and names its Total row; a breakdown's Chart data, with a row
+  per video or source each day, gives every day two values, so it writes
+  nothing and says so; a per-video Table data has no daily date to read.
 - **16 Sep 2026, correct reaches a voided day, and costs a yes.** A stock
   whose only reading was voided dropped out of `stocks` and `history`, so
   the right number fell through to `record`, which skipped it on the key

@@ -838,12 +838,15 @@ function planDrop(){
   const { csv, map, now, days } = DROP, held = new Set(DAYS.map(d => d.metric + '|' + d.day));
   const cols = csv.columns.filter(c => map.has(c.col)), picked = cols.map(c => map.get(c.col));
   const twice = new Set(picked.filter((m, i) => picked.indexOf(m) !== i));
-  const all = [], values = new Map(), lines = csv.body.map(r => {
+  const all = [], values = new Map(), skip = new Map(), count = (why, unit, raw) => { const k = unit + '|' + why, s = skip.get(k) || { why, unit, n: 0, first: raw }; s.n++; skip.set(k, s); };
+  const lines = csv.body.map(r => {
     const raw = (r[csv.dateCol] || '').trim(), when = readWhen(raw, now);
     // a line with more cells than the header names: which cell belongs to which column would be a guess, so none is written
-    const off = !!when.why || r.slice(csv.head.length).some(v => v.trim() !== '');
+    const ragged = r.slice(csv.head.length).some(v => v.trim() !== ''), off = !!when.why || ragged;
+    if (when.why) count(when.why, 'row', raw); else if (ragged) count('more cells than the header', 'row', raw);
     return { raw, off, cells: cols.map(c => {
       const v = (r[c.col] || '').trim(), n = csvNum(v) ? Number(v) : NaN, metric = map.get(c.col);
+      if (!off && v !== '' && !Number.isFinite(n)) count('not a number', 'cell', v);
       if (off || !Number.isFinite(n)) return { v: null, bad: !off && v !== '' ? v : null };   // text that is not a number is shown red, never written
       const row = { metric, value: n, when, source_id: readingKey(metric, raw) };   // the key every door gives a file's reading
       all.push(row); values.set(row.source_id, (values.get(row.source_id) || new Set()).add(n));
@@ -852,8 +855,13 @@ function planDrop(){
     }) };
   });
   const clash = id => values.get(id).size > 1;
-  for (const l of lines) for (const c of l.cells) if (c.row) c.clash = clash(c.row.source_id);
-  return { cols, twice, rows: all.filter(r => !clash(r.source_id)), lines };
+  for (const l of lines) for (const c of l.cells) if (c.row && (c.clash = clash(c.row.source_id))) count('two values for one stock at one time', 'cell', l.raw);
+  return { cols, twice, rows: all.filter(r => !clash(r.source_id)), lines, skipped: [...skip.values()] };
+}
+// what was skipped and why, one entry a reason: 1 row not a date or a timestamp with a zone (Total)
+function skippedLine(list){
+  if (!list.length) return '';
+  return `<div class="types dsk"><span>skipped</span>${list.map(s => `<span>${esc(s.why)}${s.first ? ` (${esc(String(s.first).slice(0, 24))})` : ''}<b>${fmt(s.n)} ${s.unit}${s.n === 1 ? '' : 's'}</b></span>`).join('')}</div>`;
 }
 function drawDrop(){
   const D = DROP, csv = D.csv, p = D.plan || planDrop(), lock = D.writing || !!D.done;
@@ -864,11 +872,11 @@ function drawDrop(){
     return `<label class="dc"><span>${esc(c.label)}</span><b>${fmt(c.n)}</b><select data-col="${c.col}"${p.twice.has(m) ? ' class="bad"' : ''}${lock ? ' disabled' : ''}>${opts(m)}</select></label>`; }).join('');
   const table = !p.cols.length ? '' : `<div class="dw"><table><thead><tr><th>${esc(csv.head[csv.dateCol])}</th>${p.cols.map(c => `<th>${esc(D.map.get(c.col))}</th>`).join('')}</tr></thead><tbody>${p.lines.map(l =>
     `<tr><td${l.off ? ' class="off"' : ''}>${esc(l.raw || '·')}</td>${l.cells.map(c => c.v == null ? (c.bad != null ? `<td class="off">${esc(c.bad)}</td>` : '<td class="none">&#183;</td>') : `<td${c.clash ? ' class="off"' : c.held ? ' class="held"' : ''}>${esc(String(c.v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-  const foot = D.done ? `<div class="types"><span>landed<b>${fmt(D.done.landed)}</b></span><span>already there<b>${fmt(D.done.there)}</b></span></div>`
+  const foot = D.done ? `<div class="types"><span>landed<b>${fmt(D.done.landed)}</b></span><span>already there<b>${fmt(D.done.there)}</b></span></div>` + skippedLine(D.done.skipped)
     : D.writing ? `<u class="dbar"><i style="width:${(D.at * 100).toFixed(1)}%"></i></u>`
     : `<div class="dgo"><div class="types"><span>writes<b>${fmt(p.rows.length)}</b></span></div><button type="button" class="tab" id="dgo"${p.rows.length && !p.twice.size ? '' : ' disabled'}>go</button></div>`;
   const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.col : undefined;
-  $('dropview').innerHTML = found + `<div class="dcs">${cols}</div>` + table + foot;
+  $('dropview').innerHTML = found + (D.done ? '' : skippedLine(p.skipped)) + `<div class="dcs">${cols}</div>` + table + foot;
   if (focus !== undefined){ const el = $('dropview').querySelector(`select[data-col="${focus}"]`); if (el) el.focus(); }
 }
 // each moment's ledger day, from day_of, a few at a time, once the file is on screen; then the amber is redrawn
@@ -888,18 +896,21 @@ async function goDrop(){
   const work = Math.ceil(p.rows.length / 100) + Math.ceil(p.rows.length / 500), total = dates.length + work;
   const bar = x => { D.at = Math.min(1, x / total); const i = $('dropview').querySelector('.dbar i'); if (i) i.style.width = (D.at * 100).toFixed(1) + '%'; };
   let landed = 0, there = 0, error = null;
+  const skipped = p.skipped.map(s => ({ ...s })), add = (why, n) => { const s = skipped.find(x => x.why === why && x.unit === 'cell'); if (s) s.n += n; else skipped.push({ why, unit: 'cell', n }); };
   try {
-    // each date at a moment day_of puts on it. If one cannot be placed, nothing is written
-    const at = await momentsOn(db, dates, bar);
-    const lost = dates.find(d => !at.get(d));
-    if (lost){ D.writing = false; D.plan = null; drawDrop(); say(`nothing written · day_of puts none of the moments tried on ${lost}`); return; }
-    const out = p.rows.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));
-    // landRows, the one way a file's rows go in: each key once, events_once the last word
-    ({ landed, there, error } = await landRows(db, out, f => bar(dates.length + f * work)));
+    // each date at a moment day_of puts on it. A date that cannot be placed skips its own cells and no others
+    const { at, why } = await momentsOn(db, dates, bar);
+    const placed = p.rows.filter(r => !r.when.date || at.get(r.when.date));
+    for (const r of p.rows) if (r.when.date && !at.get(r.when.date)) add(why.get(r.when.date), 1);
+    const out = placed.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));
+    // landRows, the one way a file's rows go in: each key once, events_once the last word, a row the table cannot take skipped
+    const got = await landRows(db, out, f => bar(dates.length + f * work));
+    ({ landed, there, error } = got);
+    for (const s of got.skipped) add(s.why, 1);
   } catch (e) { error = e; }
   if (error) say(error.message || String(error));
   if (error && !landed){ D.writing = false; D.plan = null; drawDrop(); return; }   // nothing landed: back to the file as it was, the error said
-  D.done = { landed, there }; D.at = 1; drawDrop();   // the counts at once; the page stays held while it reloads
+  D.done = { landed, there, skipped }; D.at = 1; drawDrop();   // the counts at once; the page stays held while it reloads
   if (landed){ try { await load(); render(); } catch (e) { say(e.message || String(e)); } }
   D.writing = false; applyView(); drawDrop();
 }

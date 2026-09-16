@@ -158,16 +158,22 @@ async function momentOn(db, date, dayOf = ts => readDay(db, ts)) {
   return (await dayOf(other)) === date ? other : null;
 }
 
-// Every date at a moment day_of puts on it, eight at a time, for a door bringing many: a Map of each date
-// to its moment, or to null where no moment tried is on that date. tick is told how many dates have been tried.
+// Every date at a moment day_of puts on it, eight at a time, for a door bringing many. at maps each date
+// to its moment, or to null where it has none; why says for each of those why not: no moment tried is on
+// that date, or day_of could not be asked about it. One date that cannot be placed never stops the others:
+// its rows are skipped and counted, and the rest land. tick is told how many dates have been tried.
 async function momentsOn(db, dates, tick = () => {}) {
-  const at = new Map();
+  const at = new Map(), why = new Map();
   for (let i = 0; i < dates.length; i += 8) {
-    const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d)));
-    got.forEach((m, j) => at.set(dates[i + j], m));
+    await Promise.all(dates.slice(i, i + 8).map(async d => {
+      let m = null;
+      try { m = await momentOn(db, d); if (!m) why.set(d, 'day_of puts none of the moments tried on its date'); }
+      catch (e) { why.set(d, 'day_of could not be asked about its date: ' + ((e && e.message) || e)); }
+      at.set(d, m);
+    }));
     tick(at.size);
   }
-  return at;
+  return { at, why };
 }
 
 // ---- a reading, once: the same reading twice lands once, whichever door brings it ----
@@ -189,12 +195,15 @@ const readingKey = (metric, time) => {
 // one value, and not at all when they carry two, because picking one would be a guess. What is in already
 // is asked a hundred keys at a time, so a file brought twice costs a few questions and not a write per row,
 // and events_once has the last word: a batch it refuses goes in a row at a time, and a row it refuses was
-// already there. A row's extra copies count as already there once that row has landed or been found.
-// tick is told the share of the work done. An error stops it, and says how far it got.
+// already there. A row's extra copies count as already there once that row has landed or been found. A row
+// the table refuses for what it holds, a value it cannot take, is skipped and said, and the rest land;
+// an error that is not about one row, the connection or the sign in, stops it and says how far it got.
+// tick is told the share of the work done.
 async function landRows(db, rows, tick = () => {}) {
   const id = r => r.source + '|' + r.source_id + '|' + r.metric, values = new Map(), once = new Map(), copies = new Map();
   for (const r of rows) values.set(id(r), (values.get(id(r)) || new Set()).add(r.value));
   let landed = 0, there = 0, clashed = 0, done = 0;
+  const skipped = [], ofRow = e => /^2[23]/.test(String(e && e.code || '')) && e.code !== '23505';   // a data or constraint error names one row
   for (const r of rows) { const k = id(r); if (values.get(k).size > 1) clashed++; else if (once.has(k)) copies.set(k, (copies.get(k) || 0) + 1); else once.set(k, r); }
   const also = r => copies.get(id(r)) || 0;
   const out = [...once.values()], steps = Math.ceil(out.length / 100) + Math.ceil(out.length / 500), step = () => tick(Math.min(1, ++done / steps));
@@ -217,16 +226,19 @@ async function landRows(db, rows, tick = () => {}) {
     for (let i = 0; i < fresh.length; i += 500) {
       const batch = fresh.slice(i, i + 500), { error } = await db.from('events').insert(batch);
       if (!error) for (const r of batch) { landed++; there += also(r); }
-      else if (error.code !== '23505') throw error;
+      else if (error.code !== '23505' && !ofRow(error)) throw error;
       else for (const r of batch) {
         const { error: e } = await db.from('events').insert(r);
-        if (!e) { landed++; there += also(r); } else if (e.code === '23505') there += 1 + also(r); else throw e;
+        if (!e) { landed++; there += also(r); }
+        else if (e.code === '23505') there += 1 + also(r);
+        else if (ofRow(e)) skipped.push({ metric: r.metric, source_id: r.source_id, why: e.message });
+        else throw e;
       }
       step();
     }
-  } catch (error) { return { landed, there, clashed, error }; }
+  } catch (error) { return { landed, there, clashed, skipped, error }; }
   tick(1);
-  return { landed, there, clashed };
+  return { landed, there, clashed, skipped };
 }
 
 // ---- voids: stop counting, without removing anything ----
@@ -449,10 +461,54 @@ function distanceOf(value, rule) {
 // that pass it. Three states and nothing else.
 const BASELINE = 30;
 
+// A stock can also outgrow its baseline, and then the baseline is intact and
+// the index is still nonsense. One point is a tenth of the stock's own
+// ordinary variation, so that unit has to still describe the stock. A channel
+// that did four watch minutes a day across its first thirty readings and does
+// three hundred now no longer varies by two minutes, it varies by a hundred
+// and fifty, and an ordinary day reads thousands of points from 100. That
+// number is arithmetic, not a reading.
+//
+// The test is the variation and never the level. A stock that simply got
+// better sits far from its baseline mean and still varies by about what it
+// used to: that is the case the index was built for, and it keeps its number,
+// because there is no ceiling. A stock whose variation is OUTGROWN times what
+// it was has lost the unit itself, and there is nothing honest left to draw.
+// Reading the level instead would put a ceiling back on, and refuse the
+// improvement the index exists to show.
+//
+// It is one sided. A stock that went quiet reads flat against an old wide
+// unit, and that is true: you are where you were, and you no longer vary.
+//
+// A baseline is never rebuilt to fix this, because a baseline that moves to
+// meet the reading measures nothing. A total that grows has no level to
+// measure around: track a rate, which does, or start the stock clean under a
+// new name.
+const OUTGROWN = 8;
+
+// How many times its baseline's variation the stock varies by now, over the
+// readings past the frozen baseline. 0 where the question cannot be asked.
+function outgrownBy(pts) {
+  const p = pts || [];
+  if (!(p.spread > 0) || !(p.spreadNow > 0)) return 0;
+  return p.spreadNow / p.spread;
+}
+
 function indexState(pts) {
   const p = pts || [];
   if (!(p.spread > 0)) return 'none';
+  if (outgrownBy(p) >= OUTGROWN) return 'none';
   return p.length < BASELINE ? 'moving' : 'firm';
+}
+
+// Why there is no index, in the stock's own terms, for every door that says
+// so. The gate lives in one place and so does its reason.
+function noIndexWhy(pts) {
+  const p = pts || [];
+  if (!(p.spread > 0)) return 'this stock\'s baseline never moved, so there is nothing to score a reading against';
+  const by = outgrownBy(p);
+  if (by >= OUTGROWN) return `this stock has outgrown its baseline: it varies about ${Math.round(by)} times as much now as across its first ${BASELINE} readings, so an index drawn in the old unit would be arithmetic and not a reading. A total that grows has no level to measure around: track a rate, or start the stock clean under a new name`;
+  return '';
 }
 
 function baselineOf(values) {
@@ -515,6 +571,11 @@ function rankSeries(rows, rules, voids = {}) {
     // It belongs to the series and not to a point, so it does not repeat on
     // every one of them and never reaches the wire as data.
     pts.spread = spreadOf(base);
+    // And what it varies by now: the readings past the frozen baseline, at
+    // most thirty of them, so a stock that has outgrown its baseline can be
+    // told from one that has simply got better. Under two such readings there
+    // is nothing to ask, and spreadOf answers 0.
+    pts.spreadNow = spreadOf(scored.slice(BASELINE).slice(-BASELINE));
     out[metric] = pts;
   }
   return out;

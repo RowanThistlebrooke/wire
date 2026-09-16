@@ -2,8 +2,9 @@
 //
 // A row is split on commas outside quotes. The date column is the one where the most cells read as
 // dates, as long as more of them read as dates than as plain numbers. A number column is every other
-// column where at least six cells in ten are numbers. Nothing here names a metric: that is the page's
-// to ask and yours to say.
+// column that holds a number at all: a cell that is empty or is not a number is that row's silence, not
+// the column's, so a column a real export leaves blank on most days is still offered. Nothing here names
+// a metric: that is the page's to ask and yours to say.
 
 function parseCSV(text) {
   const rows = [[]];
@@ -29,6 +30,7 @@ const csvNum  = v => v.trim() !== '' && !isNaN(Number(v));
 // The file's header, its rows, which column holds the dates and which hold numbers: { head, body,
 // dateCol, columns: [{ col, label, n }] }, n the cells in that column that are numbers. Or { error }.
 function readCSV(text) {
+  if (text.startsWith('PK\u0003\u0004')) return { error: 'A zip file. Open it and drop a CSV from inside.' };
   const rows = parseCSV(text);
   if (!rows.length) return { error: 'No rows found.' };
   const head = rows[0].map(h => h.trim());
@@ -47,7 +49,7 @@ function readCSV(text) {
   head.forEach((h, c) => {
     if (c === dateCol) return;
     const n = body.filter(r => csvNum(r[c] || '')).length;
-    if (n >= body.length * 0.6) columns.push({ col: c, label: h, n });
+    if (n > 0) columns.push({ col: c, label: h, n });
   });
   if (!columns.length) return { error: 'No number columns found.' };
 

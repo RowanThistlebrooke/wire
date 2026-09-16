@@ -113,7 +113,7 @@ function names() {
   const pre = slug(src.value);
   document.getElementById('names').innerHTML = PLAN.metrics.map((m, i) =>
     `<label class="row">
-      <input type="checkbox" data-i="${i}" checked>
+      <input type="checkbox" data-i="${i}"${m.n >= PLAN.body.length * 0.6 ? ' checked' : ''}>
       <span class="nm">${esc(pre ? pre + '_' : '')}${esc(m.name)}</span>
       <span class="k">${m.n}</span>
     </label>`).join('');
@@ -154,10 +154,10 @@ go.onclick = async () => {
   // moment day_of puts on it, not at midnight UTC, which the ledger's day put on the day before wherever
   // it is less than six hours ahead of UTC. A timestamp must say its zone. A row whose time is neither,
   // or is still to come, is not written, and is counted under readWhen's own reason.
-  const now = Date.now(), rows = [], off = {};
+  const now = Date.now(), rows = [], off = {}, tally = (why, n = 1) => { off[why] = (off[why] || 0) + n; };
   for (const r of PLAN.body) {
     const raw = r[PLAN.dateCol] || '', when = readWhen(raw.trim(), now);
-    if (when.why) { if (chosen.some(m => csvNum(r[m.col] || ''))) off[when.why] = (off[when.why] || 0) + 1; continue; }
+    if (when.why) { if (chosen.some(m => csvNum(r[m.col] || ''))) tally(when.why); continue; }
     for (const m of chosen) {
       const v = r[m.col];
       if (!csvNum(v || '')) continue;
@@ -170,24 +170,25 @@ go.onclick = async () => {
       });
     }
   }
-  const unreadNote = Object.entries(off).map(([why, n]) => ` · ${n} row${n === 1 ? '' : 's'} ${why}, not written`).join('');
-  if (!rows.length && unreadNote) { msg.className = 'msg bad'; msg.textContent = 'nothing written' + unreadNote; go.disabled = false; return; }
+  const note = () => Object.entries(off).map(([why, n]) => ` · ${n} skipped, ${why}`).join('');
+  if (!rows.length && Object.keys(off).length) { msg.className = 'msg bad'; msg.textContent = 'nothing written' + note(); go.disabled = false; return; }
 
-  // each date at a moment day_of puts on it; if one cannot be placed, or day_of cannot be asked, nothing is written
-  let at;
-  try { at = await momentsOn(db, [...new Set(rows.filter(x => x.when.date).map(x => x.when.date))]); }
-  catch (e) { msg.className = 'msg bad'; msg.textContent = 'nothing written · ' + (e.message || e); go.disabled = false; return; }
-  const lost = [...at].find(([, m]) => !m);
-  if (lost) { msg.className = 'msg bad'; msg.textContent = `nothing written · day_of puts none of the moments tried on ${lost[0]}`; go.disabled = false; return; }
-  for (const x of rows) { x.occurred_at = x.when.date ? at.get(x.when.date) : x.when.stamp; delete x.when; }
+  // each date at a moment day_of puts on it; a date that cannot be placed skips its own readings and no others
+  const { at, why } = await momentsOn(db, [...new Set(rows.filter(x => x.when.date).map(x => x.when.date))]);
+  const placed = rows.filter(x => !x.when.date || at.get(x.when.date));
+  for (const x of rows) if (x.when.date && !at.get(x.when.date)) tally(why.get(x.when.date));
+  for (const x of placed) { x.occurred_at = x.when.date ? at.get(x.when.date) : x.when.stamp; delete x.when; }
 
   // Keyed by readingKey and landed by landRows in you-reader.js, as you.html lands a dropped file,
   // so the same file lands once whichever of the two it comes through.
-  const got = await landRows(db, rows, f => { msg.textContent = `${Math.round(f * 100)}%`; });
+  const got = await landRows(db, placed, f => { msg.textContent = `${Math.round(f * 100)}%`; });
+  if (got.clashed) tally('two values for one stock at one time', got.clashed);
+  for (const s of got.skipped) tally(s.why);
   msg.className = got.error ? 'msg bad' : 'msg good';
-  if (got.error) msg.textContent = `${got.error.message || got.error} · ${got.landed} added${unreadNote}`;
-  else if (!got.landed && !got.clashed) msg.textContent = `nothing new · all ${got.there} readings are already in${unreadNote}`;
-  else msg.textContent = `${got.landed} added · ${got.there} already there${got.clashed ? ` · ${got.clashed} with two values, not written` : ''}${unreadNote}`;
+  if (got.error) msg.textContent = `${got.error.message || got.error} · ${got.landed} added${note()}`;
+  else if (!got.landed && !placed.length) msg.textContent = `nothing written${note()}`;
+  else if (!got.landed) msg.textContent = `nothing new · all ${got.there} readings are already in${note()}`;
+  else msg.textContent = `${got.landed} added · ${got.there} already there${note()}`;
   go.disabled = false;
 };
 

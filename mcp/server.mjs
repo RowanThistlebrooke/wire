@@ -31,7 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
-           indexState, BASELINE, LAGS,
+           indexState, noIndexWhy, outgrownBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
@@ -356,7 +356,7 @@ export function wireServer() {
           latest_reading: last.value,
           index: R.indexState(p) === 'none' ? null : last.rank,
           index_state: R.indexState(p),
-          note: R.indexState(p) === 'none' ? 'no index yet: this stock\'s baseline has no spread, so there is nothing to score a reading against'
+          note: R.indexState(p) === 'none' ? 'no index: ' + R.noIndexWhy(p)
               : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
               : undefined
         };
@@ -403,7 +403,7 @@ export function wireServer() {
             index: R.indexState(p) === 'none' || !last ? null : last.rank,
             index_state: R.indexState(p),
             note: !g.measures.some(m => series[m]) ? 'no measure has a rule yet'
-                : R.indexState(p) === 'none' ? 'no index yet: this line has no spread, so there is nothing to score a day against'
+                : R.indexState(p) === 'none' ? 'no index: ' + (R.noIndexWhy(p) || 'this line has no spread, so there is nothing to score a day against')
                 : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
                 : undefined,
             day: last ? last.day : null,
