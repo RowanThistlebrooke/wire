@@ -82,6 +82,12 @@ out loud. Keep it that way.
   drawn only on days where every live stock is fresh.
 - The **index** is 100 at the frozen baseline, which is the first thirty
   readings, and ten points is one standard deviation of that baseline.
+  It has three states and `indexState` in `you-reader.js` is all of them:
+  under fourteen readings there is no index and nothing is drawn; from
+  fourteen to twenty-nine the baseline is still filling, so the index is
+  drawn and marked as still moving; at thirty the baseline freezes and it
+  is drawn solid. A goal line counts only the stocks that pass that gate.
+  The page shows the state and never writes it in words.
 
 ## How to help someone build it
 

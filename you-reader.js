@@ -191,11 +191,27 @@ function distanceOf(value, rule) {
   return 0;
 }
 
-// The baseline is FROZEN: the first 30 readings ever, and it never moves.
-// A rolling window would compare you to your recent self, which puts
+// The baseline is FROZEN: the first BASELINE readings ever, and it never
+// moves. A rolling window would compare you to your recent self, which puts
 // you at 50 forever no matter how much you improve.
+//
+// Until it is full, the baseline is still filling, so the index standing on
+// it is still moving: the same reading can score differently tomorrow. Under
+// INDEX_MIN there is too little of it to mean anything at all, and the honest
+// answer is no index rather than a number that will not hold.
+//
+// The gate lives here, once, because it is the same question everywhere: the
+// page draws it, the MCP reports it, and a goal line counts only the stocks
+// that pass it. Three states and nothing else.
+const INDEX_MIN = 14;
+const BASELINE = 30;
+
+function indexState(n) {
+  return n < INDEX_MIN ? 'none' : n < BASELINE ? 'moving' : 'firm';
+}
+
 function baselineOf(values) {
-  return values.slice(0, 30);
+  return values.slice(0, BASELINE);
 }
 
 // An index, not a rank. 100 is the person you were across your first
@@ -264,6 +280,10 @@ const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 // quietly drops a stock, because then skipping a bad one would raise
 // your score.
 function etfSeries(series, members) {
+  // A stock with no index of its own cannot lend one to a line. The gate is
+  // the one indexState names, so a goal, YOU and the MCP all count the same
+  // stocks, and a young stock joins the line on the day it earns an index.
+  members = members.filter(m => indexState((series[m] || []).length) !== 'none');
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))].sort();
   const byMetric = {}, born = {};
   for (const m of members) {
@@ -291,8 +311,10 @@ function etfSeries(series, members) {
 
 // How many days YOU could actually be worked out, and how many it skipped.
 function coverage(series, members) {
-  const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))];
-  return { drawn: etfSeries(series, members).length, days: days.length };
+  // both halves speak of the same stocks: the ones the line is actually drawn from
+  const counted = members.filter(m => indexState((series[m] || []).length) !== 'none');
+  const days = [...new Set(counted.flatMap(m => (series[m] || []).map(p => p.day)))];
+  return { drawn: etfSeries(series, counted).length, days: days.length };
 }
 
 // ---- commits: the other column ----
@@ -874,6 +896,7 @@ function weakPoint(goal, series) {
   for (const m of goal.measures) {
     const pts = series[m];
     if (!pts || !pts.length) continue;
+    if (indexState(pts.length) === 'none') continue;   // no index yet, so it cannot be the weakest
     const p = pts[pts.length - 1];
     if (!weak || p.rank < weak.rank) weak = { metric: m, rank: p.rank, day: p.day };
   }

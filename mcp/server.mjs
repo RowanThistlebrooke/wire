@@ -31,6 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
+           indexState, INDEX_MIN, BASELINE,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
 // The client is made on the first question, not on import, so a server
@@ -184,8 +185,11 @@ export function wireServer() {
           rule: rules[m],
           days: p.length,
           latest_reading: last.value,
-          index: p.length >= 14 ? last.rank : null,
-          note: p.length >= 14 ? undefined : 'under 14 days, no index yet'
+          index: R.indexState(p.length) === 'none' ? null : last.rank,
+          index_state: R.indexState(p.length),
+          note: R.indexState(p.length) === 'none' ? `under ${R.INDEX_MIN} readings, no index yet`
+              : R.indexState(p.length) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
+              : undefined
         };
       });
       const undeclared = all.filter(m => !(m in rules));
@@ -223,9 +227,12 @@ export function wireServer() {
           return {
             goal: g.name,
             id: g.id,
-            index: p.length >= 14 && last ? last.rank : null,
+            index: R.indexState(p.length) === 'none' || !last ? null : last.rank,
+            index_state: R.indexState(p.length),
             note: !g.measures.some(m => series[m]) ? 'no measure has a rule yet'
-                : p.length >= 14 ? undefined : 'under 14 days, no index yet',
+                : R.indexState(p.length) === 'none' ? `under ${R.INDEX_MIN} days, no index yet`
+                : R.indexState(p.length) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
+                : undefined,
             day: last ? last.day : null,
             target: g.target,
             measures: g.measures,

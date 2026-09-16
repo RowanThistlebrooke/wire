@@ -100,6 +100,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 #c{display:block;width:100%;touch-action:pan-y;cursor:crosshair}
 #c .ln{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s cubic-bezier(.4,0,.2,1) forwards}
 #c.still .ln{animation:none;stroke-dashoffset:0}
+#c .ln.moving{stroke-opacity:.45}
 @keyframes draw{to{stroke-dashoffset:0}}
 #c .area{opacity:0;animation:fadein .9s ease .35s forwards}
 #c.still .area{animation:none;opacity:1}
@@ -307,6 +308,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .gv-ms .node.m.off .gv-i{color:var(--muted)}
 .gv-ms .node.m.weak .nm,.gv-ms .node.m.weak .gv-i{color:var(--amber)}
 .gv-ms .node.m.weak .gv-b u{background:var(--amber)}
+.gv-ms .node.m.gv-mv .gv-i{color:var(--dim)}
+.gv-ms .node.m.gv-mv .gv-b u{background:var(--muted)}
 .gv-ms .node.m.gv-st .nm,.gv-ms .node.m.gv-st .gv-i,.gv-ms .node.m.gv-st .gv-b i{color:var(--leak)}
 .gv-ms .node.m.gv-st .gv-b u.gv-d{border-top-color:var(--leak)}
 .gv-gl{position:relative;align-self:center}
@@ -424,7 +427,9 @@ async function load(){
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
   TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids;
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
-  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
+  // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
+  // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
+  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m].length) !== 'none'); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of rows) if (!voidedOn(voids, r.metric, r.day)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one
@@ -470,8 +475,10 @@ function spark(pts, cls){ const a = pts.slice(-45); if (a.length < 3) return '<s
   const d = a.map((p, i) => (i ? 'L' : 'M') + (i * 60 / (a.length - 1)).toFixed(1) + ' ' + (2 + (hi - p.rank) * 20 / span).toFixed(1)).join('');
   return `<svg viewBox="0 0 60 24" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${cls === 'pos' ? '#5fc4b4' : cls === 'neg' ? '#c9695c' : '#5c656b'}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`; }
 function drawRail(){
-  const row = (g, pts) => { const p = silent(g) ? null : pts[pts.length-1], mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
-    return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${spark(pts, cls)}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
+  // a goal under the gate has no index and no line to show: its name, and nothing more
+  const row = (g, pts) => { const drawn = !silent(g) && indexState(pts.length) !== 'none';
+    const p = drawn ? pts[pts.length-1] : null, mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
+    return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
   $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES))).join('') + `<button type="button" class="gr add" id="plus" aria-label="goal">+</button>`;
 }
 function pickGoal(id){ SEL = id; FM = null; FC = null; FX = null; BAND = false; SHOWLEDGER = false; applyView(); say(''); fillGoalLine(); render(); }
@@ -483,8 +490,12 @@ function newGoal(){ for (const id of ['gname', 'gtm', 'gtv', 'gpicks', 'glevers'
 function drawHead(hi){
   const g = cur(), v = VIEW, m = v.m;
   let val = null, day = null;
-  if (hi != null && v.line[hi] != null){ val = v.line[hi]; day = dstr(D0 + hi); }
-  else if (!(m ? stale(m) : silent(g))){ const p = v.pts[v.pts.length-1]; if (p){ val = p.rank; day = p.day; } }
+  // under the gate there is no index, so the big number stays empty the way it does for a stock with
+  // no readings at all. The header never writes a number the chart did not draw
+  if (v.gate !== 'none'){
+    if (hi != null && v.line[hi] != null){ val = v.line[hi]; day = dstr(D0 + hi); }
+    else if (!(m ? stale(m) : silent(g))){ const p = v.pts[v.pts.length-1]; if (p){ val = p.rank; day = p.day; } }
+  }
   let first = null; for (let i = v.i0; i <= v.i1; i++) if (v.line[i] != null){ first = v.line[i]; break; }
   const ch = val != null && first != null ? Math.round((val - first) * 10) / 10 : null;
   $('bn').textContent = val == null ? '·' : val; $('bn').className = 'big ' + word(val).cls;
@@ -514,14 +525,18 @@ function drawFlow(g){
   const ms = listOf(g), weak = weakPoint(g, SERIES), f = $('flow');
   if (!ms.length){ f.innerHTML = ''; f.classList.remove('grouped'); return; }
   const state = m => { const s = SERIES[m]; if (!s) return RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : LAST[m] ? 'unscored' : 'empty'; return stale(m) ? 'stale' : ''; };
+  // the index gate, in no words: under it there is no index to show, and while the baseline is still
+  // filling the index is dimmed. The same three states the chart draws, from the same one function
+  const gate = m => indexState((SERIES[m] || []).length);
   // a bar per fresh stock, on one scale that holds 100, padded the way the chart pads its own
-  const ranks = ms.filter(m => SERIES[m] && !stale(m)).map(m => SERIES[m][SERIES[m].length-1].rank);
+  const ranks = ms.filter(m => SERIES[m] && !stale(m) && gate(m) !== 'none').map(m => SERIES[m][SERIES[m].length-1].rank);
   let lo = Math.min(100, ...ranks), hi = Math.max(100, ...ranks); const pad = Math.max(2, (hi - lo) * .16); lo -= pad; hi += pad;
-  const chip = (m, label, k) => { const st = state(m), pts = SERIES[m] || [], last = pts[pts.length-1], lr = LAST[m];
-    const bar = st ? `<span class="gv-b"><u class="gv-d"></u><i>${st}</i></span>` : `<span class="gv-b"><u style="width:${((last.rank - lo) / (hi - lo) * 100).toFixed(1)}%"></u></span>`;
-    const idx = st === 'stale' ? `${since(lr.day)} d` : st ? '&#8212;' : `${last.rank}<span class="gl">${word(last.rank).w}</span>`;
-    return `<button type="button" class="node m${st ? ' off' : ''}${st === 'stale' ? ' gv-st' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" data-k="${k}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${bar}<span class="gv-i">${idx}</span></button>`; };
-  const gp = pointsOf(g), gl = silent(g) ? null : gp[gp.length-1];
+  const chip = (m, label, k) => { const st = state(m), gt = gate(m), pts = SERIES[m] || [], last = pts[pts.length-1], lr = LAST[m];
+    const off = st || gt === 'none';   // nothing to draw: a dashed rule where the bar would be
+    const bar = off ? `<span class="gv-b"><u class="gv-d"></u>${st ? `<i>${st}</i>` : ''}</span>` : `<span class="gv-b"><u style="width:${((last.rank - lo) / (hi - lo) * 100).toFixed(1)}%"></u></span>`;
+    const idx = st === 'stale' ? `${since(lr.day)} d` : off ? '&#8212;' : `${last.rank}<span class="gl">${word(last.rank).w}</span>`;
+    return `<button type="button" class="node m${off ? ' off' : ''}${gt === 'moving' ? ' gv-mv' : ''}${st === 'stale' ? ' gv-st' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" data-k="${k}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${bar}<span class="gv-i">${idx}</span></button>`; };
+  const gp = pointsOf(g), gl = silent(g) || indexState(gp.length) === 'none' ? null : gp[gp.length-1];   // a goal under the gate has no index to show either
   const grouped = ms.length > FLOW_ROWS;
   f.classList.toggle('grouped', grouped);
   // the stocks under the source that writes them. scored ones by their index, stale last, a source placed by its first stock; the rest, the sources with the most stocks first
@@ -634,9 +649,14 @@ function drawChart(anim){
       if (!open){ path += `M${px} ${py}`; area += `M${px} ${H - B}L${px} ${py}`; open = true; } else { path += `L${px} ${py}`; area += `L${px} ${py}`; }
       prev = i; }
     else if (open){ area += `L${x(prev).toFixed(1)} ${H - B}Z`; open = false; } }
-  if (area) s += `<path class="area" d="${area}" fill="url(#ga)"/>`;
-  if (path) s += `<path class="ln" d="${path}" pathLength="1" stroke="${col}"/>`;
-  line.forEach((v, i) => { if (v == null || i < i0 || i > i1) return; if ((i === i0 || line[i-1] == null) && (i === i1 || line[i+1] == null)) s += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.8" fill="${col}"/>`; });
+  // the index gate, drawn and never written: nothing under it, faded while the baseline is still
+  // filling, solid once it is frozen. indexState lives in you-reader.js and the MCP reads the same one
+  const gate = indexState(pts.length);
+  if (gate !== 'none'){
+    if (area) s += `<path class="area" d="${area}" fill="url(#ga)"/>`;
+    if (path) s += `<path class="ln ${gate}" d="${path}" pathLength="1" stroke="${col}"/>`;
+    line.forEach((v, i) => { if (v == null || i < i0 || i > i1) return; if ((i === i0 || line[i-1] == null) && (i === i1 || line[i+1] == null)) s += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.8" fill="${col}"/>`; });
+  }
   // testCommit's before and during means, and its number
   if (r && shows(r)){ const p = span(fc), c = vhex(r);
     s += `<line x1="${x(Math.max(i0, p.b)).toFixed(1)}" x2="${x(p.s).toFixed(1)}" y1="${y(r.beforeMean).toFixed(1)}" y2="${y(r.beforeMean).toFixed(1)}" stroke="#8d959a" stroke-width="1.4" stroke-dasharray="5 4"/>`
@@ -652,14 +672,14 @@ function drawChart(anim){
     s += `<text class="eff" x="${W - R - 6}" y="${T + 30}" text-anchor="end" style="fill:${ec}">${sgn(c.effect)}</text><text x="${W - R - 6}" y="${T + 46}" text-anchor="end">${c.high} &#183; ${c.low}${c.verdict === 'before' ? ' &#183; before' : ''}</text>`; }
   if (!fc && !fx && li >= 0 && li < today && i1 === today && (m ? stale(m) : silent(g))){ const X = x(li).toFixed(1);
     s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...(m ? [m] : g.measures.filter(stale)).map(x => since(LAST[x].day)))} d</text>`; }
-  if (li >= 0){ const X = x(li).toFixed(1), Y = tagY.toFixed(1);
+  if (li >= 0 && gate !== 'none'){ const X = x(li).toFixed(1), Y = tagY.toFixed(1);   // the latest index is a number too: under the gate it is not written either
     s += `<circle class="pulse" cx="${X}" cy="${Y}" r="9" fill="${col}"/><circle cx="${X}" cy="${Y}" r="3.2" fill="${col}"/><text class="tag" x="${W - R + 10}" y="${(tagY + 3.5).toFixed(1)}" style="fill:${col}">${line[li]}</text>`; }
   s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text><g id="hov"></g>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.classList.toggle('still', !anim); svg.innerHTML = s;
-  VIEW = { m, pts, line, i0, i1, x, y, W, H, T, B, R, col };
+  VIEW = { m, pts, line, i0, i1, x, y, W, H, T, B, R, col, gate };   // the gate travels with the view, so reading the chart can never show what it did not draw
 }
 // reading the chart: the nearest drawn day under the pointer
-$('c').addEventListener('pointermove', e => { const v = VIEW; if (!v) return;
+$('c').addEventListener('pointermove', e => { const v = VIEW; if (!v || v.gate === 'none') return;   // nothing is drawn under the gate, so there is nothing to read off it
   const b = $('c').getBoundingClientRect(), px = (e.clientX - b.left) * v.W / b.width;
   const i = Math.max(v.i0, Math.min(v.i1, Math.round(v.i0 + px / (v.W - v.R) * (v.i1 - v.i0))));
   let k = -1; for (let d = 0; d <= v.i1 - v.i0 && k < 0; d++){ if (i - d >= v.i0 && v.line[i - d] != null) k = i - d; else if (i + d <= v.i1 && v.line[i + d] != null) k = i + d; }

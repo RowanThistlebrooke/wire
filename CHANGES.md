@@ -3,6 +3,15 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the index gate, in one file.** The gate was a literal 14
+  in the MCP, twice and nowhere else, so the page indexed a stock from its
+  first reading while the MCP refused under fourteen. `indexState` in
+  you-reader.js is now the whole of it, and the page and the MCP read the
+  same one. Under fourteen readings there is no index and nothing is
+  drawn; fourteen to twenty-nine is drawn faded, because the baseline is
+  still filling and the number will move; at thirty it freezes and is
+  drawn solid. A goal line counts only the stocks that pass it. The page
+  shows which of the three it is and never writes it in words.
 - **16 Sep 2026, void reaches commits.** A test commit written while
   building the commit page can stop counting, the way a reading already
   could. One more void row names the commit instead of a day, and a
