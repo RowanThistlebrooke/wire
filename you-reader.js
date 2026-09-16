@@ -41,7 +41,7 @@ async function writeRule(db, metric, rule) {
 async function readDays(db, metrics) {
   const { data, error } = await db
     .from('day_metrics')
-    .select('day, metric, mean')
+    .select('day, metric, mean, readings')
     .in('metric', metrics)
     .order('day', { ascending: true })
     .limit(20000);
@@ -58,6 +58,81 @@ async function readDay(db, ts = new Date().toISOString()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('day_of does not return a date');
   return data;
 }
+
+// ---- voids: stop counting, without removing anything ----
+//
+// A void is one more row. It says: do not count this reading. Nothing is
+// deleted, law 1 is untouched, every reading stays in the ledger, and one
+// more row brings it back.
+//
+// context { metric, day, voided }. The day names one reading. No day means
+// every reading of that metric up to the void row's own day, which is the
+// ledger's day and so comes from day_of, like every other day here. The
+// latest row per metric and day wins, as rules and goals do, and a row that
+// names the day is the last word on that day, so a dayless void can be
+// undone one reading at a time.
+//
+// A ledger whose void rows all name a day never asks day_of at all, and one
+// with several dayless rows asks for them at once, not a round trip each.
+// The asker can be handed in: the MCP hands in its own, which names day_of
+// and health when the day cannot be read.
+const isDay = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+
+async function readVoids(db, dayOf) {
+  const { data, error } = await db
+    .from('events')
+    .select('metric, context, occurred_at')
+    .eq('event_type', 'void')
+    .order('occurred_at', { ascending: true })
+    .limit(20000);
+  if (error) throw error;
+  const latest = new Map();
+  // A row that does not say voided says nothing, and its readings keep counting. A
+  // row that cannot be read must never be the reason a reading is dropped.
+  for (const r of data) {
+    const c = r.context || {};
+    const metric = typeof c.metric === 'string' ? c.metric : r.metric;
+    const day = isDay(c.day) ? c.day : null;
+    latest.set(metric + '|' + (day || ''), { metric, day, voided: !!c.voided, at: r.occurred_at });
+  }
+  const rows = [...latest.values()];
+  const wide = rows.filter(r => !r.day && r.voided);          // the dayless rows still standing
+  const at = dayOf || (ts => readDay(db, ts));
+  const days = await Promise.all(wide.map(r => at(r.at)));    // the ledger's day of each of those rows
+  const out = {};
+  const of = m => out[m] || (out[m] = { days: {}, upTo: null });
+  for (const r of rows) if (r.day) of(r.metric).days[r.day] = r.voided;
+  wide.forEach((r, i) => { of(r.metric).upTo = days[i]; });
+  return out;
+}
+
+async function writeVoid(db, metric, day, voided) {
+  return db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric,
+    event_type: 'void',
+    value: null,
+    source: 'you',
+    context: { metric, day, voided }
+  });
+}
+
+// The void's rule, written once and read by everything: a reading is not
+// counted while a void row names its day, or a dayless void row sits on or
+// after it. rankSeries reads its rows through this, and so does every other
+// reader of the day rows, the lever scan included, so no two of them can
+// drift apart.
+function voidedOn(voids, metric, day) {
+  const v = voids && voids[metric];
+  if (!v) return false;
+  if (day in v.days) return v.days[day];   // the row that names the day is the last word on it
+  return !!v.upTo && day <= v.upTo;
+}
+function liveRows(rows, voids) { return voids && Object.keys(voids).length ? rows.filter(r => !voidedOn(voids, r.metric, r.day)) : rows; }
+
+// The one reading a void names: the day row as day_metrics made it, or null
+// when that metric has nothing on that day. Read, never guessed.
+function readingOn(rows, metric, day) { return rows.find(r => r.metric === metric && r.day === day) || null; }
 
 // A band turns a value into how far outside the band it is.
 // Inside the band is zero, and zero is as good as it gets.
@@ -104,12 +179,17 @@ function indexOf(value, baseline, lowerIsBetter) {
 
 // Returns { metric: [{ day, value, rank }] }
 // value is always the real reading. rank is the index.
-function rankSeries(rows, rules) {
+//
+// A voided reading is in none of this: no series, so no index, and so
+// nothing in YOU, in a goal or in the scan. The baseline rebuilds from the
+// readings that remain, so a metric can start clean without changing its
+// name, and voided away to nothing it has no series at all.
+function rankSeries(rows, rules, voids = {}) {
   const out = {};
   for (const metric of Object.keys(rules)) {
     const rule = rules[metric];
     if (rule.kind === 'ignore') continue;
-    const mine = rows.filter(r => r.metric === metric);
+    const mine = rows.filter(r => r.metric === metric && !voidedOn(voids, metric, r.day));
     if (!mine.length) continue;
     const values = mine.map(r => Number(r.mean));
     const scored = values.map(v => distanceOf(v, rule));

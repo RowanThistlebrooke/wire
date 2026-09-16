@@ -183,6 +183,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .tab:hover{color:var(--ink)}
 .tab[aria-pressed="true"]{color:var(--amber);box-shadow:inset 0 -1px var(--amber)}
 #ledgerview{margin-top:28px}
+.vd td{color:var(--dim);text-decoration:line-through}
+.vd td:first-child{text-decoration:none}
 .how{display:flex;align-items:stretch}
 .hb{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--edge2);padding:14px 14px 12px}
 .hb > i{font-style:normal;font:400 9.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
@@ -410,7 +412,7 @@ function remembered(){ try { return localStorage.getItem('wire.pad.metric'); } c
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
-let ALL = [], RULES = {}, COMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {};
+let ALL = [], RULES = {}, COMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {};   // VOIDS: which readings are not counted, by stock and day
 let SEL = YOU_ID, FM = null, FC = null, FX = null, BAND = false, GPICK = new Set(), GLEVER = new Map(), RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let RULING = false, ENDING = false;              // a rule row or an end row on its way: a double click writes one
@@ -418,13 +420,13 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
-  const [today, all, rules, goals] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db)]);
+  const [today, all, rules, goals, voids] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db)]);
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
-  TODAY = today; ALL = all; RULES = rules; COMMITS = commits; GOALS = goals;
-  SERIES = rankSeries(rows, rules); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
+  TODAY = today; ALL = all; RULES = rules; COMMITS = commits; GOALS = goals; VOIDS = voids;
+  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
-  CROSS = crossGrid(GOALS, rows, SERIES, TODAY);
-  LAST = {}; for (const r of rows) LAST[r.metric] = r;                // readDays is oldest first
+  CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
+  LAST = {}; for (const r of rows) if (!voidedOn(voids, r.metric, r.day)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one
   // each stock's unit and every source that has written it, newest first
   const { data: u, error: ue } = await db.from('events').select('metric, unit, source').eq('event_type', 'measurement').order('occurred_at', { ascending: false }).limit(20000);
   if (ue) throw ue;
@@ -812,10 +814,14 @@ function drawLedger(){
     body = mcpRows + (body || (mcpRows ? '' : '<div class="empty">0</div>'));
     return `<section class="lane"><div class="lh"><div class="lt">${l}</div><b>${fmt(total(l))}</b><span>rows</span>${last ? `<em>${String(last).slice(5, 10)}</em>` : ''}</div>${body}</section>`;
   };
+  // the voided readings: still in the ledger, no longer counted, struck through with their day
+  const off = DAYS.filter(d => voidedOn(VOIDS, d.metric, d.day));
+  const voided = !off.length ? '' : `<section class="lane"><div class="lh"><div class="lt">voided</div><b>${fmt(off.length)}</b><span>reading${off.length === 1 ? '' : 's'}</span>${off.length > 30 ? '<em>latest 30</em>' : ''}</div><div class="tw"><table>${off.slice(-30).reverse().map(d =>
+    `<tr class="vd"><td>${esc(d.day)}</td><td>${esc(d.metric)}</td><td class="r">${num(Number(d.mean))}${UNITS[d.metric] ? ' ' + esc(UNITS[d.metric]) : ''}</td></tr>`).join('')}</table></div></section>`;
   // the ledger itself, newest first: every row is a line that is never changed
   const tape = `<section class="lane"><div class="lh"><div class="lt">latest</div></div><div class="tw"><table>${rows.filter(r => r.event_type !== 'note').slice(0, 14).map(r =>
     `<tr><td>${esc(String(r.occurred_at).slice(0, 16).replace('T', ' '))}</td><td>${laneOf(r.source)}</td><td>${esc(r.source || '')}</td><td>${esc(r.event_type || 'measurement')}</td><td>${esc(r.metric)}</td><td class="r">${r.value != null ? num(Number(r.value)) + (r.unit ? ' ' + esc(r.unit) : '') : '&#183;'}</td></tr>`).join('')}</table></div></section>`;
-  $('ledgerview').innerHTML = how + types + key + lanes.map(lane).join('') + tape;
+  $('ledgerview').innerHTML = how + types + key + lanes.map(lane).join('') + voided + tape;
 }
 
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----

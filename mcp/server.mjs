@@ -29,6 +29,7 @@ const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
+           readVoids, writeVoid, readingOn, voidedOn, liveRows,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
 // The client is made on the first question, not on import, so a server
@@ -79,12 +80,14 @@ async function momentOn(date) {
 
 // The readers come first. The writers are at the end. The ledger's day and the commits are read only
 // for the questions that use them, so a question about stocks never waits on day_of or fails with it.
+// A void row that names no day is the one exception: its own day is the ledger's day. Those are asked
+// for through the same ledgerDay, so a day that cannot be read is said in words and never guessed.
 async function load({ day = false } = {}) {
   await signIn();
-  const [today, all, rules] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db)]);
+  const [today, all, rules, voids] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay)]);
   const [commits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
-  const series = R.rankSeries(rows, rules);
-  return { all, rules, commits, series, rows, today };
+  const series = R.rankSeries(rows, rules, voids);
+  return { all, rules, commits, series, rows, today, voids };
 }
 
 const text = o => ({ content: [{ type: 'text', text: JSON.stringify(o, null, 2) }] });
@@ -313,8 +316,9 @@ export function wireServer() {
     'days; effect is what decides.',
     {},
     async () => {
-      const { series, rows, today } = await load({ day: true });
-      const grid = R.crossGrid(await R.readGoals(db), rows, series, today);
+      const { series, rows, voids, today } = await load({ day: true });
+      // a voided reading is no more a lever than it is an outcome, so the scan is given the rows that count
+      const grid = R.crossGrid(await R.readGoals(db), R.liveRows(rows, voids), series, today);
       for (const b of grid.blocks) for (const l of b.levers) for (const o of Object.keys(l.cells)) {
         const { pairs, ...rest } = l.cells[o];
         l.cells[o] = { ...rest, pairs: pairs.length };
@@ -506,6 +510,42 @@ export function wireServer() {
       const context = { name: title, measures, ...(t ? { target: t } : {}), ...(levers.length ? { levers } : {}) };
       return text(error ? { error: error.message }
                         : { written: { metric: R.slugCommit(title), event_type: 'goal', source: 'claude', context }, ...(dropped.length ? { dropped } : {}) });
+    }
+  );
+
+  server.tool(
+    'void',
+    'Stop counting one reading, or count it again. It removes nothing: it writes one void row, and the ' +
+    'latest void row per stock and day wins, as rules do. A voided reading is in no series, no index, not in ' +
+    'YOU, in no goal and in no scan, and the baseline rebuilds from the readings that remain, so a stock can ' +
+    'start clean without changing its name. Call it first with no confirm: it answers with the reading it ' +
+    'would void and the phrase that voids it. Print those two lines to the user exactly as they are. Nothing ' +
+    'is written until the user sends that phrase back and you pass it as confirm. A yes is not enough: ' +
+    'writing a row costs a yes, voiding one costs typing the number back, so it cannot happen by accident or ' +
+    'by a misread. Signed claude. voided false counts the reading again, the same way.',
+    { metric: z.string(), day: z.string(), voided: z.boolean().optional(), confirm: z.string().optional() },
+    async ({ metric, day, voided = true, confirm }) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-09-15, not ${day}` });
+      const { rows, voids } = await load();
+      const r = R.readingOn(rows, metric, day);
+      if (!r) return text({ error: `no reading of ${metric} on ${day}: nothing to ${voided ? 'void' : 'count again'}` });
+      if (R.voidedOn(voids, metric, day) === voided)
+        return text({ error: `${metric} on ${day} is already ${voided ? 'voided' : 'counted'}` });
+      // the number in the phrase is the reading itself, as day_metrics made it. typing it back is the yes
+      const value = Number(r.mean);
+      const phrase = `${voided ? 'void' : 'unvoid'} ${metric} ${value} on ${day}`;
+      // the phrase exactly, give or take the spacing and the capital a keyboard adds
+      const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (said !== phrase) return text({
+        metric, day, value, readings: Number(r.readings),
+        print: `${metric}  ${value}  ${day}\nto ${voided ? 'void this' : 'count this again'}, send: ${phrase}`,
+        say: 'print the two lines in print to the user, exactly as they are, and nothing else. Write nothing ' +
+             'until the user sends that phrase back; then call void again with confirm set to what they sent.'
+      });
+      const { error } = await R.writeVoid(asClaude, metric, day, voided);
+      return text(error ? { error: error.message }
+                        : { written: { metric, event_type: 'void', source: 'claude', context: { metric, day, voided } },
+                            [voided ? 'not_counted' : 'counted_again']: { metric, value, day } });
     }
   );
 

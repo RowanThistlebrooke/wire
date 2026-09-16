@@ -55,6 +55,17 @@ out loud. Keep it that way.
   so the latest one wins and the old ones stay on the record.
 - A **commit** is something done. It has a start and an end, not a value.
   `event_type = 'commit'`, ended by a `commit_end`.
+- A **void** stops the maths counting a reading: `event_type = 'void'`,
+  `context { metric, day, voided }`. The day names one reading; no day
+  means every reading of that metric up to the void row's own day.
+  `voided: false` counts it again. The latest row per metric and day wins,
+  as rules do, and a row that names the day is the last word on that day.
+  A voided reading is in no series, no index, not in YOU, in no goal and
+  in no scan, and the baseline rebuilds from the readings that remain, so
+  a stock can start clean without changing its name. A void adds a row and
+  never removes one. That is the only reason the system can have it: law 1
+  still holds, every reading is still there, and one more row brings it
+  back.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.

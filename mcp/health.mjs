@@ -53,7 +53,7 @@ export function keys() {
 // The columns the code reads and writes, with the type Postgres names for each.
 const EVENTS = { occurred_at: 'timestamp with time zone', metric: 'text', value: 'numeric', unit: 'text',
                  source: 'text', source_id: 'text', event_type: 'text', context: 'json' };
-const DAYS = { day: 'date', metric: 'text', mean: 'numeric' };
+const DAYS = { day: 'date', metric: 'text', mean: 'numeric', readings: 'bigint' };
 
 async function probe(db, table, column) {
   const { error } = await db.from(table).select(column).eq(column, 'x').limit(0);
