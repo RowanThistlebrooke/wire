@@ -776,9 +776,9 @@ function drawWeak(g){
 
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
 // notes are counted here and nothing more: their text is never read by a page
-const laneOf = s => s === 'claude' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';
+const laneOf = s => s === 'claude' || s === 'photo' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';   // an estimate comes through the MCP door too, under its own source
 const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes', 'cross'];   // the tools in mcp/wire.mjs that read
-const MCP_WRITES = ['record', 'did', 'rule', 'goal', 'remember', 'void', 'void_commit'];   // and the ones that write, every row signed claude
+const MCP_WRITES = ['record', 'estimate', 'did', 'rule', 'goal', 'remember', 'void', 'void_commit'];   // and the ones that write: claude, except estimate, which signs photo
 const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note', 'void'];
 const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' };
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -842,7 +842,7 @@ function drawLedger(){
   const lane = l => {
     const srcs = inLane(l), last = srcs.map(s => lastSrc[s]).sort().pop();
     const mcpRows = l !== 'mcp' ? '' : `<div class="lrow"><span class="k">reads</span>${MCP_READS.map(n => `<span class="chip">${n}</span>`).join('')}</div>
-      <div class="lrow"><span class="k">writes</span>${MCP_WRITES.map(n => `<span class="chip on">${n}</span>`).join('')}<b class="cnt">${fmt(bySrc.claude || 0)}</b></div>`;
+      <div class="lrow"><span class="k">writes</span>${MCP_WRITES.map(n => `<span class="chip on">${n}</span>`).join('')}<b class="cnt">${fmt((bySrc.claude || 0) + (bySrc.photo || 0))}</b></div>`;
     let body = srcs.map(s => {
       const ms = Object.keys(stocks).filter(m => stocks[m][s]).sort(), kinds = {};
       for (const r of rows) if (r.source === s && r.event_type && r.event_type !== 'measurement') kinds[r.event_type] = (kinds[r.event_type] || 0) + 1;

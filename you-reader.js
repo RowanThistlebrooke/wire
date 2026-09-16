@@ -27,6 +27,7 @@ const FED = {
   instagram: 3,
   tiktok: 1,
   claude: null,
+  photo: null,
   pad: null,
   you: null,
   csv: null

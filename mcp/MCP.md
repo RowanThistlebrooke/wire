@@ -2,7 +2,7 @@
 
 The MCP is the main door into the ledger. These are its laws.
 
-The writing laws, 11 to 13, are not only written here. They ship: the server
+The writing laws, 11 to 14, are not only written here. They ship: the server
 sends them as its instructions at the start of every session, so any copy of
 the Wire carries them whether or not anyone ever opens this file. They live
 in exactly two places, here and in `wireServer()` in `mcp/server.mjs`. Change
@@ -40,7 +40,12 @@ one and change the other.
 11. Print every row before writing it. Wait for a yes.
 12. Transcribe only. Never estimate, round, fill or infer. If a
     number cannot be read, say so.
-13. Silence over a guess. Everywhere.
+13. An estimate is not a measurement. A number the user gave you is
+    transcribed under `record`. A number you read out of a photo or a
+    screenshot goes under `estimate`, which signs it `photo`, keeps the
+    model that read it in context, and takes only names ending `_est`.
+    Never the other way round.
+14. Silence over a guess. Everywhere.
 
 ## Every reply ends with
 

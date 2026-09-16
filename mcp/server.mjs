@@ -143,6 +143,81 @@ async function few(tasks, n = 8) {
   return out;
 }
 
+// The two ways a number reaches the ledger, and the whole of the difference
+// between them. A number the user gave is a measurement, signed claude. A
+// number Claude read off a picture is an estimate: signed photo, never claude,
+// its name ending _est, and carrying the model that read it.
+//
+// They must never share a name or a source. The instrument drifts between
+// models and does not reproduce, and the table has no delete, so a series that
+// mixes the two can never be untangled again. Named here, once, so the source
+// and the name rule cannot drift apart from what the tools do.
+export const WRITERS = {
+  record: { source: 'claude', name: null },
+  estimate: {
+    source: 'photo',
+    name: m => /_est$/.test(m) ? null : 'an estimate\'s metric name must end _est, so it can never be taken for something measured'
+  }
+};
+
+// record and estimate write the same shape and differ only in what produced the
+// number, so the reading of dates, the refusals and the ledger's own day are one
+// piece of code and the two can never drift apart on any of them.
+async function writeReadings(rows, writer, context = null) {
+  const read = [], refused = [];
+  for (const r of rows) {
+    const metric = slug(r.metric), date = isDay(r.occurred_at) ? r.occurred_at : null;
+    const stamp = !date && isStamp(r.occurred_at) ? new Date(Date.parse(r.occurred_at)).toISOString() : null;
+    if (!metric) { refused.push({ ...r, why: 'no metric name' }); continue; }
+    const badName = writer.name && writer.name(metric);
+    if (badName) { refused.push({ ...r, why: badName }); continue; }
+    if (!Number.isFinite(r.value)) { refused.push({ ...r, why: 'the value is not a number' }); continue; }
+    if (!date && !stamp) { refused.push({ ...r, why: 'occurred_at is not a date or a timestamp with a zone' }); continue; }
+    // a date is refused only when it is not today anywhere; a timestamp is one moment, with five minutes for a slow clock
+    if (date ? date > lastDay() : Date.parse(stamp) > Date.now() + 5 * 60e3) { refused.push({ ...r, why: 'occurred_at is in the future' }); continue; }
+    read.push({ r, date, stamp, metric, value: r.value, unit: r.unit || null });
+  }
+  // the name is read before anything is asked of the ledger, so a wrong one costs no round trip
+  if (refused.length) return { error: 'nothing written', refused };
+
+  // The day in source_id is the ledger's, from day_of, a few questions at a time. A timestamp's day is
+  // day_of of it. A date is its own day, written at a moment day_of puts on it. If a day cannot be read,
+  // or no moment tried is on the date, nothing is written.
+  await signIn();
+  const dates = [...new Set(read.filter(x => x.date).map(x => x.date))];
+  const stamps = [...new Set(read.filter(x => x.stamp).map(x => x.stamp))];
+  let moment, dayAt;
+  try {
+    const got = await few([...dates.map(d => () => momentOn(d)), ...stamps.map(ts => () => ledgerDay(ts))]);
+    moment = new Map(dates.map((d, i) => [d, got[i]]));
+    dayAt = new Map(stamps.map((ts, i) => [ts, got[dates.length + i]]));
+  } catch (e) { return { error: 'nothing written', why: e.message }; }
+  for (const x of read) if (x.date && !moment.get(x.date)) refused.push({ ...x.r, why: 'day_of puts none of the moments tried on this date' });
+  if (refused.length) return { error: 'nothing written', refused };
+  const out = read.map(x => ({
+    occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
+    source: writer.source, source_id: `${x.metric}:${x.date || dayAt.get(x.stamp)}`, event_type: 'measurement',
+    ...(context ? { context } : {})
+  }));
+
+  // the same metric on the same day, already in the ledger or twice in this call, lands once. The
+  // source is part of the question, so an estimate never dedupes against a measurement, or the reverse
+  const { data: have, error: e1 } = await db.from('events')
+    .select('metric, source_id').eq('source', writer.source)
+    .in('source_id', out.map(r => r.source_id)).limit(20000);
+  if (e1) return { error: e1.message };
+  const seen = new Set(have.map(r => r.metric + '|' + r.source_id)), fresh = [], skipped = [];
+  for (const r of out) {
+    const k = r.metric + '|' + r.source_id;
+    if (seen.has(k)) skipped.push(r); else { seen.add(k); fresh.push(r); }
+  }
+  if (fresh.length) {
+    const { error } = await db.from('events').insert(fresh);
+    if (error) return { error: error.message, written: [], skipped };
+  }
+  return { written: fresh, skipped };
+}
+
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
 export function wireServer() {
@@ -156,7 +231,9 @@ export function wireServer() {
       'never estimate, round, fill or infer a number, and say so plainly when one cannot be read. ' +
       'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
       'Voiding costs more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
-      'write only once the user sends that phrase back.'
+      'write only once the user sends that phrase back. A number the user gave you goes through ' +
+      'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +
+      'a name ending _est. Never the other way round.'
   });
 
   server.tool(
@@ -372,55 +449,31 @@ export function wireServer() {
         occurred_at: z.string()
       })).min(1)
     },
-    async ({ rows }) => {
-      const read = [], refused = [];
-      for (const r of rows) {
-        const metric = slug(r.metric), date = isDay(r.occurred_at) ? r.occurred_at : null;
-        const stamp = !date && isStamp(r.occurred_at) ? new Date(Date.parse(r.occurred_at)).toISOString() : null;
-        if (!metric) { refused.push({ ...r, why: 'no metric name' }); continue; }
-        if (!Number.isFinite(r.value)) { refused.push({ ...r, why: 'the value is not a number' }); continue; }
-        if (!date && !stamp) { refused.push({ ...r, why: 'occurred_at is not a date or a timestamp with a zone' }); continue; }
-        // a date is refused only when it is not today anywhere; a timestamp is one moment, with five minutes for a slow clock
-        if (date ? date > lastDay() : Date.parse(stamp) > Date.now() + 5 * 60e3) { refused.push({ ...r, why: 'occurred_at is in the future' }); continue; }
-        read.push({ r, date, stamp, metric, value: r.value, unit: r.unit || null });
-      }
-      if (refused.length) return text({ error: 'nothing written', refused });
+    async ({ rows }) => text(await writeReadings(rows, WRITERS.record))
+  );
 
-      // The day in source_id is the ledger's, from day_of, a few questions at a time. A timestamp's day is
-      // day_of of it. A date is its own day, written at a moment day_of puts on it. If a day cannot be read,
-      // or no moment tried is on the date, nothing is written.
-      await signIn();
-      const dates = [...new Set(read.filter(x => x.date).map(x => x.date))];
-      const stamps = [...new Set(read.filter(x => x.stamp).map(x => x.stamp))];
-      let moment, dayAt;
-      try {
-        const got = await few([...dates.map(d => () => momentOn(d)), ...stamps.map(ts => () => ledgerDay(ts))]);
-        moment = new Map(dates.map((d, i) => [d, got[i]]));
-        dayAt = new Map(stamps.map((ts, i) => [ts, got[dates.length + i]]));
-      } catch (e) { return text({ error: 'nothing written', why: e.message }); }
-      for (const x of read) if (x.date && !moment.get(x.date)) refused.push({ ...x.r, why: 'day_of puts none of the moments tried on this date' });
-      if (refused.length) return text({ error: 'nothing written', refused });
-      const out = read.map(x => ({
-        occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
-        source: 'claude', source_id: `${x.metric}:${x.date || dayAt.get(x.stamp)}`, event_type: 'measurement'
-      }));
-
-      // the same metric on the same day, already in the ledger or twice in this call, lands once
-      const { data: have, error: e1 } = await db.from('events')
-        .select('metric, source_id').eq('source', 'claude')
-        .in('source_id', out.map(r => r.source_id)).limit(20000);
-      if (e1) return text({ error: e1.message });
-      const seen = new Set(have.map(r => r.metric + '|' + r.source_id)), fresh = [], skipped = [];
-      for (const r of out) {
-        const k = r.metric + '|' + r.source_id;
-        if (seen.has(k)) skipped.push(r); else { seen.add(k); fresh.push(r); }
-      }
-      if (fresh.length) {
-        const { error } = await db.from('events').insert(fresh);
-        if (error) return text({ error: error.message, written: [], skipped });
-      }
-      return text({ written: fresh, skipped });
-    }
+  server.tool(
+    'estimate',
+    'Write numbers you read off a picture yourself: one events row each, event_type measurement, ' +
+    'source photo and never claude, and context naming the model that read them and what it read. ' +
+    'Every metric name must end _est, and a row whose name does not is refused along with the rest of ' +
+    'the call. source_id is the metric and the ledger day joined by a colon, so the same estimate twice ' +
+    'lands once; an estimate never lands on top of a measurement, because the source is part of that ' +
+    'question. occurred_at is a timestamp with its zone, or a date, handled exactly as record handles it. ' +
+    'If any row cannot be read, nothing is written; print every row to the user and get a yes before ' +
+    'calling this. An estimate is not a measurement: a number the user gave you goes through record, a ' +
+    'number you read goes through this, and never the other way round.',
+    {
+      rows: z.array(z.object({
+        metric: z.string(),
+        value: z.number(),
+        unit: z.string().nullable(),
+        occurred_at: z.string()
+      })).min(1),
+      model: z.string().describe('the model that read the picture, as exactly as you can name it'),
+      read: z.enum(['photo', 'screenshot']).describe('what was read')
+    },
+    async ({ rows, model, read }) => text(await writeReadings(rows, WRITERS.estimate, { model, read }))
   );
 
   server.tool(

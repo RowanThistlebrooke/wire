@@ -3,6 +3,17 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, estimate: a number Claude read is not one you measured.**
+  record wrote source claude under whatever metric name it was handed, so
+  a number read out of a photo landed looking exactly like a number you
+  measured. There is a second door now. estimate writes source `photo`,
+  never claude, takes only metric names ending `_est`, and keeps the model
+  that read it in context. Everything else behaves like a measurement: an
+  `_est` stock takes a rule, an index and a place in a goal like any
+  other. The point is only that if the instrument turns out to be noise it
+  can be filtered out by source or by name without touching anything else,
+  because an AI reading drifts between models, does not reproduce, and the
+  table has no delete.
 - **16 Sep 2026, the index gate is a spread, not a day count.** Fourteen
   was a correlation number, derived for comparing two series: the first n
   where a relationship can clear 2/sqrt(n), and the first n holding two of

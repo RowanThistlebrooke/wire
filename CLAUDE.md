@@ -51,6 +51,12 @@ out loud. Keep it that way.
    the user gave it in a message, a file or an image. It never estimates,
    rounds, fills a gap or infers a value. If it cannot read a number it
    says so. Notes keep their existing rule.
+8. **An estimate is not a measurement.** A number Claude read out of a
+   photo or a screenshot is written under source `photo`, with the model
+   that read it in context, and its metric name ends `_est`. It never
+   shares a name or a source with something that was measured. The
+   instrument drifts between models and does not reproduce, so the row
+   must say what produced it, or the series can never be untangled later.
 
 ## The shape of the data
 
