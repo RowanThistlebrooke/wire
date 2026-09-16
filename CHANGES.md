@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a dropped CSV can name a stock that does not exist yet.** The
+  drop on you.html offered a list of the stocks you already had and nothing
+  else, so a file full of readings the ledger had never seen could be dropped,
+  read, and then written nowhere: every column's only honest answer was the
+  dot. The column's control is now a name you type, with the stocks you have
+  offered under it. A name that is not one of them is a new stock, born by this
+  file's first row the way any stock is born, and it reads teal so making one is
+  never a slip of the eye. Nothing is written until go, and the table above it
+  already shows every row under the name it would land under. A name ending
+  `_est` is refused, as `record` refuses it: only a picture Claude read writes
+  under an estimate's name. Two columns given one name still stop the write, as
+  before. The name rule itself moves into csv-reader.js and both CSV doors read
+  it there, so a name typed on the page and a name made from a column are one
+  rule and not two.
 - **16 Sep 2026, every reader of an index asks the gate.** A stock that
   has outgrown its baseline, or whose baseline never moved, had no index
   on the page, in the goals and in `stocks`, but four readers still read

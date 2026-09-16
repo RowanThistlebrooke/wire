@@ -84,7 +84,7 @@ a{color:inherit;text-decoration:none}
 const db = supabase.createClient(WIRE.url, WIRE.key);
 let PLAN = null;
 
-const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'metric';
+const slug = s => slugMetric(s) || 'metric';   // the rule lives in csv-reader.js, read by both doors
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // --- work out what this file is: csv-reader.js reads it, the names are guessed here ---

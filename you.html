@@ -223,9 +223,10 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .dc{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(0,220px);gap:14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--edge);font:400 12px/1.2 var(--mono);color:var(--dim)}
 .dc span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dc b{font-weight:400;color:var(--ink);text-align:right}
-.dc select{background:var(--ground);border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:400 12px/1.2 var(--mono);padding:6px 0;width:100%;min-width:0;border-radius:0;color-scheme:dark}
-.dc select:focus{border-bottom-color:var(--teal);outline:0}
-.dc select.bad{border-bottom-color:var(--leak)}
+.dc input{background:var(--ground);border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:400 12px/1.2 var(--mono);padding:6px 0;width:100%;min-width:0;border-radius:0;color-scheme:dark}
+.dc input:focus{border-bottom-color:var(--teal);outline:0}
+.dc input.bad{border-bottom-color:var(--leak)}
+.dc input.new{color:var(--teal);border-bottom-color:var(--teal)}
 .dw{overflow:auto;max-height:52vh;margin-top:18px}
 .dw table{border-collapse:collapse;font:400 11px/1.2 var(--mono);white-space:nowrap}
 .dw th{font-weight:400;color:var(--dim);text-align:right;padding:8px 0 8px 22px;position:sticky;top:0;background:var(--ground)}
@@ -268,7 +269,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
   .flow{column-gap:20px}
   .node.s{letter-spacing:.08em}
   .dc{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
-  .dc select{grid-column:1/-1}
+  .dc input{grid-column:1/-1}
 }
 </style>
 <style>
@@ -866,18 +867,26 @@ function skippedLine(list){
 function drawDrop(){
   const D = DROP, csv = D.csv, p = D.plan || planDrop(), lock = D.writing || !!D.done;
   $('eyebrow').textContent = D.scope.name + ' · ' + D.name;
-  const opts = on => '<option value="">&#183;</option>' + D.scope.stocks.map(m => `<option value="${esc(m)}"${m === on ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  // A column goes to a stock you name. The stocks you already have are offered,
+  // and a name that is not one of them is a new stock, born by this file's first
+  // row as any stock is. It reads teal, so making one is never a slip of the eye.
+  // A name ending _est is refused here as record refuses it: only a picture read
+  // by Claude writes under an estimate's name.
+  const list = `<datalist id="dstocks">${D.scope.stocks.map(m => `<option value="${esc(m)}"></option>`).join('')}</datalist>`;
   const found = `<div class="types"><span>date<b>${esc(csv.head[csv.dateCol])}</b></span><span>rows<b>${fmt(csv.body.length)}</b></span></div>`;
-  const cols = csv.columns.map(c => { const m = D.map.get(c.col) || '';
-    return `<label class="dc"><span>${esc(c.label)}</span><b>${fmt(c.n)}</b><select data-col="${c.col}"${p.twice.has(m) ? ' class="bad"' : ''}${lock ? ' disabled' : ''}>${opts(m)}</select></label>`; }).join('');
+  const cols = csv.columns.map(c => { const m = D.map.get(c.col) || '', typed = D.typed.get(c.col);
+    const bad = (m && p.twice.has(m)) || (typed && !m && slugMetric(typed)), fresh = m && !ALL.includes(m);
+    return `<label class="dc"><span>${esc(c.label)}</span><b>${fmt(c.n)}</b><input type="text" list="dstocks" data-col="${c.col}" value="${esc(typed == null ? m : typed)}" placeholder="&#183;" autocomplete="off" spellcheck="false"${bad ? ' class="bad"' : fresh ? ' class="new"' : ''}${lock ? ' disabled' : ''}></label>`; }).join('');
   const table = !p.cols.length ? '' : `<div class="dw"><table><thead><tr><th>${esc(csv.head[csv.dateCol])}</th>${p.cols.map(c => `<th>${esc(D.map.get(c.col))}</th>`).join('')}</tr></thead><tbody>${p.lines.map(l =>
     `<tr><td${l.off ? ' class="off"' : ''}>${esc(l.raw || '·')}</td>${l.cells.map(c => c.v == null ? (c.bad != null ? `<td class="off">${esc(c.bad)}</td>` : '<td class="none">&#183;</td>') : `<td${c.clash ? ' class="off"' : c.held ? ' class="held"' : ''}>${esc(String(c.v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   const foot = D.done ? `<div class="types"><span>landed<b>${fmt(D.done.landed)}</b></span><span>already there<b>${fmt(D.done.there)}</b></span></div>` + skippedLine(D.done.skipped)
     : D.writing ? `<u class="dbar"><i style="width:${(D.at * 100).toFixed(1)}%"></i></u>`
     : `<div class="dgo"><div class="types"><span>writes<b>${fmt(p.rows.length)}</b></span></div><button type="button" class="tab" id="dgo"${p.rows.length && !p.twice.size ? '' : ' disabled'}>go</button></div>`;
-  const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.col : undefined;
-  $('dropview').innerHTML = found + (D.done ? '' : skippedLine(p.skipped)) + `<div class="dcs">${cols}</div>` + table + foot;
-  if (focus !== undefined){ const el = $('dropview').querySelector(`select[data-col="${focus}"]`); if (el) el.focus(); }
+  const act = document.activeElement, focus = act && act.dataset ? act.dataset.col : undefined;
+  const caret = act && act.tagName === 'INPUT' ? act.selectionStart : null;
+  $('dropview').innerHTML = list + found + (D.done ? '' : skippedLine(p.skipped)) + `<div class="dcs">${cols}</div>` + table + foot;
+  if (focus !== undefined){ const el = $('dropview').querySelector(`input[data-col="${focus}"]`);
+    if (el){ el.focus(); if (caret != null) try { el.setSelectionRange(caret, caret); } catch (e) {} } }
 }
 // each moment's ledger day, from day_of, a few at a time, once the file is on screen; then the amber is redrawn
 async function dropDays(D){
@@ -924,14 +933,18 @@ document.addEventListener('drop', e => {
     if (DROP && DROP.writing) return;
     const csv = readCSV(text);
     if (csv.error){ say(csv.error); return; }
-    say(''); DROP = { name: f.name, csv, scope, now: Date.now(), days: new Map(), map: new Map(), plan: null, writing: false, done: null, at: 0 };   // one clock for the preview and the write
+    say(''); DROP = { name: f.name, csv, scope, now: Date.now(), days: new Map(), map: new Map(), typed: new Map(), plan: null, writing: false, done: null, at: 0 };   // one clock for the preview and the write
     applyView(); drawDrop(); dropDays(DROP);
   }, err => say(err.message || String(err)));
 });
-document.addEventListener('change', e => {
-  const sel = e.target.closest && e.target.closest('#dropview select[data-col]');
-  if (!sel || !DROP || DROP.writing || DROP.done) return;
-  if (sel.value) DROP.map.set(Number(sel.dataset.col), sel.value); else DROP.map.delete(Number(sel.dataset.col));
+document.addEventListener('input', e => {
+  const el = e.target.closest && e.target.closest('#dropview input[data-col]');
+  if (!el || !DROP || DROP.writing || DROP.done) return;
+  const col = Number(el.dataset.col), name = slugMetric(el.value);
+  DROP.typed.set(col, el.value);   // what was typed stays as typed, so the caret does not jump
+  // The name is what the row is written under. An empty one is a column left out,
+  // and a name ending _est is no name at all here: that door is estimate's alone.
+  if (name && !/_est$/.test(name)) DROP.map.set(col, name); else DROP.map.delete(col);
   drawDrop();
 });
 

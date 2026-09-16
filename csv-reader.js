@@ -29,6 +29,11 @@ const csvNum  = v => v.trim() !== '' && !isNaN(Number(v));
 
 // The file's header, its rows, which column holds the dates and which hold numbers: { head, body,
 // dateCol, columns: [{ col, label, n }] }, n the cells in that column that are numbers. Or { error }.
+// A stock's name, from a column's label or from something typed: lower case,
+// one underscore for every run of anything else. Both CSV doors read it here,
+// so a name made from a column and a name typed on the page are one rule.
+const slugMetric = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
 function readCSV(text) {
   if (text.startsWith('PK\u0003\u0004')) return { error: 'A zip file. Open it and drop a CSV from inside.' };
   const rows = parseCSV(text);
