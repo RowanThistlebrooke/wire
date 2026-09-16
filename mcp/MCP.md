@@ -47,7 +47,8 @@ one and change the other.
     transcribed under `record`. A number you read out of a photo or a
     screenshot goes under `estimate`, which signs it `photo`, keeps the
     model that read it in context, and takes only names ending `_est`.
-    Never the other way round.
+    Never the other way round. A wrong estimate is read again through
+    `estimate`, never corrected by a typed number.
 15. Silence over a guess. Everywhere.
 
 ## Every reply ends with

@@ -354,14 +354,15 @@ function liveRows(rows, voids) {
   return out;
 }
 
-async function writeCorrection(db, metric, day, value, was, readings) {
+// extra rides in the context beside them: a picture read again names the model that read it and what it read
+async function writeCorrection(db, metric, day, value, was, readings, extra = {}) {
   return db.from('events').insert({
     occurred_at: new Date().toISOString(),
     metric,
     event_type: 'correction',
     value: null,
     source: 'you',
-    context: { metric, day, value, was, readings }
+    context: { metric, day, value, was, readings, ...extra }
   });
 }
 

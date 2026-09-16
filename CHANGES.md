@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a wrong estimate is read again.** `correct` refuses an
+  `_est` reading, because a typed number is not the instrument that read
+  the picture, and that left a wrong estimate with only a void, which
+  blanks the day. Now `estimate` can put a new reading in place of its own
+  earlier one for that day. Read the picture again and call `estimate` as
+  usual: a day that already held an estimate reading another value, or a
+  voided or stale one, writes nothing and comes back under `read_again`,
+  with the value the day reads, the model that read it when a picture made
+  that value, and the phrase that carries the new value, `re-estimate
+  weight_est 81.2 on 2026-09-16`. Sent back exactly, it writes one
+  correction row signed `photo`, naming the model that read it again and
+  what it read. Latest wins, as with every correction, so the day keeps
+  its place in every series, index, goal and scan, and the earlier reading
+  stays in the ledger with the model that produced it. A typed number
+  still never corrects an estimate. `readingsOf` in mcp/server.mjs is the
+  part of writing that keys a reading and finds its day without writing
+  it, so reading again keys the day exactly as `estimate` wrote it.
 - **16 Sep 2026, a correction puts the right number on a day.** A void
   stops a mistyped reading counting, and on its own it left the day blank:
   the right number could not be written, because the same reading twice

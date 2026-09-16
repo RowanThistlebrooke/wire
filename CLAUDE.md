@@ -57,6 +57,11 @@ out loud. Keep it that way.
    shares a name or a source with something that was measured. The
    instrument drifts between models and does not reproduce, so the row
    must say what produced it, or the series can never be untangled later.
+   A wrong estimate is fixed by reading the picture again, never by a
+   typed number: `estimate` puts the new reading in place of its own
+   earlier one for that day as a correction row signed `photo`, with the
+   model that read it, at the friction of a correction. The earlier
+   reading stays on the record with the model that produced it.
 
 ## The shape of the data
 
@@ -105,9 +110,10 @@ out loud. Keep it that way.
   would be a guess. The reading stays in the ledger, struck through beside
   the value the day reads now. The friction matches void, and the phrase
   carries the new value, because that is the number typed back. An `_est`
-  reading is never corrected by a typed number. A void and a correction
-  name a stock and a day, never a source: that is a known limit, not a
-  promise.
+  reading is never corrected by a typed number: `estimate` reads the
+  picture again and writes the correction signed `photo`, with its model.
+  A void and a correction name a stock and a day, never a source: that is
+  a known limit, not a promise.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.

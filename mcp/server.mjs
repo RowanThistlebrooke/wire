@@ -44,6 +44,10 @@ let db = null;
 const asClaude = {
   from: table => ({ insert: row => db.from(table).insert({ ...row, source: 'claude' }) })
 };
+// A picture read again is still the instrument's reading, so its correction goes in signed photo.
+const asPhoto = {
+  from: table => ({ insert: row => db.from(table).insert({ ...row, source: 'photo' }) })
+};
 
 // Sign in on the first question, not at startup. Claude expects an answer
 // to its handshake within a couple of seconds, and a network round trip
@@ -158,7 +162,9 @@ export const WRITERS = {
 // record, estimate and /api/at write the same shape and differ only in what
 // produced the number, so the reading of dates, the refusals and the ledger's
 // own day are one piece of code and they can never drift apart on any of them.
-export async function writeReadings(rows, writer, context = null) {
+// The rows as the ledger would hold them, each with its ledger day, or why nothing can be written. Asking
+// this writes nothing, so a reading can be keyed exactly as it would land before anything is decided.
+async function readingsOf(rows, writer, context = null) {
   const read = [], refused = [];
   for (const r of rows) {
     const metric = slug(r.metric), when = R.readWhen(r.occurred_at);
@@ -187,11 +193,19 @@ export async function writeReadings(rows, writer, context = null) {
   } catch (e) { return { error: 'nothing written', why: e.message }; }
   for (const x of read) if (x.date && !moment.get(x.date)) refused.push({ ...x.r, why: 'day_of puts none of the moments tried on this date' });
   if (refused.length) return { error: 'nothing written', refused };
-  const out = read.map(x => ({
+  const days = read.map(x => x.date || dayAt.get(x.stamp));
+  const out = read.map((x, i) => ({
     occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
-    source: writer.source, source_id: R.readingKey(x.metric, x.date || dayAt.get(x.stamp)), event_type: 'measurement',
+    source: writer.source, source_id: R.readingKey(x.metric, days[i]), event_type: 'measurement',
     ...(context ? { context } : {})
   }));
+  return { out, days };
+}
+
+export async function writeReadings(rows, writer, context = null) {
+  const got = await readingsOf(rows, writer, context);
+  if (got.error) return got;
+  const { out } = got;
 
   // the same metric on the same day, already in the ledger or twice in this call, lands once. The
   // source is part of the question, so an estimate never dedupes against a measurement, or the reverse
@@ -222,6 +236,47 @@ export async function writeReadings(rows, writer, context = null) {
   return { written, skipped };
 }
 
+// Estimates already in the ledger, read again with another value, or on a day voided or stale: for each, what its
+// day reads now, the model that read that value when a picture made it, and the phrase that puts the new reading
+// in its place. rows are estimate rows as readingsOf builds them, days their ledger days. A day already reading the
+// new value, and a day with no reading, are left out; missing says which days had no reading.
+async function readAgain(rows, days, model) {
+  const { rows: dayRows, voids } = await load();
+  const out = [], photo = new Map();
+  out.missing = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i], day = days[i], r = R.readingOn(dayRows, row.metric, day);
+    if (!r) { out.missing.push(day); continue; }
+    const reads = R.correctedOn(voids, row.metric, day) ?? Number(r.mean), readings = Number(r.readings);
+    const voided = R.voidedOn(voids, row.metric, day), stale = R.staleOn(voids, row.metric, day, readings);
+    if (reads === row.value && !voided && !stale) continue;
+    // The model that read the value the day reads now, named only when a picture made that value: a corrected day
+    // by its latest correction, if that one is signed photo; an uncorrected day by its estimate, if that is the
+    // day's one reading. A mean of several doors was read by no model. An estimate sits at the moment it reads and
+    // a correction at the moment it was written, so the two kinds are chosen apart, never by one walk in time.
+    if (!photo.has(row.metric)) {
+      const { data, error } = await db.from('events').select('event_type, source, source_id, context, occurred_at')
+        .eq('metric', row.metric).or('source.eq.photo,event_type.eq.correction').order('occurred_at', { ascending: true }).limit(20000);
+      if (error) throw new Error(error.message);
+      photo.set(row.metric, data);
+    }
+    const mine = photo.get(row.metric), ctx = e => e.context || {};
+    const fix = R.correctedOn(voids, row.metric, day) !== undefined
+      ? mine.filter(e => e.event_type === 'correction' && ctx(e).day === day).pop()
+      : null;
+    const made = fix ? (fix.source === 'photo' ? fix : null)
+      : readings === 1 ? mine.find(e => e.event_type === 'measurement' && e.source === 'photo' && e.source_id === row.source_id) : null;
+    const by = made && typeof ctx(made).model === 'string' ? ctx(made).model : null;
+    const phrase = `re-estimate ${row.metric} ${row.value} on ${day}`;
+    out.push({
+      metric: row.metric, day, reads, read_by: by, voided, stale, value: row.value, model, readings, phrase,
+      print: `${row.metric}  ${reads}  ${day}${by ? `  read by ${by}` : ''}${voided ? '  voided' : ''}${stale ? '  a reading landed after its correction' : ''}\n` +
+             `to make it ${row.value}, read by ${model}, send: ${phrase}`
+    });
+  }
+  return out;
+}
+
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
 export function wireServer() {
@@ -240,7 +295,8 @@ export function wireServer() {
       'Voiding and correcting cost more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
       'write only once the user sends that phrase back. A number the user gave you goes through ' +
       'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +
-      'a name ending _est. Never the other way round.'
+      'a name ending _est. Never the other way round. A wrong estimate is read again through estimate, never ' +
+      'corrected by a typed number.'
   });
 
   server.tool(
@@ -469,7 +525,14 @@ export function wireServer() {
     'question. occurred_at is a timestamp with its zone, or a date, handled exactly as record handles it. ' +
     'If any row cannot be read, nothing is written; print every row to the user and get a yes before ' +
     'calling this. An estimate is not a measurement: a number the user gave you goes through record, a ' +
-    'number you read goes through this, and never the other way round.',
+    'number you read goes through this, and never the other way round. A wrong estimate is fixed by reading the ' +
+    'picture again, never by a typed number. When a day already holds an estimate and you read it again with ' +
+    'another value, or that day is voided or stale, nothing is written for that row: the answer lists it under ' +
+    'read_again with two lines to print ' +
+    'and a phrase that carries the new value. Print those lines to the user exactly as they are. Only when the ' +
+    'user sends a phrase back, call this again with that one row, the same model and read, and confirm set to what ' +
+    'they sent: that writes one correction row signed photo, naming the model, and the latest one per stock and day ' +
+    'wins. The earlier reading stays in the ledger with the model that read it. A yes is not enough.',
     {
       rows: z.array(z.object({
         metric: z.string(),
@@ -478,9 +541,59 @@ export function wireServer() {
         occurred_at: z.string()
       })).min(1),
       model: z.string().describe('the model that read the picture, as exactly as you can name it'),
-      read: z.enum(['photo', 'screenshot']).describe('what was read')
+      read: z.enum(['photo', 'screenshot']).describe('what was read'),
+      confirm: z.string().optional().describe('only when reading a day again: the phrase the user sent back')
     },
-    async ({ rows, model, read }) => text(await writeReadings(rows, WRITERS.estimate, { model, read }))
+    async ({ rows, model, read, confirm }) => {
+      if (confirm === undefined) {
+        const out = await writeReadings(rows, WRITERS.estimate, { model, read });
+        if (out.error || !out.skipped || !out.skipped.length) return text(out);
+        // a day already holding an estimate: if the picture now reads another value, or the day is voided or stale,
+        // offer to read it again. A row skipped because this same call wrote its day first was never in the ledger
+        const wrote = new Set(out.written.map(r => r.metric + '|' + r.source_id));
+        const back = out.skipped.filter(r => !wrote.has(r.metric + '|' + r.source_id));
+        const days = back.map(r => r.source_id.slice(r.metric.length + 1));
+        // the rows have landed by now, so a day that cannot be read again never hides what was written
+        let again;
+        try { again = back.length ? await readAgain(back, days, model) : []; }
+        catch (e) { return text({ ...out, why: `written and skipped are as listed; whether the skipped days read another value could not be read: ${(e && e.message) || e}` }); }
+        return text(!again.length ? out : {
+          ...out, read_again: again,
+          say: 'these days already held an estimate before this call, and it reads another value, or the day is voided ' +
+               'or stale, so nothing was written for them. Print ' +
+               'each print to the user exactly as it is. Write nothing more until the user sends a phrase back; then call ' +
+               'estimate again with that one row, the same model and read, and confirm set to what they sent.'
+        });
+      }
+      // reading a day again: one row, an estimate already in the ledger for its stock and day, and the phrase typed back
+      if (rows.length !== 1) return text({ error: 'reading a day again takes one row and its phrase' });
+      const got = await readingsOf(rows, WRITERS.estimate, { model, read });
+      if (got.error) return text(got);
+      const row = got.out[0], day = got.days[0];
+      const { data: have, error } = await db.from('events').select('source_id').eq('source', 'photo')
+        .eq('metric', row.metric).eq('source_id', row.source_id).eq('event_type', 'measurement').limit(1);
+      if (error) return text({ error: error.message });
+      if (!have.length) return text({ error: `no estimate of ${row.metric} on ${day} to read again: call estimate without confirm` });
+      let found;
+      try { found = await readAgain([row], [day], model); }
+      catch (e) { return text({ error: 'nothing written', why: (e && e.message) || String(e) }); }
+      const again = found[0];
+      if (!again) return text({ error: found.missing.length ? `no reading of ${row.metric} on ${day}: nothing to read again` : `${row.metric} on ${day} already reads ${row.value}` });
+      // the phrase exactly, give or take the spacing and the capital a keyboard adds
+      const said = String(confirm).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (said !== again.phrase.toLowerCase()) return text({
+        ...again,
+        say: 'print the two lines in print to the user, exactly as they are, and nothing else. Write nothing until the ' +
+             'user sends that phrase back; then call estimate again with this row, the same model and read, and confirm.'
+      });
+      const extra = { model, read };
+      const { error: e2 } = await R.writeCorrection(asPhoto, row.metric, day, row.value, again.reads, again.readings, extra);
+      return text(e2 ? { error: e2.message } : {
+        written: { metric: row.metric, event_type: 'correction', source: 'photo',
+                   context: { metric: row.metric, day, value: row.value, was: again.reads, readings: again.readings, ...extra } },
+        read_again: { metric: row.metric, day, was: again.reads, read_by: again.read_by, now: row.value, model }
+      });
+    }
   );
 
   server.tool(
@@ -654,12 +767,12 @@ export function wireServer() {
     'those two lines to the user exactly as they are. Nothing is written until the user sends that phrase back and ' +
     'you pass it as confirm. A yes is not enough: the new number is typed back, so it cannot be written by accident ' +
     'or by a misread. Only a number the user gave you, and never on an estimate: an _est reading was read off a ' +
-    'picture, and a typed number is not that instrument. Signed claude.',
+    'picture, and a typed number is not that instrument; estimate reads the picture again instead. Signed claude.',
     { metric: z.string(), day: z.string(), value: z.number(), confirm: z.string().optional() },
     async ({ metric, day, value, confirm }) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-09-15, not ${day}` });
       if (!Number.isFinite(value)) return text({ error: 'the value is not a number' });
-      if (/_est$/.test(metric)) return text({ error: `${metric} is an estimate, read off a picture; a typed number does not correct it` });
+      if (/_est$/.test(metric)) return text({ error: `${metric} is an estimate, read off a picture; a typed number does not correct it. Read the picture again through estimate` });
       const { rows, voids } = await load();
       const r = R.readingOn(rows, metric, day);
       if (!r) return text({ error: `no reading of ${metric} on ${day}: nothing to correct` });
