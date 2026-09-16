@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, YouTube feeds a rate, and a day belongs to one door.** The
+  YouTube puller asked for views, watch minutes and subscribers gained, all
+  three totals that grow, so a year of them backfilled has no index and the
+  channel had nothing the index could score. It now also asks for
+  `averageViewPercentage` and writes it as `yt_pct_viewed`: a rate, with a
+  level to vary around, so it keeps an index where a total does not. The
+  Studio export carries the same number, so it is the first stock two doors
+  can reach, and the write loop now leaves alone any day the ledger already
+  holds for that stock from another door, and says how many it left: two
+  doors on one day are averaged into a number neither of them read. Thumbnail
+  click-through rate, unique viewers and stayed-to-watch are not in the
+  Analytics API at all and never have been, so a stock made from those can
+  only ever come from an export by hand, and a stock with no door goes stale
+  and takes YOU with it.
 - **16 Sep 2026, the ledger is read all of it, a page at a time.** Every read
   asked for twenty thousand rows, and Postgres handed back the thousand its
   settings allow, with no error and nothing to say it stopped. Under a thousand

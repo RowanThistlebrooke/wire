@@ -48,7 +48,12 @@ const DRY = process.argv.includes('--dry');
 const YT_METRICS = [
   ['yt_channel_views', 'views'],
   ['yt_watch_minutes', 'minutes'],
-  ['yt_subscribers_gained', 'subscribers']
+  ['yt_subscribers_gained', 'subscribers'],
+  // A rate, not a total: it has a level to vary around, so it keeps an index
+  // where a total that grows does not. It is the one stock here a Studio
+  // export also carries, so the write loop leaves alone any day another door
+  // already filled.
+  ['yt_pct_viewed', 'percent']
 ];
 
 // Each TikTok account is its own app, with its own key and secret.
@@ -162,6 +167,20 @@ async function ledger() {
       })());
       return moments.get(day);
     },
+    // Every day the ledger already holds for these stocks, whichever door
+    // filled it. A day is one door's: two doors on one day are averaged into a
+    // number neither of them read, so the second one leaves it alone.
+    async heldDays(metrics) {
+      const seen = new Set();
+      if (!metrics.length) return seen;
+      for (let from = 0; ; from += 1000) {
+        const q = new URLSearchParams({ select: 'day,metric', metric: `in.(${metrics.join(',')})`, day: `gte.${FIRST}`,
+          order: 'day.asc,metric.asc', limit: '1000', offset: String(from) });
+        const page = await call(`${url}/rest/v1/day_metrics?${q}`, { headers });
+        for (const r of page) seen.add(`${r.day}|${r.metric}`);
+        if (page.length < 1000) return seen;
+      }
+    },
     // Every (source_id, metric) this source already holds from FIRST on.
     async have(source) {
       const seen = new Set();
@@ -198,10 +217,10 @@ async function youtube() {
   keep(t.access_token);
 
   const q = new URLSearchParams({ ids: 'channel==MINE', startDate: FIRST, endDate: newest('youtube'), dimensions: 'day',
-    metrics: 'views,estimatedMinutesWatched,subscribersGained', sort: 'day' });
+    metrics: 'views,estimatedMinutesWatched,subscribersGained,averageViewPercentage', sort: 'day' });
   const report = await call(`https://youtubeanalytics.googleapis.com/v2/reports?${q}`, { headers: bearer(t.access_token) });
   const columns = (report.columnHeaders || []).map(h => h.name).join(',');
-  if (columns !== 'day,views,estimatedMinutesWatched,subscribersGained') throw new Error(`unexpected columns: ${columns || 'none'}`);
+  if (columns !== 'day,views,estimatedMinutesWatched,subscribersGained,averageViewPercentage') throw new Error(`unexpected columns: ${columns || 'none'}`);
 
   // A day YouTube has not counted yet is left out of the report, not zeroed.
   const rows = [];
@@ -386,10 +405,14 @@ for (const [label, source, pull] of jobs) {
     // The database refuses the same (source, source_id, metric) twice. This
     // check keeps a repeat from failing the whole insert.
     const have = await db.have(source);
-    const fresh = rows.filter(r => !have.has(`${r.source_id}|${r.metric}`));
+    const mine = rows.filter(r => !have.has(`${r.source_id}|${r.metric}`));
+    // A day another door already filled for this stock is left alone, and said.
+    const held = await db.heldDays([...new Set(mine.map(r => r.metric))]);
+    const fresh = mine.filter(r => !held.has(`${r.source_id}|${r.metric}`));
+    const theirs = mine.length - fresh.length;
     // a platform's day row carries its date until the ledger says which moment falls on that day
     for (const r of fresh) if (/^\d{4}-\d{2}-\d{2}$/.test(r.occurred_at)) r.occurred_at = await db.moment(r.occurred_at);
-    const note = `${rows.length - fresh.length} already there` + (empty ? `, ${empty} empty values skipped` : '');
+    const note = `${rows.length - mine.length} already there` + (theirs ? `, ${theirs} left to another door` : '') + (empty ? `, ${empty} empty values skipped` : '');
     if (DRY) {
       for (const r of fresh) say(`  ${r.source_id}  ${r.metric.padEnd(24)} ${r.value} ${r.unit}`);
       say(`${label}: would add ${fresh.length}, ${note}`);
