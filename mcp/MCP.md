@@ -2,6 +2,12 @@
 
 The MCP is the main door into the ledger. These are its laws.
 
+The writing laws, 11 to 13, are not only written here. They ship: the server
+sends them as its instructions at the start of every session, so any copy of
+the Wire carries them whether or not anyone ever opens this file. They live
+in exactly two places, here and in `wireServer()` in `mcp/server.mjs`. Change
+one and change the other.
+
 ## Before anything
 
 1. Look, do not ask. Read the ledger first. Never ask for something

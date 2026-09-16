@@ -3,6 +3,13 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the MCP's laws ship.** `mcp/MCP.md` was a file in a repo
+  that no other copy's Claude ever read, because the server set no
+  instructions at all. `wireServer` now sends the writing laws at the
+  start of every session: the table is append only, print every row
+  before writing it and wait for a yes, transcribe only and never
+  estimate, round, fill or infer, silence over a guess, and voiding costs
+  the phrase typed back. Short on purpose, because it is sent every time.
 - **16 Sep 2026, the ledger tab follows the gate.** The raw reading is the
   record and always shows. Everything drawn from the index follows the
   gate instead: the word, the tone and the small line. A stock under the

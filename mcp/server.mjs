@@ -145,7 +145,18 @@ async function few(tasks, n = 8) {
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
 export function wireServer() {
-  const server = new McpServer({ name: 'wire', version: version() || '0.0.0' });
+  // mcp/MCP.md holds these laws, and a file in a repo is read by nobody. The ones that govern
+  // writing travel with the server instead, so every session opens with them, a buyer's as much
+  // as this one. Kept short on purpose: it is sent every time.
+  const server = new McpServer({ name: 'wire', version: version() || '0.0.0' }, {
+    instructions:
+      'The Wire is a personal ledger, and it is append only: a row can be added, never edited and ' +
+      'never removed. Print every row before you write it and wait for a yes. Transcribe only: ' +
+      'never estimate, round, fill or infer a number, and say so plainly when one cannot be read. ' +
+      'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
+      'Voiding costs more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
+      'write only once the user sends that phrase back.'
+  });
 
   server.tool(
     'health',
