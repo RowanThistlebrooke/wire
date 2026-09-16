@@ -206,6 +206,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .key{display:flex;gap:18px;flex-wrap:wrap;margin-top:30px;font:400 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
 .key span::before{content:'';display:inline-block;width:16px;height:2px;margin-right:8px;vertical-align:middle;background:currentColor}
 .key .up{color:var(--teal)}.key .down{color:var(--leak)}.key .flat{color:var(--ink)}.key .mute{color:var(--muted)}
+/* the doors: one line each, its state in the colour of the bar and in no word */
+.fd{margin-top:14px;display:flex;flex-direction:column;gap:5px}
+.fr{display:flex;align-items:center;gap:10px;font:400 10px/1 var(--mono);color:var(--dim)}
+.fr .fn{width:92px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr u{flex:1;min-width:20px;height:2px;background:var(--edge2);text-decoration:none}
+.fr .fv{width:52px;text-align:right;color:var(--muted)}
+.fr.ontime u{background:var(--teal)}
+.fr.drifting u{background:var(--amber)}
+.fr.stale u{background:var(--leak)}
+.fr.stale .fn,.fr.stale .fv{color:var(--leak)}
 .lane{margin-top:30px;border-top:1px solid var(--edge2);padding-top:16px}
 .lh{display:flex;align-items:baseline;gap:10px}
 .lh .lt{font:300 30px/1 var(--ui);letter-spacing:.02em;text-transform:uppercase}
@@ -416,7 +426,7 @@ function remembered(){ try { return localStorage.getItem('wire.pad.metric'); } c
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
-let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {}, CVOIDS = {};   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record
+let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {}, CVOIDS = {}, FEEDS = [];   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record. FEEDS: each door, how far behind it is, and whether that is its promise or a dead cable
 let SEL = YOU_ID, FM = null, FC = null, FX = null, BAND = false, GPICK = new Set(), GLEVER = new Map(), RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let RULING = false, ENDING = false;              // a rule row or an end row on its way: a double click writes one
@@ -424,9 +434,10 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
-  const [today, all, rules, goals, voids, cvoids] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db)]);
+  const [today, all, rules, goals, voids, cvoids, feeds] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db)]);
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
   TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids;
+  FEEDS = feedOf(feeds);   // which doors are feeding the ledger, and which have stopped
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
   // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
   // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
@@ -851,7 +862,10 @@ function drawLedger(){
   // the ledger itself, newest first: every row is a line that is never changed
   const tape = `<section class="lane"><div class="lh"><div class="lt">latest</div></div><div class="tw"><table>${rows.filter(r => r.event_type !== 'note').slice(0, 14).map(r =>
     `<tr><td>${esc(String(r.occurred_at).slice(0, 16).replace('T', ' '))}</td><td>${laneOf(r.source)}</td><td>${esc(r.source || '')}</td><td>${esc(r.event_type || 'measurement')}</td><td>${esc(r.metric)}</td><td class="r">${r.value != null ? num(Number(r.value)) + (r.unit ? ' ' + esc(r.unit) : '') : '&#183;'}</td></tr>`).join('')}</table></div></section>`;
-  $('ledgerview').innerHTML = how + types + key + lanes.map(lane).join('') + voided + tape;
+  // the doors: one line each, how long since it last wrote, its state in the colour of the bar and in no word
+  const doors = `<section class="lane"><div class="lh"><div class="lt">fed</div><b>${fmt(FEEDS.filter(d => d.state !== 'none').length)}</b><span>promised</span></div><div class="fd">${FEEDS.map(d =>
+    `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
+  $('ledgerview').innerHTML = how + doors + types + key + lanes.map(lane).join('') + voided + tape;
 }
 
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----

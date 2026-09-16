@@ -3,6 +3,18 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the doors, and whether they are still feeding.** Nine
+  doors write into the ledger, and every row already carried the source
+  that wrote it. What was missing was the promise: youtube is six days
+  behind by design, instagram three, whoop and github one, and the pad,
+  an import and Claude are never late because you open them yourself.
+  Without that, "last wrote on the 10th" says nothing, because for
+  youtube it is on time and for whoop it is a dead cable. `FED` and one
+  function in you-reader.js hold it, the ledger tab draws a line per door
+  with its state in the colour of the bar and no word for it, and health
+  gains a fourth section beside code, table and keys: those three say
+  whether this copy is built correctly, this one says whether anything is
+  still coming in.
 - **16 Sep 2026, AGENTS.md points at CLAUDE.md.** It was a second copy of
   the laws and it had drifted: no void, no index gate, and a shorter list
   of where a secret may live. Two files disagreed about the same law, and

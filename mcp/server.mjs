@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
-import { code, keys, table, version } from './health.mjs';
+import { code, feed, keys, table, version } from './health.mjs';
 
 const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
@@ -32,6 +32,7 @@ const R = new Function(src + `
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, INDEX_MIN, BASELINE,
+           FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
 // The client is made on the first question, not on import, so a server
@@ -160,22 +161,26 @@ export function wireServer() {
 
   server.tool(
     'health',
-    'Whether this wire is up to date, its table is the right shape, and its settings are in place. ' +
-    'code compares this copy\'s version with the one on GitHub. table checks the columns the code reads, ' +
-    'day_of and day_metrics, names what is missing or the wrong shape, and hands over the exact SQL that ' +
-    'puts it right, to run in the Supabase SQL editor. keys names the settings that are not set, never a ' +
-    'value. It writes nothing.',
+    'Whether this wire is up to date, its table is the right shape, its settings are in place, and it is ' +
+    'still being fed. code compares this copy\'s version with the one on GitHub. table checks the columns ' +
+    'the code reads, day_of and day_metrics, names what is missing or the wrong shape, and hands over the ' +
+    'exact SQL that puts it right, to run in the Supabase SQL editor. keys names the settings that are not ' +
+    'set, never a value. feed names every door that writes into the ledger, how many days behind its newest ' +
+    'row is, and whether that is the lag the door promises or a cable that has stopped. The first three say ' +
+    'whether this copy is built correctly; feed says whether anything is still coming in. It writes nothing.',
     {},
     async () => {
       const k = keys();
       const ledger = !k.wrong && k.missing.every(n => n === 'WIRE_TOKEN');
-      const [c, t] = await Promise.all([
+      const unchecked = { ok: null, say: 'not checked until the keys are set' };
+      // a trailing catch, not then's second argument: that one only sees signIn fail, never the read after it
+      const [c, t, f] = await Promise.all([
         code(),
-        ledger ? signIn().then(() => table(db), e => ({ ok: null, error: e.message }))
-               : { ok: null, say: 'not checked until the keys are set' }
+        ledger ? signIn().then(() => table(db), e => ({ ok: null, error: e.message })) : unchecked,
+        ledger ? signIn().then(async () => feed(R.feedOf(await R.readFeeds(db)))).catch(e => ({ ok: null, error: e.message })) : unchecked
       ]);
       const { sql, ...rest } = t;
-      const out = text({ code: c, table: sql ? { ...rest, sql: 'the next block, exact' } : rest, keys: k });
+      const out = text({ code: c, table: sql ? { ...rest, sql: 'the next block, exact' } : rest, keys: k, feed: f });
       if (sql) out.content.push({ type: 'text', text: sql });
       return out;
     }

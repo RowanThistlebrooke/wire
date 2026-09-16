@@ -1,10 +1,16 @@
-// health: three checks on this copy of the wire, each answered on its own.
+// health: four checks on this copy of the wire, each answered on its own.
 //
 //   code   is this copy's version the one on GitHub, or behind it
 //   table  does the ledger have the columns the code reads, day_of and
 //          day_metrics, in the shape sql/01_the_table.sql makes them; if not,
 //          what is missing, and the SQL that puts it right
 //   keys   which settings are not set, by name; a value is never printed
+//   feed   is the ledger being fed: every door, how far behind its newest
+//          row is, and whether that is the lag it promises or a dead cable
+//
+// The first three answer whether this copy is built correctly. feed answers
+// whether anything is still coming in, which is a different question, and the
+// one a page that has gone blank usually turns out to be.
 //
 // It reads and never writes. The table is asked through the same door the
 // tools use, signed in as you with the publishable key: each column is
@@ -48,6 +54,22 @@ export function keys() {
   for (const k of ['WIRE_EMAIL', 'WIRE_PASSWORD']) if (!process.env[k]) missing.push(k);
   if (process.env.VERCEL && !process.env.WIRE_TOKEN) missing.push('WIRE_TOKEN');   // the web door; Claude Desktop does not need it
   return { ok: !missing.length && !wrong.length, missing, ...(wrong.length ? { wrong } : {}) };
+}
+
+// Which doors are still feeding the ledger. The doors, their promises and how
+// far behind each one is are worked out in you-reader.js, beside the rest of
+// the maths; this reads that answer and only says whether anything is wrong.
+// A door with no promise cannot be late, so it is never the reason this fails.
+export function feed(doors) {
+  const all = doors || [];
+  const late = all.filter(d => d.state === 'drifting' || d.state === 'stale');
+  const never = all.filter(d => d.promise != null && d.days == null);
+  const ok = !late.length && !never.length;
+  const say = [
+    ...never.map(d => `${d.source} has never written`),
+    ...late.map(d => `${d.source} last wrote ${d.days} days ago and promises ${d.promise}`)
+  ].join('; ');
+  return { ok, doors: all, ...(ok ? {} : { say }) };
 }
 
 // The columns the code reads and writes, with the type Postgres names for each.

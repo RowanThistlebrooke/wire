@@ -4,6 +4,74 @@ const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 // and YOU refuses to draw, rather than guessing or quietly dropping it.
 const STALE_DAYS = 7;
 
+// ---- the doors: is the ledger being fed? ----
+//
+// Every row carries the source that wrote it, so the ledger already knows who
+// fed it. What it does not know by itself is the promise: how far behind a
+// door is allowed to be before something is wrong. Without that, "last wrote
+// on the 10th" says nothing, because for youtube it is on time and for whoop
+// it is a dead cable.
+//
+// The number is how many days behind a door's newest row is allowed to be,
+// read on occurred_at, the day the reading belongs to and not the moment it
+// landed. YouTube keeps trimming a day for about five days and Instagram for
+// two, so their rows are written that far back on purpose: the promise is
+// that lag, not slowness in the puller.
+//
+// null is a door you open yourself. The pad, an import and Claude through the
+// MCP write when you ask and never on their own, so they are never late.
+const FED = {
+  github: 1,
+  whoop: 1,
+  youtube: 6,
+  instagram: 3,
+  tiktok: 1,
+  claude: null,
+  pad: null,
+  you: null,
+  csv: null
+};
+
+// The newest row each source has written. Newest first, so the first row seen
+// for a source is its last one. Every event_type counts: a rule, a goal or a
+// void is Claude feeding the ledger as much as a reading is.
+async function readFeeds(db) {
+  const { data, error } = await db
+    .from('events')
+    .select('source, occurred_at')
+    .order('occurred_at', { ascending: false })
+    .limit(20000);
+  if (error) throw error;
+  const last = {};
+  for (const r of data) if (r.source && !(r.source in last)) last[r.source] = r.occurred_at;
+  return last;
+}
+
+// One answer per door: when it last wrote, how many days ago, and which of
+// three states that is. Days are whole days elapsed, not calendar days, so no
+// row has to be put through day_of: a promise is about how long ago, not about
+// which day the ledger is on.
+//
+// The promise is its own grace. On time up to it, drifting up to twice it,
+// stale past that, so a door one day late reads differently from one that has
+// stopped. A door with no promise is none of the three, because it cannot be
+// late. A source the ledger has that this map does not is listed the same way,
+// so a new door shows up the day it first writes and never claims a promise
+// nobody made.
+function feedOf(last, now = Date.now()) {
+  const seen = last || {};
+  return [...new Set([...Object.keys(FED), ...Object.keys(seen)])].sort().map(source => {
+    const at = seen[source] || null;
+    const promise = source in FED ? FED[source] : null;
+    const days = at ? Math.max(0, Math.floor((now - Date.parse(at)) / 864e5)) : null;
+    const state = promise == null || days == null ? 'none'
+                : days <= promise ? 'ontime'
+                : days <= promise * 2 ? 'drifting'
+                : 'stale';
+    return { source, promise, last: at, days, state };
+  });
+}
+
 // Every metric you have ever recorded.
 async function readMetrics(db) {
   const { data, error } = await db
