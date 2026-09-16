@@ -50,7 +50,11 @@ out loud. Keep it that way.
    it writes carries `source = 'claude'`. It may only transcribe a value
    the user gave it in a message, a file or an image. It never estimates,
    rounds, fills a gap or infers a value. If it cannot read a number it
-   says so. Notes keep their existing rule.
+   says so. Notes keep their existing rule. The friction follows what a
+   write does. Supplying a number, a correction or an estimate read again
+   included, costs a yes: a wrong one is supplied again, latest wins. A
+   typed phrase belongs on taking a reading out of the count or putting
+   it back, a void or an unvoid, and never on supplying a number.
 8. **An estimate is not a measurement.** A number Claude read out of a
    photo or a screenshot is written under source `photo`, with the model
    that read it in context, and its metric name ends `_est`. It never
@@ -60,7 +64,7 @@ out loud. Keep it that way.
    A wrong estimate is fixed by reading the picture again, never by a
    typed number: `estimate` puts the new reading in place of its own
    earlier one for that day as a correction row signed `photo`, with the
-   model that read it, at the friction of a correction. The earlier
+   model that read it, at a correction's friction, a yes. The earlier
    reading stays on the record with the model that produced it.
 
 ## The shape of the data
@@ -108,12 +112,15 @@ out loud. Keep it that way.
   readings it saw: if another reading lands on the day afterwards, the day
   reads nothing until it is corrected again, because which number to count
   would be a guess. The reading stays in the ledger, struck through beside
-  the value the day reads now. The friction matches void, and the phrase
-  carries the new value, because that is the number typed back. An `_est`
-  reading is never corrected by a typed number: `estimate` reads the
-  picture again and writes the correction signed `photo`, with its model.
-  A void and a correction name a stock and a day, never a source: that is
-  a known limit, not a promise.
+  the value the day reads now. Its friction is a yes, not void's typed
+  phrase: a void takes a reading out of every count, so typing its number
+  back proves the right one is in view, while a correction supplies a new
+  number, and a wrong one is corrected again, latest wins. It works off
+  the day rows, not the stock list, so a voided reading, even a stock's
+  only one, is still correctable. An `_est` reading is never corrected by
+  a typed number: `estimate` reads the picture again and writes the
+  correction signed `photo`, with its model. A void and a correction name
+  a stock and a day, never a source: that is a known limit, not a promise.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.

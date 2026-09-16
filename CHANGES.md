@@ -3,6 +3,29 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, correct reaches a voided day, and costs a yes.** A stock
+  whose only reading was voided dropped out of `stocks` and `history`, so
+  the right number fell through to `record`, which skipped it on the key
+  without saying why: the case `correct` was built for could not be
+  reached. `correct` works off the day rows, and a voided row is still a
+  row. `stocks` now lists such a stock under `uncounted`, beside any its
+  rule ignores, and `history` answers with the same instead of saying the
+  stock does not exist. `record` says when it skips a day that already
+  holds a reading and points at `correct`. `correct` given a stock with no
+  reading that day answers with every reading the day holds, so the right
+  name can be found. Its friction drops to a yes: the first call writes
+  nothing and answers with the row and the new value, and the call with
+  `yes` true writes. A void takes a reading out of every count, so typing
+  its number back proves the right one is in view; a correction supplies a
+  new number, and a wrong one is corrected again, latest wins. Reading an
+  estimate again is a correction too, so it is a yes as well, and can take
+  several days in one call. `void`, counting a reading again, and
+  `void_commit` keep their typed phrases, and a typed number still never
+  corrects an `_est` reading: `record` now refuses a name ending `_est`
+  too, as `/api/at` already did, so no typed number lands under an
+  estimate's name. CLAUDE.md's law 7 says why: a typed phrase belongs on
+  taking a reading out of the count or putting it back, never on supplying
+  a number.
 - **16 Sep 2026, a wrong estimate is read again.** `correct` refuses an
   `_est` reading, because a typed number is not the instrument that read
   the picture, and that left a wrong estimate with only a void, which
