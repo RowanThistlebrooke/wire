@@ -10,27 +10,16 @@
 // either as the header  Authorization: Bearer <token>  or as the last part of
 // the path, /api/mcp/<token>. If WIRE_TOKEN is not set, nothing gets in.
 
-import { timingSafeEqual } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { wireServer } from '../mcp/server.mjs';
+import { allowed, fromHeader } from '../mcp/token.mjs';
 
-// The token as the request presents it: the Authorization header first, with
-// or without the word Bearer, then the path, which vercel.json passes on as
-// ?token=.
+// The token as the request presents it: the Authorization header first, then
+// the path, which vercel.json passes on as ?token=. mcp/token.mjs compares it.
 function presented(req) {
-  const auth = (req.headers.authorization || '').trim();
-  if (auth) return auth.replace(/^Bearer\s+/i, '');
+  if ((req.headers.authorization || '').trim()) return fromHeader(req);
   const t = req.query && req.query.token;
   return typeof t === 'string' ? t : '';
-}
-
-// Compared in constant time, so how long the answer takes says nothing about
-// how close a guess was.
-function allowed(token) {
-  const want = process.env.WIRE_TOKEN;
-  if (!want || !token) return false;
-  const a = Buffer.from(token), b = Buffer.from(want);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function refuse(res, status, message) {

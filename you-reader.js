@@ -18,8 +18,9 @@ const STALE_DAYS = 7;
 // two, so their rows are written that far back on purpose: the promise is
 // that lag, not slowness in the puller.
 //
-// null is a door you open yourself. The pad, an import and Claude through the
-// MCP write when you ask and never on their own, so they are never late.
+// null is a door you open yourself. The pad, an import, a shortcut and Claude
+// through the MCP write when you ask and never on their own, so they are never
+// late.
 const FED = {
   github: 1,
   whoop: 1,
@@ -30,7 +31,8 @@ const FED = {
   photo: null,
   pad: null,
   you: null,
-  csv: null
+  csv: null,
+  shortcut: null
 };
 
 // The newest row each source has written. Newest first, so the first row seen
@@ -154,6 +156,65 @@ async function momentOn(db, date, dayOf = ts => readDay(db, ts)) {
   if (d === date) return noon;
   const other = at(d < date ? 20 : 4);
   return (await dayOf(other)) === date ? other : null;
+}
+
+// ---- a reading, once: the same reading twice lands once, whichever door brings it ----
+//
+// A reading's key is its stock and a time, joined by a colon, and it is the row's source_id. A file keys
+// a reading by the time as the file wrote it: steps:2026-09-14 for a date, and for a timestamp the moment
+// it names, steps:2026-09-14T05:30:00.000Z, so one moment written two ways is one reading. The key names
+// neither the file nor the row, so an export brought again to the same stocks, renamed or with rows
+// added, through import.html or onto you.html, lands none of its readings twice. The stock is part of
+// the key: a file sent to other stocks, as import.html does when a new file name changes the prefix it
+// fills in, is other readings. record and the shortcut key by the ledger day, so a date is keyed the
+// same way by every door. events_once holds the key with the source and the stock.
+const readingKey = (metric, time) => {
+  const t = String(time).trim();
+  return metric + ':' + (isStamp(t) ? new Date(Date.parse(t)).toISOString() : t);
+};
+
+// Rows into events, each key once. Rows that share a source, a key and a stock land once when they carry
+// one value, and not at all when they carry two, because picking one would be a guess. What is in already
+// is asked a hundred keys at a time, so a file brought twice costs a few questions and not a write per row,
+// and events_once has the last word: a batch it refuses goes in a row at a time, and a row it refuses was
+// already there. A row's extra copies count as already there once that row has landed or been found.
+// tick is told the share of the work done. An error stops it, and says how far it got.
+async function landRows(db, rows, tick = () => {}) {
+  const id = r => r.source + '|' + r.source_id + '|' + r.metric, values = new Map(), once = new Map(), copies = new Map();
+  for (const r of rows) values.set(id(r), (values.get(id(r)) || new Set()).add(r.value));
+  let landed = 0, there = 0, clashed = 0, done = 0;
+  for (const r of rows) { const k = id(r); if (values.get(k).size > 1) clashed++; else if (once.has(k)) copies.set(k, (copies.get(k) || 0) + 1); else once.set(k, r); }
+  const also = r => copies.get(id(r)) || 0;
+  const out = [...once.values()], steps = Math.ceil(out.length / 100) + Math.ceil(out.length / 500), step = () => tick(Math.min(1, ++done / steps));
+  // every key quoted and escaped, so a date cell holding a comma, a quote or a bracket is asked for exactly
+  const inList = ids => '(' + ids.map(v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',') + ')';
+  try {
+    const have = new Set();
+    for (let i = 0; i < out.length; i += 100) {
+      const chunk = out.slice(i, i + 100);
+      for (const source of new Set(chunk.map(r => r.source))) {
+        const { data, error } = await db.from('events').select('source, source_id, metric').eq('source', source)
+          .filter('source_id', 'in', inList(chunk.filter(r => r.source === source).map(r => r.source_id))).limit(1000);
+        if (error) throw error;
+        for (const h of data) have.add(id(h));
+      }
+      step();
+    }
+    const fresh = out.filter(r => !have.has(id(r)));
+    for (const r of out) if (have.has(id(r))) there += 1 + also(r);
+    for (let i = 0; i < fresh.length; i += 500) {
+      const batch = fresh.slice(i, i + 500), { error } = await db.from('events').insert(batch);
+      if (!error) for (const r of batch) { landed++; there += also(r); }
+      else if (error.code !== '23505') throw error;
+      else for (const r of batch) {
+        const { error: e } = await db.from('events').insert(r);
+        if (!e) { landed++; there += also(r); } else if (e.code === '23505') there += 1 + also(r); else throw e;
+      }
+      step();
+    }
+  } catch (error) { return { landed, there, clashed, error }; }
+  tick(1);
+  return { landed, there, clashed };
 }
 
 // ---- voids: stop counting, without removing anything ----

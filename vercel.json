@@ -3,6 +3,9 @@
     "api/mcp.mjs": {
       "includeFiles": "{you-reader.js,package.json,sql/01_the_table.sql}"
     },
+    "api/at.mjs": {
+      "includeFiles": "you-reader.js"
+    },
     "api/setup.mjs": {
       "includeFiles": "sql/01_the_table.sql"
     }

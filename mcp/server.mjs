@@ -26,7 +26,7 @@ const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 // here we read the same text and pull the functions out of it.
 const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
-  return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, rankSeries, etfSeries,
+  return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
@@ -131,27 +131,34 @@ async function few(tasks, n = 8) {
   return out;
 }
 
-// The two ways a number reaches the ledger, and the whole of the difference
+// The ways one number reaches the ledger, and the whole of the difference
 // between them. A number the user gave is a measurement, signed claude. A
 // number Claude read off a picture is an estimate: signed photo, never claude,
-// its name ending _est, and carrying the model that read it.
+// its name ending _est, and carrying the model that read it. A number an iOS
+// Shortcut sends through /api/at is a measurement too, signed shortcut, and
+// never under an estimate's name.
 //
-// They must never share a name or a source. The instrument drifts between
-// models and does not reproduce, and the table has no delete, so a series that
-// mixes the two can never be untangled again. Named here, once, so the source
-// and the name rule cannot drift apart from what the tools do.
+// An estimate and a measurement must never share a name or a source. The
+// instrument drifts between models and does not reproduce, and the table has
+// no delete, so a series that mixes the two can never be untangled again.
+// Named here, once, so the source and the name rule cannot drift apart from
+// what the doors do.
 export const WRITERS = {
   record: { source: 'claude', name: null },
   estimate: {
     source: 'photo',
     name: m => /_est$/.test(m) ? null : 'an estimate\'s metric name must end _est, so it can never be taken for something measured'
+  },
+  shortcut: {
+    source: 'shortcut',
+    name: m => /_est$/.test(m) ? 'a name ending _est is an estimate\'s, and a shortcut sends what was measured' : null
   }
 };
 
-// record and estimate write the same shape and differ only in what produced the
-// number, so the reading of dates, the refusals and the ledger's own day are one
-// piece of code and the two can never drift apart on any of them.
-async function writeReadings(rows, writer, context = null) {
+// record, estimate and /api/at write the same shape and differ only in what
+// produced the number, so the reading of dates, the refusals and the ledger's
+// own day are one piece of code and they can never drift apart on any of them.
+export async function writeReadings(rows, writer, context = null) {
   const read = [], refused = [];
   for (const r of rows) {
     const metric = slug(r.metric), when = R.readWhen(r.occurred_at);
@@ -182,7 +189,7 @@ async function writeReadings(rows, writer, context = null) {
   if (refused.length) return { error: 'nothing written', refused };
   const out = read.map(x => ({
     occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
-    source: writer.source, source_id: `${x.metric}:${x.date || dayAt.get(x.stamp)}`, event_type: 'measurement',
+    source: writer.source, source_id: R.readingKey(x.metric, x.date || dayAt.get(x.stamp)), event_type: 'measurement',
     ...(context ? { context } : {})
   }));
 
@@ -197,11 +204,22 @@ async function writeReadings(rows, writer, context = null) {
     const k = r.metric + '|' + r.source_id;
     if (seen.has(k)) skipped.push(r); else { seen.add(k); fresh.push(r); }
   }
+  // events_once has the last word. A batch it refuses goes in not at all, so each row is tried alone, and a
+  // row it refuses was already there, written by a request that crossed this one between the question and
+  // the write: two taps of a shortcut at once land one row and both answer with it.
+  const written = [];
   if (fresh.length) {
     const { error } = await db.from('events').insert(fresh);
-    if (error) return { error: error.message, written: [], skipped };
+    if (!error) written.push(...fresh);
+    else if (error.code !== '23505') return { error: error.message, written: [], skipped };
+    else for (const r of fresh) {
+      const { error: e } = await db.from('events').insert(r);
+      if (!e) written.push(r);
+      else if (e.code === '23505') skipped.push(r);
+      else return { error: e.message, written, skipped };
+    }
   }
-  return { written: fresh, skipped };
+  return { written, skipped };
 }
 
 // A fresh server with every tool on it. stdio makes one for the life of the
@@ -216,6 +234,9 @@ export function wireServer() {
       'never removed. Print every row before you write it and wait for a yes. Transcribe only: ' +
       'never estimate, round, fill or infer a number, and say so plainly when one cannot be read. ' +
       'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
+      'When the user asks to track something new, read the ledger first and say whether a stock ' +
+      'already carries that fact, naming it and why in one line: a new metric is a cost, not a free ' +
+      'addition. ' +
       'Voiding costs more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
       'write only once the user sends that phrase back. A number the user gave you goes through ' +
       'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +

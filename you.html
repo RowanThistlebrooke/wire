@@ -813,8 +813,8 @@ function drawLedger(){
 // Nothing is guessed. Every column is written nowhere until a stock is picked for it, and the stocks
 // offered are the ones a goal names when the file lands on that goal, or every stock anywhere else.
 // A time is read by readWhen, the MCP's own rule: a date lands on its ledger day, a timestamp must say
-// its zone, and a cell that is neither, or a number that is not one, is not written. Source csv, and
-// source_id the stock and the date or the moment, so the same reading dropped twice lands once
+// its zone, and a cell that is neither, or a number that is not one, is not written. Source csv, keyed
+// by readingKey and landed by landRows, as import.html lands its rows, so a file lands once through either
 let DROP = null;   // the file, its reading, the stocks on offer, which column goes to which stock, and how the write went
 const carriesFile = e => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
 function dropScope(target){
@@ -838,7 +838,7 @@ function planDrop(){
     return { raw, off, cells: cols.map(c => {
       const v = (r[c.col] || '').trim(), n = csvNum(v) ? Number(v) : NaN, metric = map.get(c.col);
       if (off || !Number.isFinite(n)) return { v: null, bad: !off && v !== '' ? v : null };   // text that is not a number is shown red, never written
-      const row = { metric, value: n, when, source_id: metric + ':' + (when.date || when.stamp) };
+      const row = { metric, value: n, when, source_id: readingKey(metric, raw) };   // the key every door gives a file's reading
       all.push(row); values.set(row.source_id, (values.get(row.source_id) || new Set()).add(n));
       const day = when.date || days.get(when.stamp);   // a moment's day is day_of's: until it has answered, the cell is amber
       return { v: n, row, held: !day || held.has(metric + '|' + day) };   // a day this stock already has a reading on
@@ -877,42 +877,24 @@ async function goDrop(){
   const D = DROP; if (!D || D.writing || D.done) return;
   const p = planDrop(); if (!p.rows.length || p.twice.size) return;
   D.plan = p; D.writing = true; D.at = 0; say(''); drawDrop();
-  let landed = 0, there = 0, steps = 1, done = 0, failed = false;
-  const tick = () => { D.at = Math.min(1, ++done / steps); const i = $('dropview').querySelector('.dbar i'); if (i) i.style.width = (D.at * 100).toFixed(1) + '%'; };
+  const dates = [...new Set(p.rows.filter(r => r.when.date).map(r => r.when.date))], at = new Map();
+  const work = Math.ceil(p.rows.length / 100) + Math.ceil(p.rows.length / 500), total = dates.length + work;
+  const bar = x => { D.at = Math.min(1, x / total); const i = $('dropview').querySelector('.dbar i'); if (i) i.style.width = (D.at * 100).toFixed(1) + '%'; };
+  let landed = 0, there = 0, placed = 0, error = null;
   try {
-    // the same stock at the same moment twice in this file, with one value, lands once
-    const seen = new Set(), rows = [];
-    for (const r of p.rows){ if (seen.has(r.source_id)) there++; else { seen.add(r.source_id); rows.push(r); } }
-    const dates = [...new Set(rows.filter(r => r.when.date).map(r => r.when.date))], at = new Map();
-    steps = dates.length + Math.ceil(rows.length / 100) + Math.ceil(rows.length / 500);
     // each date at a moment day_of puts on it, a few at a time. If one cannot be placed, nothing is written
     for (let i = 0; i < dates.length; i += 8){
-      const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d).then(m => { tick(); return m; })));
+      const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d).then(m => { bar(++placed); return m; })));
       got.forEach((m, j) => at.set(dates[i + j], m));
     }
     const lost = dates.find(d => !at.get(d));
     if (lost){ D.writing = false; D.plan = null; drawDrop(); say(`nothing written · day_of puts none of the moments tried on ${lost}`); return; }
-    const out = rows.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));
-    // which are in already, a hundred at a time, so a file dropped twice costs a few questions and not a write per row
-    const have = new Set();
-    for (let i = 0; i < out.length; i += 100){
-      const { data, error } = await db.from('events').select('metric, source_id').eq('source', 'csv').in('source_id', out.slice(i, i + 100).map(r => r.source_id)).limit(1000);
-      if (error) throw error;
-      for (const h of data) have.add(h.metric + '|' + h.source_id);
-      tick();
-    }
-    const fresh = out.filter(r => !have.has(r.metric + '|' + r.source_id));
-    there += out.length - fresh.length;
-    // events_once has the last word: a batch it refuses goes in a row at a time, and a row it refuses was already there
-    for (let i = 0; i < fresh.length; i += 500){
-      const batch = fresh.slice(i, i + 500), { error } = await db.from('events').insert(batch);
-      if (!error) landed += batch.length;
-      else if (error.code !== '23505') throw error;
-      else for (const r of batch){ const { error: e1 } = await db.from('events').insert(r); if (!e1) landed++; else if (e1.code === '23505') there++; else throw e1; }
-      tick();
-    }
-  } catch (e) { failed = true; say(e.message || String(e)); }
-  if (failed && !landed){ D.writing = false; D.plan = null; drawDrop(); return; }   // nothing landed: back to the file as it was, the error said
+    const out = p.rows.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));
+    // landRows, the one way a file's rows go in: each key once, events_once the last word
+    ({ landed, there, error } = await landRows(db, out, f => bar(dates.length + f * work)));
+  } catch (e) { error = e; }
+  if (error) say(error.message || String(error));
+  if (error && !landed){ D.writing = false; D.plan = null; drawDrop(); return; }   // nothing landed: back to the file as it was, the error said
   D.done = { landed, there }; D.at = 1; drawDrop();   // the counts at once; the page stays held while it reloads
   if (landed){ try { await load(); render(); } catch (e) { say(e.message || String(e)); } }
   D.writing = false; applyView(); drawDrop();

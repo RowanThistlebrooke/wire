@@ -43,6 +43,7 @@ and will stay that way.
 | `pull/github.mjs` | pulls your commit count every morning |
 | `pull/whoop.mjs` | pulls your Whoop readings every morning, from your own Mac |
 | `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
+| `api/at.mjs` | one reading from an iOS Shortcut, behind `WIRE_TOKEN` |
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
 | `api/setup.mjs` | a walkthrough for Claude, one step at a time, for Whop license holders; it has no door to any ledger |
 
@@ -75,6 +76,15 @@ made in step 2) and `WIRE_TOKEN` (a long random string you make, for
 example with `openssl rand -hex 32`). In claude.ai, add a custom connector
 at `https://<your site>/api/mcp`, choose No sign-in, and add the header
 `authorization` with the value `Bearer ` followed by your token.
+
+**For an iOS Shortcut**, which writes one reading from your phone, add a
+Get Contents of URL action: `https://<your site>/api/at`, method POST, a
+header `Authorization` with the value `Bearer ` followed by your
+`WIRE_TOKEN`, and a JSON request body with `metric` (Text), `value`
+(Number) and `unit` (Text). The token goes in the header and never in the
+address, because an address ends up in logs; a request with the token in
+the address is refused. The reading lands at the moment it arrives, once
+per stock per day: a second tap on the same day lands nothing.
 
 **For the automatic puller**, add five repository secrets on GitHub under
 Settings, Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`,

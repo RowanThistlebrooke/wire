@@ -3,6 +3,31 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, /api/at, and one key for a reading.** An iOS Shortcut can
+  write one reading: POST to `/api/at` with `WIRE_TOKEN` in the
+  Authorization header, checked by the same function `/api/mcp` uses, and
+  a JSON body of exactly `metric`, `value` and `unit`. The token is read
+  from the header only; one put in the address is refused, because an
+  address ends up in logs. A value that is not a JSON number is refused.
+  The row goes through the body `record` uses, signed `shortcut`, at the
+  moment it arrives, keyed by the stock and the ledger day, so a second
+  tap the same day lands nothing, two taps at once land one row and both
+  answer with it, and it never takes an estimate's `_est` name. A
+  reading's key is now one rule in you-reader.js, `readingKey`: the stock
+  and a time joined by a colon, a date as written and a timestamp as the
+  moment it names. import.html and a drop on you.html both key and land
+  their rows through it and `landRows`, so a file brought a second time to
+  the same stocks lands zero rows, whichever of the two it comes through
+  and whatever the file is called. import.html fills its prefix in from
+  the file's name, so a renamed file there lands under new stocks unless
+  the prefix is typed back. import.html used to key by the file's name and
+  row, and its check of what was in read at most a thousand rows. Rows
+  import.html wrote before this keep their old keys, so a file imported
+  before lands once more, on the right days, beside the rows it wrote a
+  day early. MCP.md gains law 4, before anything: asked to track something
+  new, read the ledger and say whether a stock already carries it. It
+  ships in the session instructions with the writing laws, which are now
+  12 to 15.
 - **16 Sep 2026, a CSV dropped on you.html imports itself.** Drop a file
   anywhere on the page and it is read, shown, and written only after a go.
   Nothing names a metric for you: every number column is written nowhere

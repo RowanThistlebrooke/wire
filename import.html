@@ -78,6 +78,7 @@ a{color:inherit;text-decoration:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/api/config.js"></script>
+<script src="you-reader.js"></script>
 <script src="csv-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
@@ -150,7 +151,7 @@ go.onclick = async () => {
     });
 
   const rows = [];
-  for (const [ri, r] of PLAN.body.entries()) {
+  for (const r of PLAN.body) {
     const raw = r[PLAN.dateCol];
     if (!csvDate(raw || '')) continue;
     const when = new Date(raw).toISOString();
@@ -162,31 +163,18 @@ go.onclick = async () => {
         metric: m.name,
         value: Number(v),
         source: 'csv',
-        source_id: `${PLAN.filename}:${ri}:${raw}`
+        source_id: readingKey(m.name, raw)
       });
     }
   }
 
-  // Ask the database what it already has, so the same file twice lands once.
-  const { data: have } = await db.from('events')
-    .select('source_id, metric').eq('source', 'csv');
-  const seen = new Set((have || []).map(h => h.source_id + '|' + h.metric));
-  const fresh = rows.filter(r => !seen.has(r.source_id + '|' + r.metric));
-
-  if (!fresh.length) {
-    msg.className = 'msg good';
-    msg.textContent = `nothing new · all ${rows.length} readings are already in`;
-    go.disabled = false; return;
-  }
-
-  for (let i = 0; i < fresh.length; i += 500) {
-    const { error } = await db.from('events').insert(fresh.slice(i, i + 500));
-    if (error) { msg.className = 'msg bad'; msg.textContent = error.message; go.disabled = false; return; }
-    msg.textContent = `${Math.min(i + 500, fresh.length)} / ${fresh.length}`;
-  }
-
-  msg.className = 'msg good';
-  msg.textContent = `${fresh.length} added · ${rows.length - fresh.length} already there`;
+  // Keyed by readingKey and landed by landRows in you-reader.js, as you.html lands a dropped file,
+  // so the same file lands once whichever of the two it comes through.
+  const got = await landRows(db, rows, f => { msg.textContent = `${Math.round(f * 100)}%`; });
+  msg.className = got.error ? 'msg bad' : 'msg good';
+  if (got.error) msg.textContent = `${got.error.message || got.error} · ${got.landed} added`;
+  else if (!got.landed && !got.clashed) msg.textContent = `nothing new · all ${got.there} readings are already in`;
+  else msg.textContent = `${got.landed} added · ${got.there} already there${got.clashed ? ` · ${got.clashed} with two values, not written` : ''}`;
   go.disabled = false;
 };
 

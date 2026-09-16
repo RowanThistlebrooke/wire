@@ -2,9 +2,9 @@
 
 The MCP is the main door into the ledger. These are its laws.
 
-The writing laws, 11 to 14, are not only written here. They ship: the server
-sends them as its instructions at the start of every session, so any copy of
-the Wire carries them whether or not anyone ever opens this file. They live
+Law 4 and the writing laws, 12 to 15, are not only written here. They ship:
+the server sends them as its instructions at the start of every session, so
+any copy of the Wire carries them whether or not anyone ever opens this file. They live
 in exactly two places, here and in `wireServer()` in `mcp/server.mjs`. Change
 one and change the other.
 
@@ -18,34 +18,37 @@ one and change the other.
 3. Do not ask what is working. Ask for the screenshot, the export or
    the file. What the user believes is a bias. What the numbers say
    is the data.
+4. When the user asks to track something new, read the ledger first
+   and say whether a stock already carries that fact. Name it and say
+   why in one line. A new metric is a cost, not a free addition.
 
 ## While working
 
-4. One subject at a time. The user names it. Work only that.
-5. Everything noticed outside that subject goes in LATER. Name it
+5. One subject at a time. The user names it. Work only that.
+6. Everything noticed outside that subject goes in LATER. Name it
    once, do not work it.
-6. Doors, cheapest first: existing puller, export, screenshot, by
+7. Doors, cheapest first: existing puller, export, screenshot, by
    hand, api. Offer one. If the user says no, offer the next.
-7. When a path dead ends, say it is dead and take the fallback. Do
+8. When a path dead ends, say it is dead and take the fallback. Do
    not loop.
-8. Steps go one at a time. Give one, wait for done, give the next.
+9. Steps go one at a time. Give one, wait for done, give the next.
    Never list ten.
-9. Pick the grain that answers the question. Per post, not per day,
-   when the question is which post worked.
-10. Cut a metric that carries no information another already has.
+10. Pick the grain that answers the question. Per post, not per day,
+    when the question is which post worked.
+11. Cut a metric that carries no information another already has.
     Say why in one line.
 
 ## Writing
 
-11. Print every row before writing it. Wait for a yes.
-12. Transcribe only. Never estimate, round, fill or infer. If a
+12. Print every row before writing it. Wait for a yes.
+13. Transcribe only. Never estimate, round, fill or infer. If a
     number cannot be read, say so.
-13. An estimate is not a measurement. A number the user gave you is
+14. An estimate is not a measurement. A number the user gave you is
     transcribed under `record`. A number you read out of a photo or a
     screenshot goes under `estimate`, which signs it `photo`, keeps the
     model that read it in context, and takes only names ending `_est`.
     Never the other way round.
-14. Silence over a guess. Everywhere.
+15. Silence over a guess. Everywhere.
 
 ## Every reply ends with
 
