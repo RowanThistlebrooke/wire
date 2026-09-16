@@ -91,7 +91,7 @@ async function load({ day = false } = {}) {
   // every question about commits is asked of the ones that count. The whole list is kept beside it, so a
   // voided commit can still be named and counted again, and so its name is still taken.
   const commits = allCommits && R.liveCommits(allCommits, cvoids);
-  return { all, rules, commits, allCommits, cvoids, series, rows, today, voids };
+  return { all, rules, commits, allCommits, cvoids, series, rows, today, voids, staleBy };
 }
 
 const text = o => ({ content: [{ type: 'text', text: JSON.stringify(o, null, 2) }] });
@@ -354,7 +354,7 @@ export function wireServer() {
     'they are still stocks, and correct reaches their days.',
     {},
     async () => {
-      const { all, rules, series, rows, voids } = await load();
+      const { all, rules, series, rows, voids, staleBy } = await load();
       const out = Object.keys(series).map(m => {
         const p = series[m];
         const last = p[p.length - 1];
@@ -404,7 +404,7 @@ export function wireServer() {
     'point is the measure with the lowest index right now.',
     {},
     async () => {
-      const { series } = await load();
+      const { series, staleBy } = await load();
       const goals = await R.readGoals(db);
       return text({
         goals: goals.map(g => {
@@ -448,7 +448,7 @@ export function wireServer() {
     'same number of days straight before. Refuses to answer when it cannot know.',
     { commit: z.string(), metric: z.string() },
     async ({ commit, metric }) => {
-      const { commits, series, today } = await load({ day: true });
+      const { commits, series, today, staleBy } = await load({ day: true });
       const c = commits.find(x => x.id === commit || x.name === commit);
       if (!c) return text({ error: `no commit called ${commit}` });
       const points = metric === 'YOU'
