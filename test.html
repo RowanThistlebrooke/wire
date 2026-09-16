@@ -107,6 +107,7 @@ function cell(c, k) {
   else if (r.verdict === 'tangled') { cls = 'tangled'; word = 'confident · tangled'; }
   else if (r.verdict === 'no finding') { cls = 'flat'; word = lead ? 'lead · unconfident' : (unconfident ? 'unconfident' : 'very unconfident'); }
   else if (r.verdict === 'early') { cls = 'wait'; word = `very unconfident · ${r.needs} more days`; }
+  else if (r.verdict === 'no index') { cls = 'wait'; word = 'no index'; n = null; }
   else if (r.duringMean != null) { n = Math.round((r.duringMean - 100) * 10) / 10; cls = 'wait'; word = 'vs your usual · 0 before'; }
   else { cls = 'wait'; word = '0 readings'; }
   return { r, cls, word, lead, n };
@@ -130,7 +131,8 @@ function drawRead() {
   const box = $('read'); if (!PICK) { box.className = 'read'; box.innerHTML = ''; return; }
   const c = COMMITS.find(z => z.id === PICK.c); if (!c) { PICK = null; box.className = 'read'; return; }
   const x = cell(c, PICK.k), r = x.r;
-  const nums = r.beforeMean != null
+  const nums = r.verdict === 'no index' ? `<b>${r.before}</b> days before &#183; <b>${r.during}</b> days since &#183; no index`
+    : r.beforeMean != null
     ? `before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean}</b> &#183; needs more than <b>${r.bar}</b> &#183; <b>${r.before}</b> days before &#183; <b>${r.during}</b> days since${r.needs ? ` &#183; <b>${r.needs}</b> more days` : ''}`
     : `since <b>${r.duringMean != null ? r.duringMean : '··'}</b> &#183; your usual is <b>100</b> &#183; <b>${r.during}</b> days since &#183; nothing before it`;
   box.className = 'read on';

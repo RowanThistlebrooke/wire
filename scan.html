@@ -114,9 +114,12 @@ function show() {
   const rows = scanCommit(withYou, PICK, COMMITS, TODAY);
   const usable = rows.filter(r => r.effect !== undefined);
   const leads = usable.filter(r => r.lead);
+  // a stock the gate gives no index cannot be scanned: named, with its reason on hover, never dropped in silence
+  const gated = rows.filter(r => r.verdict === 'no index');
+  const left = gated.length ? `<p class="empty">no index &#183; ${gated.map(r => `<span title="${esc(r.why)}">${esc(r.metric)}</span>`).join(' &#183; ')}</p>` : '';
 
   if (!usable.length) {
-    out.innerHTML = `<p class="empty">${esc(PICK.name)} &#183; ${rows[0] ? esc(rows[0].why) : '0 readings'}</p>`;
+    out.innerHTML = `<p class="empty">${esc(PICK.name)} &#183; ${rows[0] ? esc(rows[0].why) : '0 readings'}</p>` + left;
     return;
   }
 

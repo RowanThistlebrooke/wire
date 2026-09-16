@@ -37,7 +37,8 @@ out loud. Keep it that way.
    soften either one to make a page feel more useful.
    The test gates are day counts. The index gate is not. `MIN_DAYS`,
    `SCAN_BAR` and the two standard errors were derived for comparing two
-   series; an index is gated by whether its own baseline has a spread, and
+   series; an index is gated by whether its own baseline has a spread and
+   whether the stock has outgrown it (law 9), and
    marked as moving until that baseline freezes at thirty. Never carry a
    number from one into the other. Fourteen is a correlation threshold and
    it spent a while wrongly gating the index.
@@ -142,14 +143,19 @@ out loud. Keep it that way.
 - **YOU** is not a row. It is the average of every index you own, per day,
   drawn only on days where every live stock is fresh.
 - The **index** is 100 at the frozen baseline, which is the first thirty
-  readings, and ten points is one standard deviation of that baseline.
-  It has three states and `indexState` in `you-reader.js` is all of them:
+  readings, and ten points is one standard deviation of that baseline. It
+  has three states and `indexState` in `you-reader.js` is all of them:
   with no spread in its baseline there is no index and nothing is drawn,
   because there is nothing to measure a reading against; with a spread the
   index is drawn and marked as still moving, since a reading landing
   inside the baseline still changes what 100 means; at thirty the baseline
-  freezes and it is drawn solid. A goal line counts only the stocks that
-  pass that gate. The page shows the state and never writes it in words.
+  freezes and it is drawn solid. A stock that has outgrown its baseline
+  (law 9) has no index either, and `noIndexWhy` says which refusal it is.
+  Everything that reads an index asks this gate first: a goal line and YOU
+  count only the stocks that pass it, a commit test and a scan answer `no
+  index` with its reason, a lever's cell against such an outcome says the
+  same, and health names every stock that has outgrown its baseline. The
+  page shows the state and never writes it in words.
 
 ## How to help someone build it
 

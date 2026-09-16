@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, every reader of an index asks the gate.** A stock that
+  has outgrown its baseline, or whose baseline never moved, had no index
+  on the page, in the goals and in `stocks`, but four readers still read
+  its ranks without asking. The commit test now answers `no index` with
+  its reason and no effect, so `did_it_work`, the page's commit rows,
+  test.html and the scan can no longer call growth a finding; scan.html
+  names the stocks it left out. A lever's cell against such an outcome
+  says `no index` instead of reading a lead off arithmetic. `history`
+  returns the stock's readings without an index and says why. `health`
+  gains an `index` check that goes red naming every stock that has
+  outgrown its baseline, and by how much, so it is seen the week it
+  happens; a young stock with no spread yet does not turn it red. The
+  trigger is unchanged.
 - **16 Sep 2026, a stock that has outgrown its baseline says so.** The index
   scores a reading in tenths of that stock's own ordinary variation, and a
   total that grows leaves that unit behind: a channel that did four watch

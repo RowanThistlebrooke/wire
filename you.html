@@ -661,7 +661,7 @@ function drawCross(g){
   const box = $('cross');
   if (g.id !== YOU_ID || !CROSS || !CROSS.blocks.length){ box.innerHTML = ''; return; }
   const cell = (b, l, o) => { const c = l.cells[o];
-    if (!c || c.verdict === 'empty') return '<td>&#183;</td>';
+    if (!c || c.verdict === 'empty' || c.verdict === 'no index') return '<td>&#183;</td>';
     const on = FX && FX.g === b.id && FX.l === l.metric && FX.o === o;
     const cls = c.verdict === 'lead' ? (c.effect > 0 ? 'pos' : 'neg') : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'bef' : '';
     const sub = c.verdict === 'early' ? `<i>${c.high} &#183; ${c.low}</i>` : c.verdict === 'before' ? '<i>before</i>' : c.verdict === 'fixed' ? '<i>fixed</i>' : '';
@@ -685,7 +685,7 @@ function leverRows(g){
   if (!b) return '';
   const weak = weakPoint(g, SERIES);
   return b.levers.filter(l => !Object.values(l.cells).some(c => c.verdict === 'lead')).map(l => {
-    const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty'), c = o ? l.cells[o] : null;
+    const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty' && l.cells[o].verdict !== 'no index'), c = o ? l.cells[o] : null;
     const on = c && FX && FX.g === b.id && FX.l === l.metric && FX.o === o, cls = !c ? '' : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'tan' : 'mid';
     return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c && c.effect !== undefined ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
 }

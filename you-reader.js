@@ -714,6 +714,13 @@ function testCommit(points, commit, commits, todayStr) {
   const before = ranksBetween(points, start - length - 1, start - 1);
   const clash = collisionsWith(commit, commits, todayStr);
 
+  // A series the gate gives no index has no ranks to test: its baseline never moved, or the stock has
+  // outgrown it. Say why, and draw no number in a unit that is not there.
+  if (points && points.length && indexState(points) === 'none') {
+    return { during: during.length, before: before.length, clash, duringMean: null, beforeMean: null,
+             verdict: 'no index', why: noIndexWhy(points) || 'this line has no spread, so there is nothing to score a day against' };
+  }
+
   const out = {
     during: during.length,
     before: before.length,
@@ -1129,8 +1136,11 @@ function crossGrid(goals, rows, series, todayStr) {
     id: g.id, name: g.name, outcomes: g.measures,
     levers: g.levers.map(l => ({
       metric: l.metric, lag: l.lag,
+      // an outcome the gate gives no index has no ranks to read a lever against: the cell says so and why
       cells: Object.fromEntries(g.measures.filter(o => series[o])
-        .map(o => [o, crossTest(byMetric[l.metric] || [], series[o], l.lag, asked, todayStr)]))
+        .map(o => [o, indexState(series[o]) === 'none'
+          ? { lag: l.lag, verdict: 'no index', why: noIndexWhy(series[o]), pairs: [], high: 0, low: 0, weeks: 0 }
+          : crossTest(byMetric[l.metric] || [], series[o], l.lag, asked, todayStr)]))
     }))
   }));
   const leads = blocks.reduce((n, b) => n + b.levers.reduce((k, l) =>

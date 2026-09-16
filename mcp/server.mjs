@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
-import { code, feed, keys, table, version } from './health.mjs';
+import { code, feed, index, keys, table, version } from './health.mjs';
 
 const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
@@ -317,21 +317,30 @@ export function wireServer() {
     'the code reads, day_of and day_metrics, names what is missing or the wrong shape, and hands over the ' +
     'exact SQL that puts it right, to run in the Supabase SQL editor. keys names the settings that are not ' +
     'set, never a value. feed names every door that writes into the ledger, how many days behind its newest ' +
-    'row is, and whether that is the lag the door promises or a cable that has stopped. The first three say ' +
-    'whether this copy is built correctly; feed says whether anything is still coming in. It writes nothing.',
+    'row is, and whether that is the lag the door promises or a cable that has stopped. index names every stock ' +
+    'that has outgrown its baseline, varying many times as much now as across its first thirty readings, so its ' +
+    'index would be arithmetic and not a reading. The first three say whether this copy is built correctly; ' +
+    'feed and index say whether what comes in can still be read. It writes nothing.',
     {},
     async () => {
       const k = keys();
       const ledger = !k.wrong && k.missing.every(n => n === 'WIRE_TOKEN');
       const unchecked = { ok: null, say: 'not checked until the keys are set' };
       // a trailing catch, not then's second argument: that one only sees signIn fail, never the read after it
-      const [c, t, f] = await Promise.all([
+      // the gate is indexState in you-reader.js; health only asks it which stocks have outgrown their baseline
+      const outgrown = async () => {
+        const { series } = await load();
+        return index(Object.keys(series).filter(m => R.outgrownBy(series[m]) >= R.OUTGROWN)
+          .map(m => ({ metric: m, by: Math.round(R.outgrownBy(series[m]) * 10) / 10, why: R.noIndexWhy(series[m]) })));
+      };
+      const [c, t, f, x] = await Promise.all([
         code(),
         ledger ? signIn().then(() => table(db), e => ({ ok: null, error: e.message })) : unchecked,
-        ledger ? signIn().then(async () => feed(R.feedOf(await R.readFeeds(db)))).catch(e => ({ ok: null, error: e.message })) : unchecked
+        ledger ? signIn().then(async () => feed(R.feedOf(await R.readFeeds(db)))).catch(e => ({ ok: null, error: e.message })) : unchecked,
+        ledger ? outgrown().catch(e => ({ ok: null, error: (e && e.message) || String(e) })) : unchecked
       ]);
       const { sql, ...rest } = t;
-      const out = text({ code: c, table: sql ? { ...rest, sql: 'the next block, exact' } : rest, keys: k, feed: f });
+      const out = text({ code: c, table: sql ? { ...rest, sql: 'the next block, exact' } : rest, keys: k, feed: f, index: x });
       if (sql) out.content.push({ type: 'text', text: sql });
       return out;
     }
@@ -370,7 +379,9 @@ export function wireServer() {
 
   server.tool(
     'history',
-    'The day by day readings for one metric, oldest first. A stock with a rule whose readings do not count, ' +
+    'The day by day readings for one metric, oldest first, each with its index. A stock the gate gives no index, ' +
+    'its baseline never moved or it has outgrown it, returns its readings without an index and says why. ' +
+    'A stock with a rule whose readings do not count, ' +
     'each voided or ignored, answers with no points and why, and is still a stock correct can reach.',
     { metric: z.string(), days: z.number().optional() },
     async ({ metric, days = 60 }) => {
@@ -379,6 +390,9 @@ export function wireServer() {
       if (!p && all.includes(metric) && metric in rules) return text({ ...uncountedOf(metric, rules, rows, voids), points: [],
         say: 'it is a stock with a rule and no series, for the reason in why: correct reaches its days' });
       if (!p) return text({ error: `no stock called ${metric}, or it has no rule yet` });
+      // a stock the gate gives no index returns its readings and never an index: the same reason the tests refuse it
+      if (R.indexState(p) === 'none') return text({ metric, index_state: 'none', note: 'no index: ' + R.noIndexWhy(p),
+        points: p.slice(-days).map(({ day, value }) => ({ day, value })) });
       return text({ metric, points: p.slice(-days) });
     }
   );
@@ -506,7 +520,7 @@ export function wireServer() {
       const grid = R.crossGrid(await R.readGoals(db), R.liveRows(rows, voids), series, today);
       for (const b of grid.blocks) for (const l of b.levers) for (const o of Object.keys(l.cells)) {
         const { pairs, ...rest } = l.cells[o];
-        l.cells[o] = { ...rest, pairs: pairs.length };
+        l.cells[o] = { ...rest, pairs: pairs ? pairs.length : 0 };
       }
       return text(grid);
     }
