@@ -3,6 +3,11 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the ledger tab follows the gate.** The raw reading is the
+  record and always shows. Everything drawn from the index follows the
+  gate instead: the word, the tone and the small line. A stock under the
+  gate shows its readings and no index, and one whose baseline is still
+  filling is drawn faded there too, the same fade the chart uses.
 - **16 Sep 2026, the index gate, in one file.** The gate was a literal 14
   in the MCP, twice and nowhere else, so the page indexed a stock from its
   first reading while the MCP refused under fourteen. `indexState` in

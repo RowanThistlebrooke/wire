@@ -228,6 +228,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .lb > b small{font:400 10px/1 var(--mono);color:var(--muted);margin-left:3px}
 .lb .tiny{width:100%;height:30px;display:block}
 .lb .meta{font:400 9.5px/1 var(--mono);color:var(--muted);letter-spacing:.04em}
+.lb.mv .tiny,.lb.mv .gl{opacity:.45}   /* the baseline is still filling: the same fade the chart draws */
 .lb.count{cursor:default}
 .lb.count:hover{background:var(--panel)}
 .lrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px}
@@ -816,9 +817,14 @@ function drawLedger(){
   // one box per stock: its latest reading, its last thirty days, green up, red down, white flat
   const box = (m, s) => {
     const pts = SERIES[m], lr = LAST[m], st = !pts ? (RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : 'unscored') : stale(m) ? 'stale' : '';
-    const last = pts && pts[pts.length-1], w = word(!st && last ? last.rank : null), tone = st ? 'mute' : w.cls === 'pos' ? 'up' : w.cls === 'neg' ? 'down' : 'flat';
-    const vals = pts ? pts.slice(-30).map(p => p.rank) : DAYS.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));
-    return `<button type="button" class="lb ${tone}" data-lm="${esc(m)}"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : `<span class="gl">${w.w}</span>`}</span>
+    // the raw reading is the record and always shows. Everything drawn from the index, the word and
+    // the tone and the line, follows the gate: under it the line falls back to the readings
+    // themselves, the way it already does for a stock that has no index at all
+    const gt = indexState(pts ? pts.length : 0), scored = gt !== 'none';
+    const last = scored ? pts[pts.length-1] : null, w = word(!st && last ? last.rank : null);
+    const tone = st || !scored ? 'mute' : w.cls === 'pos' ? 'up' : w.cls === 'neg' ? 'down' : 'flat';
+    const vals = scored ? pts.slice(-30).map(p => p.rank) : DAYS.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));
+    return `<button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : ''}</span>
       <b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${tiny(vals, tone)}
       <span class="meta">${fmt(stocks[m][s])} rows${lr ? ` &#183; ${lr.day.slice(5)}` : ''}</span></button>`;
   };
