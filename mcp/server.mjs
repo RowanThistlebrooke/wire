@@ -29,7 +29,7 @@ const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
-           readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
+           readAll, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, noIndexWhy, outgrownBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
@@ -108,14 +108,13 @@ const uncountedOf = (m, rules, rows, voids) => {
 // beats one the AI wrote (source 'claude'), whatever the date.
 async function readNotes(subject) {
   await signIn();
-  let q = db.from('events')
+  const q = () => { let b = db.from('events')
     .select('metric, source, occurred_at, context')
     .eq('event_type', 'note')
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (subject !== undefined) q = q.eq('metric', R.slugCommit(subject));
-  const { data, error } = await q;
-  if (error) throw new Error(error.message);
+    .order('id', { ascending: true });
+    return subject === undefined ? b : b.eq('metric', R.slugCommit(subject)); };
+  const data = await R.readAll(q);
   return data.map(r => ({
     metric: r.metric, source: r.source, occurred_at: r.occurred_at,
     text: (r.context || {}).text ?? null
@@ -267,9 +266,8 @@ async function readAgain(rows, days, model) {
     // day's one reading. A mean of several doors was read by no model. An estimate sits at the moment it reads and
     // a correction at the moment it was written, so the two kinds are chosen apart, never by one walk in time.
     if (!photo.has(row.metric)) {
-      const { data, error } = await db.from('events').select('event_type, source, source_id, context, occurred_at')
-        .eq('metric', row.metric).or('source.eq.photo,event_type.eq.correction').order('occurred_at', { ascending: true }).limit(20000);
-      if (error) throw new Error(error.message);
+      const data = await R.readAll(() => db.from('events').select('event_type, source, source_id, context, occurred_at')
+        .eq('metric', row.metric).or('source.eq.photo,event_type.eq.correction').order('occurred_at', { ascending: true }).order('id', { ascending: true }));
       photo.set(row.metric, data);
     }
     const mine = photo.get(row.metric), ctx = e => e.context || {};

@@ -82,6 +82,18 @@ out loud. Keep it that way.
    and refusing a high index would take that away. The honest fix is the
    user's, not the code's: track a rate, which has a level, instead of a
    total, which does not, or start the stock clean under a new name.
+10. **Read all of it, or say so.** A query's page size belongs to the
+    database, not to the code. Ask for twenty thousand rows and Postgres
+    hands back the thousand its settings allow, with no error and nothing
+    to say it stopped, so a read that outgrows one page quietly becomes a
+    read of part of the ledger, and a page drawn from some of the rows
+    looks exactly like a page drawn from all of them. Every read that
+    grows with the ledger goes through `readAll`, which asks for one page
+    at a time until a page comes back short, and orders by something no
+    two rows share so nothing is handed over twice or skipped. Never raise
+    a limit to make this go away: a bigger number is the same bug further
+    off. An error on any page stops the read and is said, because a short
+    answer that looks whole is worse than no answer.
 
 ## The shape of the data
 

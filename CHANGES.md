@@ -3,6 +3,22 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the ledger is read all of it, a page at a time.** Every read
+  asked for twenty thousand rows, and Postgres handed back the thousand its
+  settings allow, with no error and nothing to say it stopped. Under a thousand
+  day rows nothing showed. Over a thousand, the day rows were read oldest
+  first, so the rows quietly dropped were the newest ones: a year of history
+  imported in one go, and today's weight, today's estimates and today's
+  readings vanished from the page and from `stocks`, YOU fell back a day, and
+  every stock lost a reading. Nothing was lost from the ledger and nothing was
+  ever wrong in it; the ledger was being read in part and drawn as if in whole.
+  Every read that grows with the ledger now goes through `readAll`, which asks
+  for one page at a time until a page comes back short, and orders by something
+  no two rows share, an event by its id and a day row by its day and its
+  metric, so no row is handed over twice or skipped. An error on any page stops
+  the read and is said, rather than returning a short answer that looks whole.
+  The limit is not raised anywhere: a bigger number is the same bug further
+  off. CLAUDE.md law 10 says so.
 - **16 Sep 2026, a dropped CSV can name a stock that does not exist yet.** The
   drop on you.html offered a list of the stocks you already had and nothing
   else, so a file full of readings the ledger had never seen could be dropped,

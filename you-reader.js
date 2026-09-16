@@ -4,6 +4,30 @@ const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 // and YOU refuses to draw, rather than guessing or quietly dropping it.
 const STALE_DAYS = 7;
 
+// ---- reading all of it, and never some of it ----
+//
+// A query's page size belongs to the database, not to us: ask for twenty
+// thousand rows and Postgres hands back the thousand its settings allow, with
+// no error and nothing to say it stopped. Every read below grows with the
+// ledger, so every one of them is cut short sooner or later, and a page drawn
+// from some of the rows looks exactly like a page drawn from all of them. A
+// silent half answer is the one failure this ledger must not have.
+//
+// So a read asks for one page at a time and keeps asking until a page comes
+// back short. Each page must land in the same order as the one before it, or a
+// row is handed over twice or skipped, so every read orders by something no
+// two rows share: an event by its id, a day row by its day and its metric.
+const PAGE = 1000;
+async function readAll(make) {
+  const all = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await make().range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < PAGE) return all;
+  }
+}
+
 // ---- the doors: is the ledger being fed? ----
 //
 // Every row carries the source that wrote it, so the ledger already knows who
@@ -39,12 +63,11 @@ const FED = {
 // for a source is its last one. Every event_type counts: a rule, a goal or a
 // void is Claude feeding the ledger as much as a reading is.
 async function readFeeds(db) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('source, occurred_at')
     .order('occurred_at', { ascending: false })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: false }));
   const last = {};
   for (const r of data) if (r.source && !(r.source in last)) last[r.source] = r.occurred_at;
   return last;
@@ -77,9 +100,9 @@ function feedOf(last, now = Date.now()) {
 
 // Every metric you have ever recorded.
 async function readMetrics(db) {
-  const { data, error } = await db
-    .from('day_metrics').select('metric').limit(20000);
-  if (error) throw error;
+  const data = await readAll(() => db
+    .from('day_metrics').select('day, metric')
+    .order('day', { ascending: true }).order('metric', { ascending: true }));
   return [...new Set(data.map(r => r.metric))].sort();
 }
 
@@ -87,13 +110,12 @@ async function readMetrics(db) {
 // different event_type, so day_metrics never sees them. Latest rule per
 // metric wins, and the older ones stay on the record.
 async function readRules(db) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('metric, context, occurred_at')
     .eq('event_type', 'rule')
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: true }));
   const out = {};
   for (const r of data) out[r.metric] = r.context;
   return out;
@@ -110,14 +132,12 @@ async function writeRule(db, metric, rule) {
 }
 
 async function readDays(db, metrics) {
-  const { data, error } = await db
+  return readAll(() => db
     .from('day_metrics')
     .select('day, metric, mean, readings')
     .in('metric', metrics)
     .order('day', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
-  return data;
+    .order('metric', { ascending: true }));
 }
 
 // The ledger's day for a moment, now unless another is given. The day is
@@ -285,13 +305,12 @@ async function landRows(db, rows, tick = () => {}) {
 const isDay = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
 async function readVoids(db, dayOf) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('metric, event_type, context, occurred_at')
     .in('event_type', ['void', 'correction'])
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: true }));
   const latest = new Map(), values = new Map();
   // A row that does not say voided says nothing, and its readings keep counting. A
   // row that cannot be read must never be the reason a reading is dropped.
@@ -396,13 +415,12 @@ function readingOn(rows, metric, day) { return rows.find(r => r.metric === metri
 // ledger struck through, and its name stays taken, so nothing can quietly
 // take its place. One more row counts it again.
 async function readCommitVoids(db) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('context, occurred_at')
     .eq('event_type', 'void')
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: true }));
   const out = {};
   // rows arrive oldest first, so the last one to name a commit is the one that stands
   for (const r of data) {
@@ -646,13 +664,12 @@ const slugCommit = s =>
 // today is the ledger's day, from readDay: a running commit counts its days up to it. A start that is
 // already today somewhere but not yet in the ledger's own day has run 0 days, never fewer.
 async function readCommits(db, today) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('metric, context, event_type, occurred_at')
     .in('event_type', ['commit', 'commit_end'])
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: true }));
 
   const byId = {};
   for (const r of data) {
@@ -1159,13 +1176,12 @@ function crossGrid(goals, rows, series, todayStr) {
 // measures by crossGrid and never enter its line.
 
 async function readGoals(db) {
-  const { data, error } = await db
+  const data = await readAll(() => db
     .from('events')
     .select('metric, context, occurred_at')
     .eq('event_type', 'goal')
     .order('occurred_at', { ascending: true })
-    .limit(20000);
-  if (error) throw error;
+    .order('id', { ascending: true }));
   const byId = new Map();                       // latest wins, first declared keeps its place
   for (const r of data) {
     const c = r.context || {};

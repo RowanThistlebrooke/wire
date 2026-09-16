@@ -409,7 +409,10 @@ async function load(){
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // each stock's unit and every source that has written it, newest first
-  const { data: u, error: ue } = await db.from('events').select('metric, unit, source').eq('event_type', 'measurement').order('occurred_at', { ascending: false }).limit(20000);
+  // read a page at a time, never one capped read: readAll is in you-reader.js and says why
+  let u = null, ue = null;
+  try { u = await readAll(() => db.from('events').select('metric, unit, source').eq('event_type', 'measurement').order('occurred_at', { ascending: false }).order('id', { ascending: false })); }
+  catch (e) { ue = e; }
   if (ue) throw ue;
   UNITS = {}; SOURCES = {};
   for (const r of u){ if (r.unit && !(r.metric in UNITS)) UNITS[r.metric] = r.unit; const s = SOURCES[r.metric] || (SOURCES[r.metric] = []); if (r.source && !s.includes(r.source)) s.push(r.source); }
@@ -512,7 +515,9 @@ function drawFlow(g){
   const grouped = ms.length > FLOW_ROWS;
   f.classList.toggle('grouped', grouped);
   // the stocks under the source that writes them. scored ones by their index, stale last, a source placed by its first stock; the rest, the sources with the most stocks first
-  const tip = m => SERIES[m][SERIES[m].length-1].rank, byIndex = (a, b) => stale(a) - stale(b) || tip(a) - tip(b);
+  // a stock under the gate has no index to be placed by, so it follows the ones that do, by name
+  const gated = m => gate(m) === 'none', tip = m => SERIES[m][SERIES[m].length-1].rank;
+  const byIndex = (a, b) => stale(a) - stale(b) || gated(a) - gated(b) || (gated(a) ? a.localeCompare(b) : tip(a) - tip(b));
   const bySource = (list, order) => { const by = new Map(); for (const m of list){ const s = (SOURCES[m] || [])[0] || ''; if (!by.has(s)) by.set(s, []); by.get(s).push(m); }
     if (order) for (const l of by.values()) l.sort(order);
     return [...by.keys()].sort((a, b) => (a === '') - (b === '') || (order ? order(by.get(a)[0], by.get(b)[0]) : by.get(b).length - by.get(a).length) || a.localeCompare(b)).map(s => [s, by.get(s)]); };
@@ -563,7 +568,7 @@ const shows = t => t.verdict === 'finding' || t.verdict === 'no finding' || t.ve
 const span = c => { const s = dayNum(c.from) - D0, e = Math.min(dayNum(c.to || TODAY), dayNum(TODAY)) - D0; return { s, e, b: s - Math.max(0, e - s) - 1 }; };   // start, end, and where testCommit's before begins
 
 function drawChart(anim){
-  const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(pts);
+  const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(pts), gate = indexState(pts);
   const svg = $('c'), W = Math.max(280, Math.round($('chart').clientWidth)), H = W < 560 ? 250 : 360, T = 18, B = 28, R = 44;
   const today = N - 1, fc = FC ? COMMITS.find(c => c.id === FC) : null, fx = !fc && FX ? cellOf(FX) : null;
   let i0, i1 = today;
@@ -573,7 +578,7 @@ function drawChart(anim){
   if (!fc && !fx){ const fd = line.findIndex(v => v != null); i0 = fd < 0 ? Math.max(0, today - 89) : Math.max(i0, fd); }   // a window opens on the first reading, not on empty days
   if (i1 - i0 < 6) i0 = Math.max(0, i1 - 6);
   const r = fc ? testCommit(pts, fc, COMMITS, TODAY) : null;
-  const vals = line.slice(i0, i1 + 1).filter(v => v != null);
+  const vals = gate === 'none' ? [] : line.slice(i0, i1 + 1).filter(v => v != null);   // a line under the gate is not drawn, so it does not set the scale or place 100 either
   if (r && shows(r)) vals.push(r.beforeMean, r.duringMean);
   const xm = fx && (fx.c.verdict === 'lead' || fx.c.verdict === 'no lead' || fx.c.verdict === 'before');   // early draws no averages
   if (xm) vals.push(fx.c.highMean, fx.c.lowMean);
@@ -587,7 +592,7 @@ function drawChart(anim){
   if (fc){ const p = span(fc);
     s += `<rect x="${x(Math.max(i0, p.b)).toFixed(1)}" y="${T}" width="${Math.max(0, x(p.s) - x(Math.max(i0, p.b))).toFixed(1)}" height="${H - T - B}" fill="#8d959a" opacity=".04"/>`;
     s += `<rect x="${x(p.s).toFixed(1)}" y="${T}" width="${Math.max(2, x(p.e) - x(p.s)).toFixed(1)}" height="${H - T - B}" fill="#c9a25a" opacity=".07"/>`; }
-  const tagY = li >= 0 ? y(line[li]) : -99;
+  const tagY = li >= 0 && gate !== 'none' ? y(line[li]) : -99;
   if (100 > lo && 100 < hi){ s += `<line class="base" x1="0" x2="${W - R}" y1="${y(100).toFixed(1)}" y2="${y(100).toFixed(1)}"/>`; if (Math.abs(y(100) - tagY) > 12) s += `<text x="${W - R + 10}" y="${(y(100) + 3).toFixed(1)}">100</text>`; }
   // every commit that starts inside the window, where it starts
   for (const c of COMMITS){ const p = span(c); if (p.s < i0 || p.s > i1) continue; const on = fc && fc.id === c.id;
@@ -606,7 +611,6 @@ function drawChart(anim){
     else if (open){ area += `L${x(prev).toFixed(1)} ${H - B}Z`; open = false; } }
   // the index gate, drawn and never written: nothing under it, faded while the baseline is still
   // filling, solid once it is frozen. indexState lives in you-reader.js and the MCP reads the same one
-  const gate = indexState(pts);
   if (gate !== 'none'){
     if (area) s += `<path class="area" d="${area}" fill="url(#ga)"/>`;
     if (path) s += `<path class="ln ${gate}" d="${path}" pathLength="1" stroke="${col}"/>`;
@@ -698,7 +702,7 @@ function miniX(c){
   return `<svg class="mini" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${ps.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.rank).toFixed(1)).join('')}" fill="none" stroke="#5c656b" stroke-width="1.2" vector-effect="non-scaling-stroke"/>${ps.map((p, i) => p.side === 'high' ? `<rect x="${(x(i) - .6).toFixed(1)}" y="${H - 4}" width="1.2" height="4" fill="#c9a25a"/>` : '').join('')}</svg>`;
 }
 function drawCommits(){
-  const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(pts);
+  const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(indexState(pts) === 'none' ? [] : pts);   // under the gate testCommit says no index, and its mini draws no line
   $('cm').innerHTML = leadRows(g) + COMMITS.map(c => { const r = testCommit(pts, c, COMMITS, TODAY), on = FC === c.id, cl = vcls(r);
     const val = !Number.isFinite(r.effect) ? '&#183;' : sgn(r.effect);
     const st = r.verdict === 'early' ? `${r.needs} d` : r.verdict === 'tangled' ? 'tangled' : r.verdict === 'no finding' ? '&lt; 2 se' : '';
@@ -732,7 +736,9 @@ function applyView(){
 async function showLedger(){
   $('eyebrow').textContent = 'ledger';
   if (!LEDGER){ const k = ++LTOKEN;
-    const { data, error } = await db.from('events').select('occurred_at, metric, value, unit, source, event_type').order('occurred_at', { ascending: false }).limit(20000);
+    let data = null, error = null;
+    try { data = await readAll(() => db.from('events').select('occurred_at, metric, value, unit, source, event_type').order('occurred_at', { ascending: false }).order('id', { ascending: false })); }
+    catch (e) { error = e; }
     if (k !== LTOKEN) return;
     if (error){ say(error.message); return; }
     LEDGER = data; }
