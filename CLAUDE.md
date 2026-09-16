@@ -66,6 +66,15 @@ out loud. Keep it that way.
   never removes one. That is the only reason the system can have it: law 1
   still holds, every reading is still there, and one more row brings it
   back.
+- A void stops a **commit** the same way, by the same row under the same
+  laws: `context { commit, name, from, voided }`, and the latest row per
+  commit wins. A commit has no day and no value to name, so the row names
+  the commit itself. A voided commit is in no test, in no scan and not in
+  WHAT MOVES IT, and it collides with nothing, because a commit that is
+  not counted cannot muddy one that is. It stays in the ledger struck
+  through and its name stays taken. The friction matches: voiding a
+  reading costs typing its number back, voiding a commit costs typing its
+  name and its start.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.

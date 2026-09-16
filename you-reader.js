@@ -91,6 +91,7 @@ async function readVoids(db, dayOf) {
   // row that cannot be read must never be the reason a reading is dropped.
   for (const r of data) {
     const c = r.context || {};
+    if (c.commit) continue;                  // a commit's void is not a reading's; commitVoided reads those
     const metric = typeof c.metric === 'string' ? c.metric : r.metric;
     const day = isDay(c.day) ? c.day : null;
     latest.set(metric + '|' + (day || ''), { metric, day, voided: !!c.voided, at: r.occurred_at });
@@ -133,6 +134,52 @@ function liveRows(rows, voids) { return voids && Object.keys(voids).length ? row
 // The one reading a void names: the day row as day_metrics made it, or null
 // when that metric has nothing on that day. Read, never guessed.
 function readingOn(rows, metric, day) { return rows.find(r => r.metric === metric && r.day === day) || null; }
+
+// A commit is voided the same way, by one more row, under the same laws. It
+// has no day and no value to name, because it is one thing with a start, so
+// the row names the commit itself: context { commit, name, from, voided },
+// and the latest row per commit wins, as rules do.
+//
+// A voided commit is in no test, no scan, and not in WHAT MOVES IT. It cannot
+// collide with another commit either: a commit that is not counted cannot
+// muddy one that is. That is one filter, liveCommits, applied where the
+// commits are read, so no two readers of them can drift apart.
+//
+// What it is not: it is not a delete. The rows stay, the commit stays in the
+// ledger struck through, and its name stays taken, so nothing can quietly
+// take its place. One more row counts it again.
+async function readCommitVoids(db) {
+  const { data, error } = await db
+    .from('events')
+    .select('context, occurred_at')
+    .eq('event_type', 'void')
+    .order('occurred_at', { ascending: true })
+    .limit(20000);
+  if (error) throw error;
+  const out = {};
+  // rows arrive oldest first, so the last one to name a commit is the one that stands
+  for (const r of data) {
+    const c = r.context || {};
+    if (typeof c.commit === 'string') out[c.commit] = !!c.voided;
+  }
+  return out;
+}
+
+async function writeCommitVoid(db, commit, voided) {
+  return db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric: commit.id,
+    event_type: 'void',
+    value: null,
+    source: 'you',
+    context: { commit: commit.id, name: commit.name, from: commit.from, voided }
+  });
+}
+
+function commitVoided(cvoids, id) { return !!(cvoids && cvoids[id]); }
+function liveCommits(commits, cvoids) {
+  return cvoids && Object.keys(cvoids).length ? commits.filter(c => !commitVoided(cvoids, c.id)) : commits;
+}
 
 // A band turns a value into how far outside the band it is.
 // Inside the band is zero, and zero is as good as it gets.

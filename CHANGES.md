@@ -3,6 +3,13 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, void reaches commits.** A test commit written while
+  building the commit page can stop counting, the way a reading already
+  could. One more void row names the commit instead of a day, and a
+  voided commit is in no test, in no scan, not in WHAT MOVES IT, and it
+  collides with nothing. It stays in the ledger struck through and its
+  name stays taken. Voiding one costs typing its name and start back, as
+  voiding a reading costs typing its number.
 - **16 Sep 2026, pull/whoop.mjs.** Your Whoop readings land by themselves
   every morning: recovery, HRV, resting heart rate, sleep performance,
   sleep debt and strain, each written at the moment Whoop recorded it. It

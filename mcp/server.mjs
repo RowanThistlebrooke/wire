@@ -30,6 +30,7 @@ const R = new Function(src + `
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
+           readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
 // The client is made on the first question, not on import, so a server
@@ -84,10 +85,13 @@ async function momentOn(date) {
 // for through the same ledgerDay, so a day that cannot be read is said in words and never guessed.
 async function load({ day = false } = {}) {
   await signIn();
-  const [today, all, rules, voids] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay)]);
-  const [commits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
+  const [today, all, rules, voids, cvoids] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay), R.readCommitVoids(db)]);
+  const [allCommits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
   const series = R.rankSeries(rows, rules, voids);
-  return { all, rules, commits, series, rows, today, voids };
+  // every question about commits is asked of the ones that count. The whole list is kept beside it, so a
+  // voided commit can still be named and counted again, and so its name is still taken.
+  const commits = allCommits && R.liveCommits(allCommits, cvoids);
+  return { all, rules, commits, allCommits, cvoids, series, rows, today, voids };
 }
 
 const text = o => ({ content: [{ type: 'text', text: JSON.stringify(o, null, 2) }] });
@@ -238,8 +242,9 @@ export function wireServer() {
     'What you did. Each one has a start and an end, not a value.',
     {},
     async () => {
-      const { commits } = await load({ day: true });
-      return text({ commits });
+      const { commits, allCommits, cvoids } = await load({ day: true });
+      const voided = allCommits.filter(c => R.commitVoided(cvoids, c.id));
+      return text({ commits, ...(voided.length ? { voided } : {}) });
     }
   );
 
@@ -546,6 +551,41 @@ export function wireServer() {
       return text(error ? { error: error.message }
                         : { written: { metric, event_type: 'void', source: 'claude', context: { metric, day, voided } },
                             [voided ? 'not_counted' : 'counted_again']: { metric, value, day } });
+    }
+  );
+
+  server.tool(
+    'void_commit',
+    'Stop counting one commit, or count it again. The same row as void and the same laws: it removes ' +
+    'nothing, and the latest void row per commit wins. A voided commit is in no test, in no scan and not ' +
+    'in WHAT MOVES IT, and it cannot collide with another commit. It stays in the ledger struck through ' +
+    'and its name stays taken. A commit has no value to type back, so the phrase carries what names it ' +
+    'instead, its name and its start. Call it first with no confirm: it answers with the commit it would ' +
+    'void and the phrase that voids it. Print those two lines to the user exactly as they are. Nothing is ' +
+    'written until the user sends that phrase back and you pass it as confirm. A yes is not enough. ' +
+    'Signed claude. voided false counts the commit again, the same way.',
+    { commit: z.string(), voided: z.boolean().optional(), confirm: z.string().optional() },
+    async ({ commit, voided = true, confirm }) => {
+      const { allCommits, cvoids } = await load({ day: true });
+      const c = allCommits.find(x => x.id === commit || x.name === commit);
+      if (!c) return text({ error: `no commit called ${commit}` });
+      if (R.commitVoided(cvoids, c.id) === voided)
+        return text({ error: `${c.name} is already ${voided ? 'voided' : 'counted'}` });
+      // a commit has no reading to type back, so its name and its start are what the phrase carries
+      const phrase = `${voided ? 'void' : 'unvoid'} commit ${c.name} from ${c.from}`;
+      // the phrase exactly, give or take the spacing and the capital a keyboard adds
+      const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (said !== phrase.toLowerCase()) return text({
+        commit: c.name, from: c.from, to: c.to, days: c.days,
+        print: `${c.name}  from ${c.from}${c.to ? ` to ${c.to}` : ''}\nto ${voided ? 'void this' : 'count this again'}, send: ${phrase}`,
+        say: 'print the two lines in print to the user, exactly as they are, and nothing else. Write nothing ' +
+             'until the user sends that phrase back; then call void_commit again with confirm set to what they sent.'
+      });
+      const { error } = await R.writeCommitVoid(asClaude, c, voided);
+      return text(error ? { error: error.message }
+                        : { written: { metric: c.id, event_type: 'void', source: 'claude',
+                                       context: { commit: c.id, name: c.name, from: c.from, voided } },
+                            [voided ? 'not_counted' : 'counted_again']: { commit: c.name, from: c.from } });
     }
   );
 

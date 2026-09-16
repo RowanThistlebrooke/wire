@@ -412,7 +412,7 @@ function remembered(){ try { return localStorage.getItem('wire.pad.metric'); } c
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
-let ALL = [], RULES = {}, COMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {};   // VOIDS: which readings are not counted, by stock and day
+let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {}, CVOIDS = {};   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record
 let SEL = YOU_ID, FM = null, FC = null, FX = null, BAND = false, GPICK = new Set(), GLEVER = new Map(), RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let RULING = false, ENDING = false;              // a rule row or an end row on its way: a double click writes one
@@ -420,9 +420,10 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
-  const [today, all, rules, goals, voids] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db)]);
+  const [today, all, rules, goals, voids, cvoids] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db)]);
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
-  TODAY = today; ALL = all; RULES = rules; COMMITS = commits; GOALS = goals; VOIDS = voids;
+  TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids;
+  ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
   SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
@@ -745,8 +746,8 @@ function drawWeak(g){
 // notes are counted here and nothing more: their text is never read by a page
 const laneOf = s => s === 'claude' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';
 const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes', 'cross'];   // the tools in mcp/wire.mjs that read
-const MCP_WRITES = ['record', 'did', 'rule', 'goal', 'remember'];   // and the ones that write, every row signed claude
-const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note'];
+const MCP_WRITES = ['record', 'did', 'rule', 'goal', 'remember', 'void', 'void_commit'];   // and the ones that write, every row signed claude
+const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note', 'void'];
 const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' };
 const fmt = n => Number(n).toLocaleString('en-US');
 function applyView(){
@@ -816,7 +817,10 @@ function drawLedger(){
   };
   // the voided readings: still in the ledger, no longer counted, struck through with their day
   const off = DAYS.filter(d => voidedOn(VOIDS, d.metric, d.day));
-  const voided = !off.length ? '' : `<section class="lane"><div class="lh"><div class="lt">voided</div><b>${fmt(off.length)}</b><span>reading${off.length === 1 ? '' : 's'}</span>${off.length > 30 ? '<em>latest 30</em>' : ''}</div><div class="tw"><table>${off.slice(-30).reverse().map(d =>
+  const offc = ALLCOMMITS.filter(c => commitVoided(CVOIDS, c.id));
+  const offn = off.length + offc.length;
+  const voided = !offn ? '' : `<section class="lane"><div class="lh"><div class="lt">voided</div><b>${fmt(offn)}</b><span>row${offn === 1 ? '' : 's'}</span>${off.length > 30 ? '<em>latest 30</em>' : ''}</div><div class="tw"><table>${offc.map(c =>
+    `<tr class="vd"><td>${esc(c.from)}</td><td>${esc(c.name)}</td><td class="r">commit</td></tr>`).join('')}${off.slice(-30).reverse().map(d =>
     `<tr class="vd"><td>${esc(d.day)}</td><td>${esc(d.metric)}</td><td class="r">${num(Number(d.mean))}${UNITS[d.metric] ? ' ' + esc(UNITS[d.metric]) : ''}</td></tr>`).join('')}</table></div></section>`;
   // the ledger itself, newest first: every row is a line that is never changed
   const tape = `<section class="lane"><div class="lh"><div class="lt">latest</div></div><div class="tw"><table>${rows.filter(r => r.event_type !== 'note').slice(0, 14).map(r =>
