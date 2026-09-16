@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, import.html writes a date on its own day.** import.html
+  wrote a date cell like 2026-09-14 as midnight UTC, and the ledger's day,
+  which ends at 6am in your timezone, put that on the day before wherever
+  your timezone is less than six hours ahead of UTC: Europe, Africa, the
+  Americas, India and the Gulf. A date written any other way, 9/14/2026
+  among them, was read as midnight in the browser's timezone and landed a
+  day early there too. None of it said anything. It now reads a time the
+  way the MCP and a drop on you.html read it, with readWhen: a date lands
+  at a moment day_of puts on that date, and a timestamp must be written
+  the ISO way and say its zone, 2026-09-14T08:00:00Z or with an offset
+  such as +02:00. Any other cell is not written, and the message counts
+  those rows by reason, so every door reads a time one way. If a date
+  cannot be placed, nothing is written. Dates imported before this stay
+  where they landed; look at a day before you void it, because a
+  2026-09-14 row is already on the 14th if your timezone is six or more
+  hours ahead of UTC, and a void names a stock and a day, not a source, so
+  voiding one also stops any other reading of that stock on that day.
 - **16 Sep 2026, /api/at, and one key for a reading.** An iOS Shortcut can
   write one reading: POST to `/api/at` with `WIRE_TOKEN` in the
   Authorization header, checked by the same function `/api/mcp` uses, and

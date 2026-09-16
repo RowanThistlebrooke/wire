@@ -877,16 +877,13 @@ async function goDrop(){
   const D = DROP; if (!D || D.writing || D.done) return;
   const p = planDrop(); if (!p.rows.length || p.twice.size) return;
   D.plan = p; D.writing = true; D.at = 0; say(''); drawDrop();
-  const dates = [...new Set(p.rows.filter(r => r.when.date).map(r => r.when.date))], at = new Map();
+  const dates = [...new Set(p.rows.filter(r => r.when.date).map(r => r.when.date))];
   const work = Math.ceil(p.rows.length / 100) + Math.ceil(p.rows.length / 500), total = dates.length + work;
   const bar = x => { D.at = Math.min(1, x / total); const i = $('dropview').querySelector('.dbar i'); if (i) i.style.width = (D.at * 100).toFixed(1) + '%'; };
-  let landed = 0, there = 0, placed = 0, error = null;
+  let landed = 0, there = 0, error = null;
   try {
-    // each date at a moment day_of puts on it, a few at a time. If one cannot be placed, nothing is written
-    for (let i = 0; i < dates.length; i += 8){
-      const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d).then(m => { bar(++placed); return m; })));
-      got.forEach((m, j) => at.set(dates[i + j], m));
-    }
+    // each date at a moment day_of puts on it. If one cannot be placed, nothing is written
+    const at = await momentsOn(db, dates, bar);
     const lost = dates.find(d => !at.get(d));
     if (lost){ D.writing = false; D.plan = null; drawDrop(); say(`nothing written · day_of puts none of the moments tried on ${lost}`); return; }
     const out = p.rows.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));

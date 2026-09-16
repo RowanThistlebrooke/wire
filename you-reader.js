@@ -133,8 +133,8 @@ async function readDay(db, ts = new Date().toISOString()) {
 // When a reading happened, as it was written down. A date is its own day. A timestamp must say its
 // zone, because a bare clock time would be a guess at one, and its date must be one the calendar has,
 // or Date.parse would quietly roll 30 February into March. A date past today everywhere on Earth, or
-// a moment more than five minutes ahead, has not happened yet. The MCP's record and you.html's drop
-// both read a reading's time through here, so those two put the same reading on the same day.
+// a moment more than five minutes ahead, has not happened yet. The MCP's record, you.html's drop and
+// import.html all read a reading's time through here, so they put the same reading on the same day.
 const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) &&
   Number.isFinite(Date.parse(s + 'T00:00:00Z')) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
 const isStamp = s => typeof s === 'string' && isDate(s.slice(0, 10)) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s) && Number.isFinite(Date.parse(s));
@@ -156,6 +156,18 @@ async function momentOn(db, date, dayOf = ts => readDay(db, ts)) {
   if (d === date) return noon;
   const other = at(d < date ? 20 : 4);
   return (await dayOf(other)) === date ? other : null;
+}
+
+// Every date at a moment day_of puts on it, eight at a time, for a door bringing many: a Map of each date
+// to its moment, or to null where no moment tried is on that date. tick is told how many dates have been tried.
+async function momentsOn(db, dates, tick = () => {}) {
+  const at = new Map();
+  for (let i = 0; i < dates.length; i += 8) {
+    const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d)));
+    got.forEach((m, j) => at.set(dates[i + j], m));
+    tick(at.size);
+  }
+  return at;
 }
 
 // ---- a reading, once: the same reading twice lands once, whichever door brings it ----
