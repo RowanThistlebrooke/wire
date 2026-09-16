@@ -3,6 +3,11 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, AGENTS.md points at CLAUDE.md.** It was a second copy of
+  the laws and it had drifted: no void, no index gate, and a shorter list
+  of where a secret may live. Two files disagreed about the same law, and
+  whichever one an agent opened decided what it believed. CLAUDE.md is
+  the source; AGENTS.md now says so and says nothing else.
 - **16 Sep 2026, the MCP's laws ship.** `mcp/MCP.md` was a file in a repo
   that no other copy's Claude ever read, because the server set no
   instructions at all. `wireServer` now sends the writing laws at the
