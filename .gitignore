@@ -2,3 +2,7 @@
 mcp/node_modules/
 .playwright-mcp/
 node_modules/
+
+# a Whoop refresh token, if one is ever written here
+.whoop_refresh
+.whoop_refresh.lock

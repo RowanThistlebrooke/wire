@@ -40,6 +40,7 @@ and will stay that way.
 | `you-reader.js` | all the maths, in one file |
 | `api/config.mjs` | hands the pages your Supabase address and publishable key, from Vercel's environment |
 | `pull/github.mjs` | pulls your commit count every morning |
+| `pull/whoop.mjs` | pulls your Whoop readings every morning, from your own Mac |
 | `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
 | `api/setup.mjs` | a walkthrough for Claude, one step at a time, for Whop license holders; it has no door to any ledger |
@@ -78,6 +79,61 @@ at `https://<your site>/api/mcp`, choose No sign-in, and add the header
 Settings, Secrets and variables, Actions: `WIRE_URL`, `WIRE_KEY`,
 `WIRE_EMAIL`, `WIRE_PASSWORD`, `GH_TOKEN`. GitHub cannot see Vercel's
 variables, so these are typed again here.
+
+**For the Whoop puller**, which runs on your own Mac and not on GitHub,
+because the refresh token lives here and never leaves. Put your settings in
+`~/.wire/env`:
+
+```sh
+mkdir -p ~/.wire && chmod 700 ~/.wire
+cat > ~/.wire/env <<'EOF'
+WIRE_URL=https://yourproject.supabase.co
+WIRE_KEY=your_publishable_key
+WIRE_EMAIL=you@example.com
+WIRE_PASSWORD=your_password
+WHOOP_CLIENT_ID=your_whoop_client_id
+WHOOP_CLIENT_SECRET=your_whoop_client_secret
+EOF
+chmod 600 ~/.wire/env
+```
+
+It shares the Whoop MCP server's login rather than keeping a second one. A
+Whoop refresh token is single use, so only one copy can be the live one: the
+token stays in `.whoop_refresh` beside that server, and both this puller and
+the server take the lock next to it before refreshing, so neither spends the
+other's token. If that folder is not at `~/Desktop/los/whoop`, add
+`WHOOP_REFRESH_FILE` to the file above.
+
+Try it with `node pull/whoop.mjs --dry`, which writes nothing. Then have it
+run each morning:
+
+```sh
+cat > ~/Library/LaunchAgents/com.wire.whoop.plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.wire.whoop</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$(which node)</string>
+    <string>$HOME/wire/pull/whoop.mjs</string>
+  </array>
+  <key>WorkingDirectory</key><string>$HOME/wire</string>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>45</integer></dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>$HOME/.wire/pull.log</string>
+  <key>StandardErrorPath</key><string>$HOME/.wire/pull.log</string>
+</dict>
+</plist>
+EOF
+launchctl load ~/Library/LaunchAgents/com.wire.whoop.plist
+```
+
+It writes what it did to `~/.wire/pull.log`. A morning the Mac is asleep is
+a morning it does not run; the next run asks for the last fourteen days, so
+a missed day lands late rather than never.
 
 ## Rules this project does not break
 
