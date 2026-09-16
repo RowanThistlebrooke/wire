@@ -150,6 +150,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .tab{background:none;border:0;color:var(--muted);font:11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0 0 4px;box-shadow:inset 0 -1px transparent}
 .tab:hover{color:var(--ink)}
 .tab[aria-pressed="true"]{color:var(--amber);box-shadow:inset 0 -1px var(--amber)}
+.tab[disabled]{opacity:.35;cursor:default}
 #ledgerview{margin-top:28px}
 .vd td{color:var(--dim);text-decoration:line-through}
 .vd td:first-child{text-decoration:none}
@@ -215,6 +216,26 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .lrow .arrow{color:var(--muted);padding:0 2px}
 .lrow .cnt{font:300 22px/1 var(--ui);margin-left:8px}
 .empty{font:400 11px/1 var(--mono);color:var(--muted);margin-top:12px}
+/* a csv dropped on the page: what it found, what it would write, a go, a line while it writes */
+#dropview{margin-top:28px}
+.dcs{margin-top:18px;border-top:1px solid var(--edge)}
+.dc{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(0,220px);gap:14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--edge);font:400 12px/1.2 var(--mono);color:var(--dim)}
+.dc span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc b{font-weight:400;color:var(--ink);text-align:right}
+.dc select{background:var(--ground);border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:400 12px/1.2 var(--mono);padding:6px 0;width:100%;min-width:0;border-radius:0;color-scheme:dark}
+.dc select:focus{border-bottom-color:var(--teal);outline:0}
+.dc select.bad{border-bottom-color:var(--leak)}
+.dw{overflow:auto;max-height:52vh;margin-top:18px}
+.dw table{border-collapse:collapse;font:400 11px/1.2 var(--mono);white-space:nowrap}
+.dw th{font-weight:400;color:var(--dim);text-align:right;padding:8px 0 8px 22px;position:sticky;top:0;background:var(--ground)}
+.dw td{color:var(--ink);text-align:right;padding:6px 0 6px 22px;border-top:1px solid var(--edge)}
+.dw tr>:first-child{text-align:left;padding-left:0;color:var(--dim)}
+.dw td.held{color:var(--amber)}
+.dw td.none{color:var(--muted)}
+.dw td.off,.dw tr>td.off:first-child{color:var(--leak)}
+.dgo{display:flex;align-items:baseline;gap:22px;margin-top:4px}
+.dbar{display:block;height:2px;margin-top:22px;background:var(--edge2);text-decoration:none}
+.dbar i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
 .tw{overflow-x:auto;margin-top:10px}
 .tw table{width:100%;border-collapse:collapse;font:400 11px/1.2 var(--mono);white-space:nowrap}
 .tw td{padding:8px 14px 8px 0;border-bottom:1px solid var(--edge);color:var(--dim)}
@@ -245,6 +266,8 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
   .big{font-size:60px}
   .flow{column-gap:20px}
   .node.s{letter-spacing:.08em}
+  .dc{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
+  .dc select{grid-column:1/-1}
 }
 </style>
 <style>
@@ -339,6 +362,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
     </div>
     </div>
     <div id="ledgerview" hidden></div>
+    <div id="dropview" hidden></div>
     <p class="err" id="err"></p>
   </main>
 </div>
@@ -346,6 +370,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/api/config.js"></script>
 <script src="you-reader.js"></script>
+<script src="csv-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 const $ = id => document.getElementById(id);
@@ -699,7 +724,7 @@ const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note', 'v
 const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' };
 const fmt = n => Number(n).toLocaleString('en-US');
 function applyView(){
-  $('goalview').hidden = SHOWLEDGER; $('ledgerview').hidden = !SHOWLEDGER; $('ltab').setAttribute('aria-pressed', SHOWLEDGER);
+  $('dropview').hidden = !DROP; $('goalview').hidden = !!DROP || SHOWLEDGER; $('ledgerview').hidden = !!DROP || !SHOWLEDGER; $('ltab').setAttribute('aria-pressed', SHOWLEDGER);
   const want = SHOWLEDGER ? '#ledger' : ''; if (location.hash !== want) history.replaceState(null, '', location.pathname + location.search + want);
 }
 async function showLedger(){
@@ -784,11 +809,142 @@ function drawLedger(){
   $('ledgerview').innerHTML = how + doors + types + key + lanes.map(lane).join('') + voided + tape;
 }
 
+// ---- a csv dropped on the page: read by csv-reader.js, shown, written only after a go ----
+// Nothing is guessed. Every column is written nowhere until a stock is picked for it, and the stocks
+// offered are the ones a goal names when the file lands on that goal, or every stock anywhere else.
+// A time is read by readWhen, the MCP's own rule: a date lands on its ledger day, a timestamp must say
+// its zone, and a cell that is neither, or a number that is not one, is not written. Source csv, and
+// source_id the stock and the date or the moment, so the same reading dropped twice lands once
+let DROP = null;   // the file, its reading, the stocks on offer, which column goes to which stock, and how the write went
+const carriesFile = e => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+function dropScope(target){
+  const el = target && target.closest ? target.closest('.rail [data-id], [data-goalnode]') : null;
+  const g = !el ? null : el.matches('[data-goalnode]') ? cur() : GOALS.find(x => x.id === el.dataset.id);
+  if (!g || g.id === YOU_ID) return { name: 'YOU', stocks: ALL };
+  const own = new Set([...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]);
+  return { name: g.name, stocks: ALL.filter(m => own.has(m)) };
+}
+// every row it would write, and every line of the file as it would be shown. The same stock at the same
+// moment twice in the file with one value lands once; with two values neither is written, because
+// picking one would be a guess
+function planDrop(){
+  const { csv, map, now, days } = DROP, held = new Set(DAYS.map(d => d.metric + '|' + d.day));
+  const cols = csv.columns.filter(c => map.has(c.col)), picked = cols.map(c => map.get(c.col));
+  const twice = new Set(picked.filter((m, i) => picked.indexOf(m) !== i));
+  const all = [], values = new Map(), lines = csv.body.map(r => {
+    const raw = (r[csv.dateCol] || '').trim(), when = readWhen(raw, now);
+    // a line with more cells than the header names: which cell belongs to which column would be a guess, so none is written
+    const off = !!when.why || r.slice(csv.head.length).some(v => v.trim() !== '');
+    return { raw, off, cells: cols.map(c => {
+      const v = (r[c.col] || '').trim(), n = csvNum(v) ? Number(v) : NaN, metric = map.get(c.col);
+      if (off || !Number.isFinite(n)) return { v: null, bad: !off && v !== '' ? v : null };   // text that is not a number is shown red, never written
+      const row = { metric, value: n, when, source_id: metric + ':' + (when.date || when.stamp) };
+      all.push(row); values.set(row.source_id, (values.get(row.source_id) || new Set()).add(n));
+      const day = when.date || days.get(when.stamp);   // a moment's day is day_of's: until it has answered, the cell is amber
+      return { v: n, row, held: !day || held.has(metric + '|' + day) };   // a day this stock already has a reading on
+    }) };
+  });
+  const clash = id => values.get(id).size > 1;
+  for (const l of lines) for (const c of l.cells) if (c.row) c.clash = clash(c.row.source_id);
+  return { cols, twice, rows: all.filter(r => !clash(r.source_id)), lines };
+}
+function drawDrop(){
+  const D = DROP, csv = D.csv, p = D.plan || planDrop(), lock = D.writing || !!D.done;
+  $('eyebrow').textContent = D.scope.name + ' · ' + D.name;
+  const opts = on => '<option value="">&#183;</option>' + D.scope.stocks.map(m => `<option value="${esc(m)}"${m === on ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  const found = `<div class="types"><span>date<b>${esc(csv.head[csv.dateCol])}</b></span><span>rows<b>${fmt(csv.body.length)}</b></span></div>`;
+  const cols = csv.columns.map(c => { const m = D.map.get(c.col) || '';
+    return `<label class="dc"><span>${esc(c.label)}</span><b>${fmt(c.n)}</b><select data-col="${c.col}"${p.twice.has(m) ? ' class="bad"' : ''}${lock ? ' disabled' : ''}>${opts(m)}</select></label>`; }).join('');
+  const table = !p.cols.length ? '' : `<div class="dw"><table><thead><tr><th>${esc(csv.head[csv.dateCol])}</th>${p.cols.map(c => `<th>${esc(D.map.get(c.col))}</th>`).join('')}</tr></thead><tbody>${p.lines.map(l =>
+    `<tr><td${l.off ? ' class="off"' : ''}>${esc(l.raw || '·')}</td>${l.cells.map(c => c.v == null ? (c.bad != null ? `<td class="off">${esc(c.bad)}</td>` : '<td class="none">&#183;</td>') : `<td${c.clash ? ' class="off"' : c.held ? ' class="held"' : ''}>${esc(String(c.v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const foot = D.done ? `<div class="types"><span>landed<b>${fmt(D.done.landed)}</b></span><span>already there<b>${fmt(D.done.there)}</b></span></div>`
+    : D.writing ? `<u class="dbar"><i style="width:${(D.at * 100).toFixed(1)}%"></i></u>`
+    : `<div class="dgo"><div class="types"><span>writes<b>${fmt(p.rows.length)}</b></span></div><button type="button" class="tab" id="dgo"${p.rows.length && !p.twice.size ? '' : ' disabled'}>go</button></div>`;
+  const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.col : undefined;
+  $('dropview').innerHTML = found + `<div class="dcs">${cols}</div>` + table + foot;
+  if (focus !== undefined){ const el = $('dropview').querySelector(`select[data-col="${focus}"]`); if (el) el.focus(); }
+}
+// each moment's ledger day, from day_of, a few at a time, once the file is on screen; then the amber is redrawn
+async function dropDays(D){
+  const stamps = [...new Set(D.csv.body.map(r => readWhen((r[D.csv.dateCol] || '').trim(), D.now).stamp).filter(Boolean))];
+  if (!stamps.length) return;
+  try { for (let i = 0; i < stamps.length; i += 8){ const got = await Promise.all(stamps.slice(i, i + 8).map(t => readDay(db, t))); got.forEach((d, j) => D.days.set(stamps[i + j], d)); } }
+  catch (e) { say(e.message || String(e)); }
+  if (DROP === D && !D.writing && !D.done) drawDrop();
+}
+function closeDrop(){ DROP = null; applyView(); if (SHOWLEDGER) showLedger(); else draw(false); }
+async function goDrop(){
+  const D = DROP; if (!D || D.writing || D.done) return;
+  const p = planDrop(); if (!p.rows.length || p.twice.size) return;
+  D.plan = p; D.writing = true; D.at = 0; say(''); drawDrop();
+  let landed = 0, there = 0, steps = 1, done = 0, failed = false;
+  const tick = () => { D.at = Math.min(1, ++done / steps); const i = $('dropview').querySelector('.dbar i'); if (i) i.style.width = (D.at * 100).toFixed(1) + '%'; };
+  try {
+    // the same stock at the same moment twice in this file, with one value, lands once
+    const seen = new Set(), rows = [];
+    for (const r of p.rows){ if (seen.has(r.source_id)) there++; else { seen.add(r.source_id); rows.push(r); } }
+    const dates = [...new Set(rows.filter(r => r.when.date).map(r => r.when.date))], at = new Map();
+    steps = dates.length + Math.ceil(rows.length / 100) + Math.ceil(rows.length / 500);
+    // each date at a moment day_of puts on it, a few at a time. If one cannot be placed, nothing is written
+    for (let i = 0; i < dates.length; i += 8){
+      const got = await Promise.all(dates.slice(i, i + 8).map(d => momentOn(db, d).then(m => { tick(); return m; })));
+      got.forEach((m, j) => at.set(dates[i + j], m));
+    }
+    const lost = dates.find(d => !at.get(d));
+    if (lost){ D.writing = false; D.plan = null; drawDrop(); say(`nothing written · day_of puts none of the moments tried on ${lost}`); return; }
+    const out = rows.map(r => ({ occurred_at: r.when.date ? at.get(r.when.date) : r.when.stamp, metric: r.metric, value: r.value, unit: null, source: 'csv', source_id: r.source_id, event_type: 'measurement' }));
+    // which are in already, a hundred at a time, so a file dropped twice costs a few questions and not a write per row
+    const have = new Set();
+    for (let i = 0; i < out.length; i += 100){
+      const { data, error } = await db.from('events').select('metric, source_id').eq('source', 'csv').in('source_id', out.slice(i, i + 100).map(r => r.source_id)).limit(1000);
+      if (error) throw error;
+      for (const h of data) have.add(h.metric + '|' + h.source_id);
+      tick();
+    }
+    const fresh = out.filter(r => !have.has(r.metric + '|' + r.source_id));
+    there += out.length - fresh.length;
+    // events_once has the last word: a batch it refuses goes in a row at a time, and a row it refuses was already there
+    for (let i = 0; i < fresh.length; i += 500){
+      const batch = fresh.slice(i, i + 500), { error } = await db.from('events').insert(batch);
+      if (!error) landed += batch.length;
+      else if (error.code !== '23505') throw error;
+      else for (const r of batch){ const { error: e1 } = await db.from('events').insert(r); if (!e1) landed++; else if (e1.code === '23505') there++; else throw e1; }
+      tick();
+    }
+  } catch (e) { failed = true; say(e.message || String(e)); }
+  if (failed && !landed){ D.writing = false; D.plan = null; drawDrop(); return; }   // nothing landed: back to the file as it was, the error said
+  D.done = { landed, there }; D.at = 1; drawDrop();   // the counts at once; the page stays held while it reloads
+  if (landed){ try { await load(); render(); } catch (e) { say(e.message || String(e)); } }
+  D.writing = false; applyView(); drawDrop();
+}
+for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, e => { if (carriesFile(e)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+document.addEventListener('drop', e => {
+  if (!carriesFile(e)) return;
+  e.preventDefault();   // the browser would otherwise leave the page to open the file
+  const f = e.dataTransfer.files[0], scope = READY ? dropScope(e.target) : null;
+  if (!f || !scope || (DROP && DROP.writing)) return;
+  f.text().then(text => {
+    if (DROP && DROP.writing) return;
+    const csv = readCSV(text);
+    if (csv.error){ say(csv.error); return; }
+    say(''); DROP = { name: f.name, csv, scope, now: Date.now(), days: new Map(), map: new Map(), plan: null, writing: false, done: null, at: 0 };   // one clock for the preview and the write
+    applyView(); drawDrop(); dropDays(DROP);
+  }, err => say(err.message || String(err)));
+});
+document.addEventListener('change', e => {
+  const sel = e.target.closest && e.target.closest('#dropview select[data-col]');
+  if (!sel || !DROP || DROP.writing || DROP.done) return;
+  if (sel.value) DROP.map.set(Number(sel.dataset.col), sel.value); else DROP.map.delete(Number(sel.dataset.col));
+  drawDrop();
+});
+
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----
 // a focus is drawn on the chart: when the row clicked sits far below it, the chart comes back into view
 const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
+  // a dropped file holds the page until it is written or left: a go writes, a click outside it leaves
+  if (DROP){ if (e.target.closest('#dgo')){ goDrop(); return; } if (DROP.writing || e.target.closest('#dropview')) return; closeDrop(); }
   const rg = e.target.closest('[data-range]');
   if (rg){ RANGE = rg.dataset.range; FC = null; FX = null; draw(); return; }
   if (e.target.closest('#ltab')){ SHOWLEDGER = !SHOWLEDGER; applyView(); if (SHOWLEDGER) showLedger(); else draw(); return; }
@@ -807,7 +963,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; draw(); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
 // a wider or narrower page redraws the chart at its new width, without drawing the line in again
 let lastW = 0;
 new ResizeObserver(() => { const w = Math.round($('chart').clientWidth); if (!READY || w === lastW) return; lastW = w; drawChart(false); drawHead(null); wire(); }).observe($('chart'));

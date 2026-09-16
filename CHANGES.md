@@ -3,6 +3,28 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a CSV dropped on you.html imports itself.** Drop a file
+  anywhere on the page and it is read, shown, and written only after a go.
+  Nothing names a metric for you: every number column is written nowhere
+  until you pick a stock for it, from the stocks of the goal the file was
+  dropped on, or from every stock anywhere else. Every row it would write
+  is printed first. A cell on a day that stock already has a reading is
+  amber; a date, a number, a line with more cells than the header, or a
+  clash it cannot read is shown red and not written, and the same stock at
+  the same moment twice with two values writes neither. A date lands on
+  its own ledger day and a timestamp must say its zone, the rule the MCP's
+  record already used, now in you-reader.js as `readWhen` and `momentOn`
+  so both doors read time one way. A timestamp on a date the calendar does
+  not have, 30 February, is refused there too, where Date.parse used to
+  roll it quietly into March. Rows are source `csv`, source_id the stock
+  and its date or moment, so the same file dropped twice under any name
+  lands once, and the page says how many landed and how many were already
+  there. Those ids are not the ones import.html writes, which name the
+  file and the row, so a file already imported there lands again here, and
+  not on the same days: import.html still writes a date as midnight UTC,
+  which the ledger's day puts on the day before. The parser moves out of
+  import.html into `csv-reader.js`, which both pages load; import.html
+  behaves as it did.
 - **16 Sep 2026, you.html only reads, and goal takes levers.** The bottom
   of the page held a reading line, a commit line and a goal line with its
   two chip rows; under the chart a picked stock had rule chips, and a

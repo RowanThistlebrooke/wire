@@ -33,11 +33,12 @@ and will stay that way.
 | `index.html` | sign in |
 | `pad.html` | type one reading |
 | `import.html` | drop a CSV, every numeric column becomes a metric |
-| `you.html` | your stocks, your index, your commits underneath |
+| `you.html` | your stocks, your index, your commits underneath; drop a CSV on it to import one |
 | `commit.html` | start and stop the things you do |
 | `test.html` | did one commit move one stock |
 | `scan.html` | that commit against everything, at a raised bar |
 | `you-reader.js` | all the maths, in one file |
+| `csv-reader.js` | reads a CSV, for `import.html` and `you.html` |
 | `api/config.mjs` | hands the pages your Supabase address and publishable key, from Vercel's environment |
 | `pull/github.mjs` | pulls your commit count every morning |
 | `pull/whoop.mjs` | pulls your Whoop readings every morning, from your own Mac |

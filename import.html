@@ -78,58 +78,21 @@ a{color:inherit;text-decoration:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/api/config.js"></script>
+<script src="csv-reader.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
 let PLAN = null;
 
-// --- csv, handling quoted fields ---
-function parseCSV(text) {
-  const rows = [[]];
-  let field = '', quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
-      else if (c === '"') quoted = false;
-      else field += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') { rows[rows.length - 1].push(field); field = ''; }
-    else if (c === '\n') { rows[rows.length - 1].push(field); field = ''; rows.push([]); }
-    else if (c !== '\r') field += c;
-  }
-  rows[rows.length - 1].push(field);
-  return rows.filter(r => r.some(v => v.trim() !== ''));
-}
-
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'metric';
-const isDate = v => v.trim() !== '' && !isNaN(Date.parse(v));
-const isNum  = v => v.trim() !== '' && !isNaN(Number(v));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-// --- work out what this file is ---
-function plan(rows, filename) {
-  const head = rows[0].map(h => h.trim());
-  const body = rows.slice(1);
-
-  let dateCol = -1, best = 0;
-  head.forEach((_, c) => {
-    const hits = body.filter(r => isDate(r[c] || '')).length;
-    const nums = body.filter(r => isNum(r[c] || '')).length;
-    // a column of plain numbers is not a date column
-    if (hits > best && hits > nums) { best = hits; dateCol = c; }
-  });
-  if (dateCol === -1) return { error: 'No date column found.' };
-
-  const metrics = [];
-  head.forEach((h, c) => {
-    if (c === dateCol) return;
-    const nums = body.filter(r => isNum(r[c] || '')).length;
-    if (nums >= body.length * 0.6) metrics.push({ col: c, name: slug(h), label: h, n: nums });
-  });
-  if (!metrics.length) return { error: 'No number columns found.' };
-
+// --- work out what this file is: csv-reader.js reads it, the names are guessed here ---
+function plan(text, filename) {
+  const p = readCSV(text);
+  if (p.error) return p;
+  const metrics = p.columns.map(c => ({ col: c.col, name: slug(c.label), label: c.label, n: c.n }));
   const guess = slug(filename.replace(/\.csv$/i, '')).split('_')[0];
-  return { head, body, dateCol, metrics, filename, guess };
+  return { head: p.head, body: p.body, dateCol: p.dateCol, metrics, filename, guess };
 }
 
 function draw(p) {
@@ -158,7 +121,7 @@ function names() {
 function load(file) {
   const r = new FileReader();
   r.onload = () => {
-    const p = plan(parseCSV(r.result), file.name);
+    const p = plan(r.result, file.name);
     if (p.error) { msg.className = 'msg bad'; msg.textContent = p.error; return; }
     PLAN = p; msg.textContent = ''; draw(p);
   };
@@ -189,11 +152,11 @@ go.onclick = async () => {
   const rows = [];
   for (const [ri, r] of PLAN.body.entries()) {
     const raw = r[PLAN.dateCol];
-    if (!isDate(raw || '')) continue;
+    if (!csvDate(raw || '')) continue;
     const when = new Date(raw).toISOString();
     for (const m of chosen) {
       const v = r[m.col];
-      if (!isNum(v || '')) continue;
+      if (!csvNum(v || '')) continue;
       rows.push({
         occurred_at: when,
         metric: m.name,

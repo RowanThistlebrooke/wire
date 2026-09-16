@@ -26,7 +26,7 @@ const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 // here we read the same text and pull the functions out of it.
 const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
-  return { readMetrics, readRules, readDays, readDay, rankSeries, etfSeries,
+  return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
@@ -70,16 +70,8 @@ function signIn() {
 const ledgerDay = ts => R.readDay(db, ts).catch(e => {
   throw new Error(`the ledger's day cannot be read from day_of: ${e.message}. health names what is missing`);
 });
-// A moment that day_of puts on this date, or null. Noon UTC, as commits are, unless the ledger's day
-// there is another date, as it is west of UTC-6, where noon UTC is still before 6am: then 8pm UTC if
-// noon was the day before, 4am UTC if it was the day after. day_of confirms the one it gives.
-async function momentOn(date) {
-  const at = h => new Date(Date.parse(date + 'T00:00:00Z') + h * 3600e3).toISOString();
-  const noon = at(12), d = await ledgerDay(noon);
-  if (d === date) return noon;
-  const other = at(d < date ? 20 : 4);
-  return (await ledgerDay(other)) === date ? other : null;
-}
+// A moment that day_of puts on this date, or null: momentOn in you-reader.js, asked through ledgerDay.
+const momentOn = date => R.momentOn(db, date, ledgerDay);
 
 // The readers come first. The writers are at the end. The ledger's day and the commits are read only
 // for the questions that use them, so a question about stocks never waits on day_of or fails with it.
@@ -122,14 +114,10 @@ async function readNotes(subject) {
 // Each one writes only what the user gave, after the user has seen the
 // rows and said yes. Anything that cannot be read is refused, never guessed.
 
-const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
-// a timestamp must say its zone; a bare clock time would be a guess at one
-const isStamp = s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s) && Number.isFinite(Date.parse(s));
+// a date, and the latest date that is today somewhere on Earth: the reading of a time is in you-reader.js
+const isDay = R.isDate, lastDay = () => R.lastDay();
 // the pad's name rule: lower case, anything else an underscore
 const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-// the latest date that is today somewhere on Earth: the date at UTC+14, the zone furthest ahead. A date
-// past it is in the future for everyone; a date up to it is someone's today or already past
-const lastDay = () => new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10);
 // every task, at most n running at once; the first failure stops the rest and is thrown
 async function few(tasks, n = 8) {
   const out = []; let next = 0;
@@ -166,16 +154,14 @@ export const WRITERS = {
 async function writeReadings(rows, writer, context = null) {
   const read = [], refused = [];
   for (const r of rows) {
-    const metric = slug(r.metric), date = isDay(r.occurred_at) ? r.occurred_at : null;
-    const stamp = !date && isStamp(r.occurred_at) ? new Date(Date.parse(r.occurred_at)).toISOString() : null;
+    const metric = slug(r.metric), when = R.readWhen(r.occurred_at);
     if (!metric) { refused.push({ ...r, why: 'no metric name' }); continue; }
     const badName = writer.name && writer.name(metric);
     if (badName) { refused.push({ ...r, why: badName }); continue; }
     if (!Number.isFinite(r.value)) { refused.push({ ...r, why: 'the value is not a number' }); continue; }
-    if (!date && !stamp) { refused.push({ ...r, why: 'occurred_at is not a date or a timestamp with a zone' }); continue; }
     // a date is refused only when it is not today anywhere; a timestamp is one moment, with five minutes for a slow clock
-    if (date ? date > lastDay() : Date.parse(stamp) > Date.now() + 5 * 60e3) { refused.push({ ...r, why: 'occurred_at is in the future' }); continue; }
-    read.push({ r, date, stamp, metric, value: r.value, unit: r.unit || null });
+    if (when.why) { refused.push({ ...r, why: 'occurred_at is ' + when.why }); continue; }
+    read.push({ r, date: when.date || null, stamp: when.stamp || null, metric, value: r.value, unit: r.unit || null });
   }
   // the name is read before anything is asked of the ledger, so a wrong one costs no round trip
   if (refused.length) return { error: 'nothing written', refused };

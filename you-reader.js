@@ -128,6 +128,34 @@ async function readDay(db, ts = new Date().toISOString()) {
   return data;
 }
 
+// When a reading happened, as it was written down. A date is its own day. A timestamp must say its
+// zone, because a bare clock time would be a guess at one, and its date must be one the calendar has,
+// or Date.parse would quietly roll 30 February into March. A date past today everywhere on Earth, or
+// a moment more than five minutes ahead, has not happened yet. The MCP's record and you.html's drop
+// both read a reading's time through here, so those two put the same reading on the same day.
+const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) &&
+  Number.isFinite(Date.parse(s + 'T00:00:00Z')) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
+const isStamp = s => typeof s === 'string' && isDate(s.slice(0, 10)) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s) && Number.isFinite(Date.parse(s));
+// the latest date that is today somewhere on Earth: the date at UTC+14, the zone furthest ahead
+const lastDay = (now = Date.now()) => new Date(now + 14 * 3600e3).toISOString().slice(0, 10);
+function readWhen(s, now = Date.now()) {
+  if (isDate(s)) return s > lastDay(now) ? { why: 'in the future' } : { date: s };
+  if (isStamp(s)) return Date.parse(s) > now + 5 * 60e3 ? { why: 'in the future' } : { stamp: new Date(Date.parse(s)).toISOString() };
+  return { why: 'not a date or a timestamp with a zone' };
+}
+
+// A moment day_of puts on this date, or null. Noon UTC, as commits are, unless the ledger's day there is
+// another date, as it is west of UTC-6, where noon UTC is still before 6am: then 8pm UTC if noon was the
+// day before, 4am UTC if it was the day after. day_of confirms the one it gives. The asker can be handed
+// in, as readVoids takes one.
+async function momentOn(db, date, dayOf = ts => readDay(db, ts)) {
+  const at = h => new Date(Date.parse(date + 'T00:00:00Z') + h * 3600e3).toISOString();
+  const noon = at(12), d = await dayOf(noon);
+  if (d === date) return noon;
+  const other = at(d < date ? 20 : 4);
+  return (await dayOf(other)) === date ? other : null;
+}
+
 // ---- voids: stop counting, without removing anything ----
 //
 // A void is one more row. It says: do not count this reading. Nothing is
