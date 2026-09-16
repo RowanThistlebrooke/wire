@@ -25,7 +25,14 @@ out loud. Keep it that way.
 3. **Never carry a number forward and never quietly drop a stock.** If a
    reading is missing, the answer is silence. Carrying yesterday forward
    invents a reading. Dropping the stock means skipping a bad number
-   raises the score.
+   raises the score. Missing is measured against the door, not against one
+   number for every stock: a reading is stale when it is older than its
+   door's promise plus `STALE_DAYS` of slack, so a whoop reading six days
+   old means the cable is dead and a youtube reading six days old means
+   youtube is working normally. Every door gets the same slack, counted
+   from when its data should have arrived; a door that promises nothing
+   gets the slack alone. Never widen the slack to quiet a door that has
+   actually stopped.
 4. **Secrets.** The publishable key is safe in the browser because row
    level security protects the rows. The service_role key is not, and must
    never appear in this repo, in a page, in a log, or in a chat. Secrets

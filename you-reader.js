@@ -59,6 +59,54 @@ const FED = {
   shortcut: null
 };
 
+// A reading is stale when it is older than its own door can explain.
+//
+// One number for every stock was the wrong shape. A whoop reading six days old
+// means the cable is dead; a youtube reading six days old is youtube working
+// normally, because youtube does not settle a day's numbers faster than that.
+// Held to one limit, the honest door looks broken and the slow door looks
+// fine, and a stock that is perfectly fed falls out of YOU on the door's
+// ordinary lateness.
+//
+// So the limit is the door's own promise plus STALE_DAYS of slack. A stock two
+// doors write takes the slower promise, because either one arriving is the
+// stock being fed. A door that promises nothing, a number you type or a
+// picture you send, gets the slack alone, which is where every stock started.
+//
+// It never loosens the rule, it aims it: whoop is still stale a day after its
+// promise is twice broken, and youtube is no longer stale while it is on time.
+function staleAfter(sources) {
+  let promise = 0;
+  for (const s of sources || []) { const p = FED[s]; if (Number.isFinite(p) && p > promise) promise = p; }
+  return STALE_DAYS + promise;
+}
+
+// Which doors have written each stock. day_metrics keeps no source, so the
+// day rows cannot answer this and the events have to be asked.
+async function readSources(db) {
+  const data = await readAll(() => db
+    .from('events')
+    .select('metric, source')
+    .eq('event_type', 'measurement')
+    .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false }));
+  const out = {};
+  for (const r of data) {
+    if (!r.source) continue;
+    const list = out[r.metric] || (out[r.metric] = []);
+    if (!list.includes(r.source)) list.push(r.source);
+  }
+  return out;
+}
+
+// metric -> how many days old a reading of it may be. Built once from the
+// doors each stock has, and handed to every reader that asks about silence.
+const staleBounds = sources => {
+  const by = {};
+  for (const m of Object.keys(sources || {})) by[m] = staleAfter(sources[m]);
+  return m => (m in by ? by[m] : STALE_DAYS);
+};
+
 // The newest row each source has written. Newest first, so the first row seen
 // for a source is its last one. Every event_type counts: a rule, a goal or a
 // void is Claude feeding the ledger as much as a reading is.
@@ -611,7 +659,7 @@ const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 // forward, because that invents a reading you did not take, and it never
 // quietly drops a stock, because then skipping a bad one would raise
 // your score.
-function etfSeries(series, members) {
+function etfSeries(series, members, staleBy = () => STALE_DAYS) {
   // A stock with no index of its own cannot lend one to a line. The gate is
   // the one indexState names, so a goal, YOU and the MCP all count the same
   // stocks, and a young stock joins the line on the day it earns an index.
@@ -631,7 +679,8 @@ function etfSeries(series, members) {
       if (byMetric[m][day] !== undefined) last[m] = { rank: byMetric[m][day], t };
     }
     const live = members.filter(m => born[m] <= t);
-    const fresh = live.map(m => last[m]).filter(s => s && t - s.t <= STALE_DAYS);
+    // each stock against its own door's limit, not one number for all of them
+    const fresh = live.map(m => last[m] && t - last[m].t <= staleBy(m) ? last[m] : null).filter(Boolean);
     if (!live.length || fresh.length !== live.length) continue;   // silence, not a guess
     out.push({
       day,
@@ -645,11 +694,11 @@ function etfSeries(series, members) {
 }
 
 // How many days YOU could actually be worked out, and how many it skipped.
-function coverage(series, members) {
+function coverage(series, members, staleBy = () => STALE_DAYS) {
   // both halves speak of the same stocks: the ones the line is actually drawn from
   const counted = members.filter(m => indexState(series[m]) !== 'none');
   const days = [...new Set(counted.flatMap(m => (series[m] || []).map(p => p.day)))];
-  return { drawn: etfSeries(series, counted).length, days: days.length };
+  return { drawn: etfSeries(series, counted, staleBy).length, days: days.length };
 }
 
 // ---- commits: the other column ----
@@ -1229,8 +1278,8 @@ async function writeGoal(db, name, measures, target, levers) {
 
 // A goal's line is YOU over only its measures. The same silence rule holds:
 // one stale measure and the goal has no value that day.
-function goalSeries(goal, series) {
-  return etfSeries(series, goal.measures);
+function goalSeries(goal, series, staleBy = () => STALE_DAYS) {
+  return etfSeries(series, goal.measures, staleBy);
 }
 
 // The measure with the lowest latest index. Where the goal is weakest now.

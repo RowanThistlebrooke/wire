@@ -29,7 +29,7 @@ const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
-           readAll, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
+           readAll, readSources, staleAfter, staleBounds, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, noIndexWhy, outgrownBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
@@ -83,9 +83,11 @@ const momentOn = date => R.momentOn(db, date, ledgerDay);
 // for through the same ledgerDay, so a day that cannot be read is said in words and never guessed.
 async function load({ day = false } = {}) {
   await signIn();
-  const [today, all, rules, voids, cvoids] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay), R.readCommitVoids(db)]);
+  const [today, all, rules, voids, cvoids, sources] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay), R.readCommitVoids(db), R.readSources(db)]);
   const [allCommits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
   const series = R.rankSeries(rows, rules, voids);
+  // each stock is stale on its own door's promise plus the slack, never one number for all
+  const staleBy = R.staleBounds(sources);
   // every question about commits is asked of the ones that count. The whole list is kept beside it, so a
   // voided commit can still be named and counted again, and so its name is still taken.
   const commits = allCommits && R.liveCommits(allCommits, cvoids);
@@ -370,7 +372,7 @@ export function wireServer() {
       });
       const undeclared = all.filter(m => !(m in rules));
       const uncounted = all.filter(m => m in rules && !series[m]).map(m => uncountedOf(m, rules, rows, voids));
-      return text({ you: R.etfSeries(series, Object.keys(series)).slice(-1)[0] || null,
+      return text({ you: R.etfSeries(series, Object.keys(series), staleBy).slice(-1)[0] || null,
                     stocks: out, ...(uncounted.length ? { uncounted } : {}), undeclared });
     }
   );
@@ -406,7 +408,7 @@ export function wireServer() {
       const goals = await R.readGoals(db);
       return text({
         goals: goals.map(g => {
-          const p = R.goalSeries(g, series);
+          const p = R.goalSeries(g, series, staleBy);
           const last = p[p.length - 1];
           const weak = R.weakPoint(g, series);
           return {
@@ -450,7 +452,7 @@ export function wireServer() {
       const c = commits.find(x => x.id === commit || x.name === commit);
       if (!c) return text({ error: `no commit called ${commit}` });
       const points = metric === 'YOU'
-        ? R.etfSeries(series, Object.keys(series))
+        ? R.etfSeries(series, Object.keys(series), staleBy)
         : series[metric];
       if (!points) return text({ error: `no stock called ${metric}` });
       const r = R.testCommit(points, c, commits, today);

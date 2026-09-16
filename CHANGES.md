@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a reading is stale when its own door cannot explain it.**
+  Every stock went stale after seven days, whichever door fed it, and that is
+  the wrong shape: whoop promises a reading a day, so six days old means the
+  cable is dead, while youtube does not settle a day's numbers for six days,
+  so six days old is youtube working normally. Held to one number, the honest
+  door looked broken and the slow door looked fine, and `yt_watch_minutes` sat
+  permanently one day inside the limit: a single missed morning and the stock
+  went stale, and a stale stock means YOU has no value that day at all. The
+  limit is now the door's own promise plus `STALE_DAYS` of slack, the same
+  slack for every door, counted from when its data should have arrived: whoop
+  eight days, instagram ten, youtube thirteen, and a stock with no door, a
+  number you type or a picture you send, the seven it always had. A stock two
+  doors write takes the slower promise, because either one arriving is the
+  stock being fed. Nothing is made stricter and nothing doorless changes. The
+  slack is never widened to quiet a door that has actually stopped: a whoop
+  reading nine days old still silences YOU, as it should. CLAUDE.md law 3 says
+  so, because this was always that law, only badly aimed.
 - **16 Sep 2026, YouTube feeds a rate, and a day belongs to one door.** The
   YouTube puller asked for views, watch minutes and subscribers gained, all
   three totals that grow, so a year of them backfilled has no index and the
