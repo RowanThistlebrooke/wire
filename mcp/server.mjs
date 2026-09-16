@@ -31,7 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
-           indexState, BASELINE,
+           indexState, BASELINE, LAGS,
            FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
@@ -545,12 +545,14 @@ export function wireServer() {
 
   server.tool(
     'goal',
-    'Write a goal the user gave: a name, the stocks it is made of, and optionally a ' +
-    'target on one stock, { metric, value } or { metric, lo, hi }. Declaring a name ' +
-    'again replaces it and the old row stays on the record. Levers are declared on the page, not here: ' +
-    'read goals, pass levers as that goal\'s levers minus any now named as measures, and put them ' +
-    'in the printed row; any other set is refused and nothing is written. Written through writeGoal, ' +
-    'signed claude; print the goal to the user and get a yes before calling this.',
+    'Write a goal the user gave: a name, the stocks it is made of, optionally a target on one stock, ' +
+    '{ metric, value } or { metric, lo, hi }, and optionally levers, [{ metric, lag }]: stocks the user ' +
+    `moves, each read ${R.LAGS.join(' or ')} days later against the goal's measures, never one of those ` +
+    'measures. Declaring a name again replaces the whole goal, its levers too, and the old row stays on ' +
+    'the record: read goals first, and name again every lever the goal keeps. Every lever and lag a goal ' +
+    'has ever named raises the bar for all of them, so a lever is never tried and dropped for free. ' +
+    'Written through writeGoal, signed claude; print the goal with its levers to the user and get a yes ' +
+    'before calling this.',
     {
       name: z.string(),
       measures: z.array(z.string()).min(1),
@@ -562,13 +564,20 @@ export function wireServer() {
       }).optional(),
       levers: z.array(z.object({ metric: z.string(), lag: z.number() })).optional()
     },
-    async ({ name, measures, target, levers: said = [] }) => {
+    async ({ name, measures, target, levers = [] }) => {
       const title = name.trim();
       if (!slug(title)) return text({ error: 'no name' });
       if (new Set(measures).size !== measures.length) return text({ error: 'a measure is named twice' });
+      // readGoals keeps a lever only once, only at a lag it reads, and never one of the goal's own
+      // measures. Anything else would be written and then quietly not read, so it is refused here
+      if (new Set(levers.map(l => l.metric)).size !== levers.length) return text({ error: 'a lever is named twice' });
+      const own = levers.filter(l => measures.includes(l.metric));
+      if (own.length) return text({ error: 'a lever is never one of the goal\'s own measures', refused: own });
+      const lagless = levers.filter(l => !R.LAGS.includes(l.lag));
+      if (lagless.length) return text({ error: `a lever is read ${R.LAGS.join(' or ')} days later`, refused: lagless });
       await signIn();
       const all = await R.readMetrics(db);
-      const unknown = measures.filter(m => !all.includes(m));
+      const unknown = [...measures, ...levers.map(l => l.metric)].filter(m => !all.includes(m));
       if (unknown.length) return text({ error: 'no stock called ' + unknown.join(', ') });
       let t;
       if (target) {
@@ -579,14 +588,10 @@ export function wireServer() {
           t = { metric: target.metric, lo: target.lo, hi: target.hi };
         else return text({ error: 'a target is { metric, value } or { metric, lo, hi } with hi above lo' });
       }
-      // Levers are declared by the user on the page. The call must name exactly the ones the goal
-      // keeps, so they are in the row the user saw and said yes to; any other set writes nothing.
+      // The levers are the ones the user said yes to, and a declaration replaces the whole goal. Any the
+      // goal had before and this row does not name are said in the answer, so none leaves in silence
       const prev = (await R.readGoals(db)).find(g => g.id === R.slugCommit(title));
-      const levers = prev ? prev.levers.filter(l => !measures.includes(l.metric)) : [];
-      const dropped = prev ? prev.levers.filter(l => measures.includes(l.metric)) : [];
-      const key = ls => ls.map(l => JSON.stringify([l.metric, l.lag])).sort().join('\n');   // each lever on its own, so no name can pass for two
-      if (key(said) !== key(levers))
-        return text({ error: 'levers must be exactly the ones this goal keeps; print them in the row and call again', keeps: levers, dropped });
+      const dropped = prev ? prev.levers.filter(p => !levers.some(l => l.metric === p.metric && l.lag === p.lag)) : [];
       const { error } = await R.writeGoal(asClaude, title, measures, t, levers);
       const context = { name: title, measures, ...(t ? { target: t } : {}), ...(levers.length ? { levers } : {}) };
       return text(error ? { error: error.message }

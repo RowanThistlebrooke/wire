@@ -3,6 +3,21 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, you.html only reads, and goal takes levers.** The bottom
+  of the page held a reading line, a commit line and a goal line with its
+  two chip rows; under the chart a picked stock had rule chips, and a
+  picked commit an end button. Writing now happens through the MCP, which
+  prints every row and waits for a yes, so all of them are gone. A picked
+  stock's rule still shows under the chart, as plain text, because it is
+  state: up, down, band lo–hi or ignore. The one thing only the page could
+  write was a goal's levers, so the goal tool takes them directly, each a
+  stock and a lag, printed in the goal before the yes. A lever named
+  twice, at a lag the scan does not read, or also one of the goal's own
+  measures is refused, because readGoals would otherwise drop it without a
+  word. Declaring a goal again replaces its levers with the ones named,
+  and any it had that are no longer named come back in the answer.
+  pad.html and commit.html are unchanged and still open at their own
+  addresses.
 - **16 Sep 2026, estimate: a number Claude read is not one you measured.**
   record wrote source claude under whatever metric name it was handed, so
   a number read out of a photo landed looking exactly like a number you

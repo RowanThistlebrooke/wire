@@ -12,8 +12,8 @@
 *{box-sizing:border-box}
 html{color-scheme:dark}
 body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--ui);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
-button,input,select{font-family:var(--mono)}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
+button{font-family:var(--mono)}
+button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .pos{color:var(--teal)}.neg{color:var(--leak)}
 
 /* the page: goals on the left, the goal in the middle */
@@ -31,8 +31,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .gr .v{display:flex;flex-direction:column;align-items:flex-end;gap:5px;font:400 13px/1 var(--mono)}
 .gr .v em{font-style:normal;font-size:10px;color:var(--muted)}
 .gr .v em.pos{color:var(--teal)}.gr .v em.neg{color:var(--leak)}
-.gr.add{display:block;color:var(--muted);font:300 20px/1 var(--ui);padding:14px 22px}
-.gr.add:hover{color:var(--ink)}
 
 .bar{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .eyebrow{font:11px/1 var(--mono);letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -87,13 +85,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 @media (max-width:520px){.flow .grp .node.m small,.flow .grp .node.m i{display:none}.flow.grouped .node.g{padding:9px 10px}.flow.grouped .node.g b{font-size:20px}}
 
 /* a stock's rule, when the stock is picked */
-.rules{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:14px}
+.rules{margin-top:14px;padding:9px 0;font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 .rules:empty{display:none}
-.rules button{background:none;border:1px solid var(--edge2);color:var(--muted);font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:9px 11px;cursor:pointer}
-.rules button:hover{color:var(--ink);border-color:var(--dim)}
-.rules button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
-.rules input{width:84px;background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 18px/1.2 var(--ui);padding:4px 0;margin-left:8px;border-radius:0}
-.rules input:focus{border-bottom-color:var(--teal);outline:0}
 
 /* the chart */
 .chart{margin-top:26px;position:relative}
@@ -150,32 +143,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
 .ce b{font:300 26px/1 var(--ui);letter-spacing:-.01em;color:var(--muted)}
 .ce b.pos{color:var(--teal)}.ce b.neg{color:var(--leak)}.ce b.tan{color:var(--amber)}.ce b.mid{color:var(--dim)}
 .ce svg{width:12px;height:12px}
-.end{background:none;border:0;padding:0;font:inherit;letter-spacing:inherit;color:var(--teal);cursor:pointer}
-.end:hover{color:var(--ink)}
-.end[disabled]{opacity:.35;cursor:default}
-
-/* the three lines */
-.line{display:grid;grid-template-columns:minmax(0,1fr) 150px 74px;gap:14px;align-items:end;margin-top:34px}
-.line + .line{margin-top:14px}
-.line input{background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:300 22px/1.2 var(--ui);padding:6px 0;width:100%;min-width:0;border-radius:0}
-.line input[type=date]{font:400 13px/1.2 var(--mono);color:var(--dim);color-scheme:dark}
-.line input:focus{border-bottom-color:var(--teal);outline:0}
-.line select{background:var(--ground);border:0;border-bottom:1px solid var(--edge2);color:var(--dim);font:400 13px/1.2 var(--mono);padding:9px 0;width:100%;min-width:0;border-radius:0;color-scheme:dark}
-.line select:focus{border-bottom-color:var(--teal);outline:0}
-.line button{background:none;border:1px solid var(--edge2);color:var(--ink);font:400 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;padding:14px 0;cursor:pointer}
-.line button:hover{border-color:var(--teal);color:var(--teal)}
-.line button[disabled]{opacity:.35;cursor:default}
-.line.c4{grid-template-columns:minmax(0,1fr) 150px 150px 74px}
-.line.new{grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr) 90px 74px}
-.line .picks{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
-.line .picks button{padding:8px 10px;font:400 10px/1 var(--mono);letter-spacing:.12em;color:var(--muted)}
-.line .picks button:hover{color:var(--ink);border-color:var(--dim)}
-.line .picks button[aria-pressed="true"]{color:var(--teal);border-color:var(--teal)}
-.line .picks button.off{border-style:dashed}
-.line .picks.levers button{border-style:dotted}
-.line .picks.levers button[aria-pressed="true"]{color:var(--amber);border-color:var(--amber);border-style:solid}
-.line .bad,.line .bad:focus,.rules .bad,.rules .bad:focus{border-bottom-color:var(--leak)}
-.line .picks.bad button{border-color:var(--leak)}
 .err{font:400 11px/1.6 var(--mono);letter-spacing:.04em;color:var(--leak);margin:14px 0 0;min-height:1.6em}
 
 /* the ledger tab: what comes in, what it becomes, and every stock it tracks */
@@ -278,8 +245,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
   .big{font-size:60px}
   .flow{column-gap:20px}
   .node.s{letter-spacing:.08em}
-  .line{grid-template-columns:1fr 1fr}.line input[type=text]{grid-column:1/3}
-  .line.c4,.line.new{grid-template-columns:1fr 1fr}
 }
 </style>
 <style>
@@ -372,28 +337,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid 
       <div class="gv-col"><div class="flow" id="flow"></div></div>
       <div class="gv-col"><div id="gvw"></div><div class="cm" id="cm"></div><div id="gvl"></div></div>
     </div>
-
-    <form class="line" id="padf">
-      <input id="pval" type="text" placeholder="82.1" autocomplete="off" spellcheck="false">
-      <select id="pstock" aria-label="stock"></select>
-      <input id="pname" type="text" placeholder="weight_kg" autocomplete="off" spellcheck="false" hidden>
-      <input id="punit" type="text" placeholder="kg" autocomplete="off" spellcheck="false" hidden>
-      <button id="padd" type="submit">add</button>
-    </form>
-    <form class="line c4" id="cmf">
-      <input id="cwhat" type="text" placeholder="creatine" autocomplete="off" spellcheck="false">
-      <input id="cfrom" type="date" aria-label="from">
-      <input id="cto" type="date" aria-label="to">
-      <button id="cadd" type="submit">add</button>
-    </form>
-    <form class="line c4" id="goalf">
-      <input id="gname" type="text" placeholder="body" autocomplete="off" spellcheck="false">
-      <select id="gtm" aria-label="target"></select>
-      <input id="gtv" type="text" placeholder="84" autocomplete="off" spellcheck="false">
-      <button id="gadd" type="submit">add</button>
-      <div class="picks" id="gpicks"></div>
-      <div class="picks levers" id="glevers"></div>
-    </form>
     </div>
     <div id="ledgerview" hidden></div>
     <p class="err" id="err"></p>
@@ -408,8 +351,6 @@ const db = supabase.createClient(WIRE.url, WIRE.key);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let TODAY = null;   // the ledger's day now, from day_of through readDay, set by load() before anything draws
-// a start is in the future only past both the ledger's day and today on this computer's own calendar
-const latestDay = () => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10); return TODAY && TODAY > d ? TODAY : d; };
 
 // glyphs, and the word for an index: 100 is your usual, ten points one step
 const UP = '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M6 2L11 10H1z" fill="#5fc4b4"/></svg>';
@@ -418,18 +359,13 @@ const FLAT = '<svg viewBox="0 0 12 12" width="12" height="12"><rect x="1" y="5" 
 const word = r => r==null?{w:'',cls:''}:r>=110?{w:UP,cls:'pos'}:r<=90?{w:DOWN,cls:'neg'}:{w:FLAT,cls:''};
 const sgn = v => (v>=0?'+':'')+(Math.round(v*10)/10);
 const num = v => Number.isInteger(v) ? String(v) : Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v*100)/100);
-// the pad's own name rule, the same as pad.html
-const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-function remember(m){ try { localStorage.setItem('wire.pad.metric', m); } catch (e) {} }
-function remembered(){ try { return localStorage.getItem('wire.pad.metric'); } catch (e) { return null; } }
 
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
 let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, VOIDS = {}, CVOIDS = {}, FEEDS = [];   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record. FEEDS: each door, how far behind it is, and whether that is its promise or a dead cable
-let SEL = YOU_ID, FM = null, FC = null, FX = null, BAND = false, GPICK = new Set(), GLEVER = new Map(), RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
+let SEL = YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
-let RULING = false, ENDING = false;              // a rule row or an end row on its way: a double click writes one
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
@@ -474,7 +410,7 @@ const silent = g => g.measures.some(stale);
 const shown = () => FX && SERIES[FX.o] ? FX.o : FM && SERIES[FM] ? FM : null;   // the stock the chart shows: a picked outcome, or a picked scored stock
 const cellOf = x => { const b = CROSS && CROSS.blocks.find(b => b.id === x.g), l = b && b.levers.find(l => l.metric === x.l), c = l && l.cells[x.o]; return c ? { b, l, c } : null; };
 
-function render(){ drawRail(); drawLines(); if (SHOWLEDGER) showLedger(); else draw(); }
+function render(){ drawRail(); if (SHOWLEDGER) showLedger(); else draw(); }
 function draw(anim = true){ const g = cur(), m = shown();
   const fx = FX && cellOf(FX);
   if (!SHOWLEDGER) $('eyebrow').textContent = g.name + (fx ? ` · ${FX.o} · ${FX.l} +${fx.l.lag} d` : m ? ' · ' + m : '');
@@ -491,12 +427,9 @@ function drawRail(){
   const row = (g, pts) => { const drawn = !silent(g) && indexState(pts) !== 'none';
     const p = drawn ? pts[pts.length-1] : null, mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
     return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
-  $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES))).join('') + `<button type="button" class="gr add" id="plus" aria-label="goal">+</button>`;
+  $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES))).join('');
 }
-function pickGoal(id){ SEL = id; FM = null; FC = null; FX = null; BAND = false; SHOWLEDGER = false; applyView(); say(''); fillGoalLine(); render(); }
-function newGoal(){ for (const id of ['gname', 'gtm', 'gtv', 'gpicks', 'glevers']) $(id).classList.remove('bad');
-  $('gname').value = ''; $('gtm').value = ''; $('gtv').value = ''; GPICK = new Set(); GLEVER = new Map(); drawPicks();
-  $('goalf').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('gname').focus({ preventScroll: true }); }
+function pickGoal(id){ SEL = id; FM = null; FC = null; FX = null; SHOWLEDGER = false; applyView(); say(''); render(); }
 
 // ---- the number: the index now, or where the pointer is, and its move across the window ----
 function drawHead(hi){
@@ -590,27 +523,10 @@ function wire(){
   svg.innerHTML = s;
 }
 
-// the rule of the picked stock: up, down, band, ignore. writeRule, the same row the rules have always been
+// the rule of the picked stock as it stands, in plain text. Rules are written through the MCP
 function drawRules(g){
-  const box = $('rules'), m = FM && listOf(g).includes(FM) ? FM : null;
-  if (!m){ box.innerHTML = ''; return; }
-  const r = RULES[m], k = r && r.kind, b = kind => `<button type="button" data-k="${kind}" aria-pressed="${k === kind}">${kind}</button>`;
-  box.innerHTML = b('up') + b('down') + b('band') + b('ignore') + (BAND ? `<input id="lo" type="number" step="any" aria-label="low" value="${r && r.lo != null ? r.lo : ''}"><input id="hi" type="number" step="any" aria-label="high" value="${r && r.hi != null ? r.hi : ''}"><button type="button" data-k="save">set</button>` : '');
-  box.dataset.m = m;
-}
-async function setRule(m, kind){
-  if (kind === 'band'){ if (!BAND){ BAND = true; drawRules(cur()); } const el = $('lo'); if (el) el.focus(); return; }
-  let rule = { kind };
-  if (kind === 'save'){ const loEl = $('lo'), hiEl = $('hi'), ls = loEl.value.trim(), hs = hiEl.value.trim(), lo = Number(ls), hi = Number(hs);
-    if (!ls || !Number.isFinite(lo)){ bad(loEl); return; }
-    if (!hs || !Number.isFinite(hi) || hi <= lo){ bad(hiEl); return; }
-    rule = { kind: 'band', lo, hi }; }
-  else if (RULES[m] && RULES[m].kind === kind) return;          // already the rule, nothing to write
-  if (RULING) return;
-  RULING = true;
-  try { const { error } = await writeRule(db, m, rule); if (error){ say(error.message); return; }
-    BAND = false; say(''); await load(); render(); }
-  finally { RULING = false; }
+  const m = FM && listOf(g).includes(FM) ? FM : null, r = m && RULES[m];
+  $('rules').textContent = !r || !r.kind ? '' : r.kind === 'band' ? `band ${r.lo ?? '·'}–${r.hi ?? '·'}` : r.kind;
 }
 
 // ---- the chart: the goal, or the picked stock, on the index scale ----
@@ -760,7 +676,7 @@ function drawCommits(){
     const val = !Number.isFinite(r.effect) ? '&#183;' : sgn(r.effect);
     const st = r.verdict === 'early' ? `${r.needs} d` : r.verdict === 'tangled' ? 'tangled' : r.verdict === 'no finding' ? '&lt; 2 se' : '';
     const glyph = r.verdict === 'finding' ? (r.effect > 0 ? UP : DOWN) : '';
-    const end = !c.to && on ? `<button type="button" class="end" data-end="${esc(c.id)}">end</button>` : c.to ? c.to.slice(5) : 'now';
+    const end = c.to ? c.to.slice(5) : 'now';
     return `<div class="cr ${cl}${on ? ' on' : ''}" data-c="${esc(c.id)}">
       <div class="cn"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${end} &#183; ${c.days} d</span></div>
       ${mini(line, c, r)}
@@ -872,137 +788,31 @@ function drawLedger(){
 // a focus is drawn on the chart: when the row clicked sits far below it, the chart comes back into view
 const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
-document.addEventListener('click', async e => {
-  const end = e.target.closest('[data-end]');
-  if (end){ if (ENDING) return; ENDING = true; end.disabled = true;
-    try { if (await endCommit(end.dataset.end)){ await load(); render(); } else end.disabled = false; } finally { ENDING = false; }
-    return; }
-  const rule = e.target.closest('#rules button[data-k]');
-  if (rule){ setRule($('rules').dataset.m, rule.dataset.k); return; }
+document.addEventListener('click', e => {
   const rg = e.target.closest('[data-range]');
   if (rg){ RANGE = rg.dataset.range; FC = null; FX = null; draw(); return; }
   if (e.target.closest('#ltab')){ SHOWLEDGER = !SHOWLEDGER; applyView(); if (SHOWLEDGER) showLedger(); else draw(); return; }
   const lm = e.target.closest('#ledgerview [data-lm]');
-  if (lm){ SHOWLEDGER = false; applyView(); SEL = YOU_ID; FC = null; FX = null; FM = lm.dataset.lm; BAND = false; say(''); fillGoalLine(); render(); scrollTo(0, 0); return; }   // a stock's box opens it on the chart
-  if (e.target.closest('.line, #rules, #out, #ledgerview')) return;
-  if (e.target.closest('#plus')){ if (SHOWLEDGER){ SHOWLEDGER = false; applyView(); draw(); } newGoal(); return; }
+  if (lm){ SHOWLEDGER = false; applyView(); SEL = YOU_ID; FC = null; FX = null; FM = lm.dataset.lm; say(''); render(); scrollTo(0, 0); return; }   // a stock's box opens it on the chart
+  if (e.target.closest('#rules, #out, #ledgerview')) return;
   const gr = e.target.closest('.rail [data-id]');
   if (gr){ pickGoal(gr.dataset.id); return; }
   const xr = e.target.closest('[data-x]');   // a cell on YOU, or a lead row on a goal's page
-  if (xr){ const [g, l, o] = xr.dataset.x.split('|'); FX = FX && FX.g === g && FX.l === l && FX.o === o ? null : { g, l, o }; FC = null; FM = null; BAND = false; draw(); if (FX) seeChart(); return; }
+  if (xr){ const [g, l, o] = xr.dataset.x.split('|'); FX = FX && FX.g === g && FX.l === l && FX.o === o ? null : { g, l, o }; FC = null; FM = null; draw(); if (FX) seeChart(); return; }
   const mn = e.target.closest('.flow .node.m');
-  if (mn){ FM = FM === mn.dataset.m ? null : mn.dataset.m; FX = null; BAND = false; draw(); return; }
-  if (e.target.closest('[data-goalnode]')){ if (FM || FX){ FM = null; FX = null; BAND = false; draw(); } return; }
+  if (mn){ FM = FM === mn.dataset.m ? null : mn.dataset.m; FX = null; draw(); return; }
+  if (e.target.closest('[data-goalnode]')){ if (FM || FX){ FM = null; FX = null; draw(); } return; }
   const cr = e.target.closest('.cr');
   if (cr){ if (FX){ FM = FX.o; FX = null; } FC = FC === cr.dataset.c ? null : cr.dataset.c; draw(); if (FC) seeChart(); return; }   // the outcome stays on the chart
   if (e.target.closest('.chart')) return;
-  if (FC || FM || FX){ FC = null; FM = null; FX = null; BAND = false; draw(); }
+  if (FC || FM || FX){ FC = null; FM = null; FX = null; draw(); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; BAND = false; draw(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
 // a wider or narrower page redraws the chart at its new width, without drawing the line in again
 let lastW = 0;
 new ResizeObserver(() => { const w = Math.round($('chart').clientWidth); if (!READY || w === lastW) return; lastW = w; drawChart(false); drawHead(null); wire(); }).observe($('chart'));
 new ResizeObserver(() => { if (READY) wire(); }).observe($('flow'));
 if (document.fonts) document.fonts.ready.then(() => { if (READY) wire(); });
-
-// ---- the three lines ----
-// a field that is wrong turns red until it is changed
-function bad(...els){ for (const el of els){ el.classList.add('bad'); const off = () => el.classList.remove('bad'); for (const ev of ['input','change','click']) el.addEventListener(ev, off, { once: true }); } if (els[0].focus) els[0].focus(); }
-function drawLines(){
-  const ps = $('pstock'), r = remembered(), want = ps.dataset.ready ? ps.value : (ALL.includes(r) ? r : (ALL[0] || ''));
-  ps.innerHTML = ALL.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('') + `<option value="">+</option>`;
-  ps.value = ALL.includes(want) ? want : ''; ps.dataset.ready = '1'; padNew();
-  const gt = $('gtm'), tw = gt.value;
-  gt.innerHTML = `<option value="">none</option>` + ALL.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join(''); gt.value = ALL.includes(tw) ? tw : '';
-  drawPicks(); if (!$('cfrom').value) $('cfrom').value = TODAY;
-}
-function padNew(){ const fresh = $('pstock').value === ''; $('pname').hidden = !fresh; $('punit').hidden = !fresh; $('padf').classList.toggle('new', fresh); }
-$('pstock').onchange = padNew;
-// every stock, scored ones first. the first row makes a stock an outcome; the second makes it a lever, read +1 d or +2 d later
-function drawPicks(){
-  const names = [...new Set([...ALL, ...GPICK, ...GLEVER.keys()])].sort((a,b) => (!SERIES[a]) - (!SERIES[b]) || a.localeCompare(b));
-  const lever = m => m + (GLEVER.has(m) ? ` +${GLEVER.get(m)} d` : '');
-  $('gpicks').innerHTML = names.map(m => `<button type="button" data-m="${esc(m)}" class="${SERIES[m] ? '' : 'off'}" aria-pressed="${GPICK.has(m)}"${GLEVER.has(m) ? ' disabled' : ''}>${esc(m)}</button>`).join('');
-  $('glevers').innerHTML = names.map(m => `<button type="button" data-m="${esc(m)}" aria-pressed="${GLEVER.has(m)}"${GPICK.has(m) ? ' disabled' : ''}>${esc(lever(m))}</button>`).join('');
-  // flipped in place: a redraw would take the button out of the page before its click reaches the document
-  const twin = (row, m) => [...$(row).querySelectorAll('button')].find(x => x.dataset.m === m);
-  $('gpicks').querySelectorAll('button').forEach(b => b.onclick = () => { const m = b.dataset.m;
-    if (GPICK.has(m)) GPICK.delete(m); else GPICK.add(m);
-    b.setAttribute('aria-pressed', GPICK.has(m)); twin('glevers', m).disabled = GPICK.has(m); });
-  $('glevers').querySelectorAll('button').forEach(b => b.onclick = () => { const m = b.dataset.m, i = GLEVER.has(m) ? LAGS.indexOf(GLEVER.get(m)) + 1 : 0;
-    if (i < LAGS.length) GLEVER.set(m, LAGS[i]); else GLEVER.delete(m);
-    b.setAttribute('aria-pressed', GLEVER.has(m)); b.textContent = lever(m); twin('gpicks', m).disabled = GLEVER.has(m); });
-}
-// the goal line holds the goal on screen, so declaring it again is one edit and one click
-function fillGoalLine(){ drawLines(); for (const id of ['gname', 'gtm', 'gtv', 'gpicks', 'glevers']) $(id).classList.remove('bad'); const g = SEL === YOU_ID ? null : cur();
-  $('gname').value = g ? g.name : ''; $('gtm').value = g && g.target ? g.target.metric : '';
-  $('gtv').value = g && g.target ? (g.target.value != null ? String(g.target.value) : `${g.target.lo} to ${g.target.hi}`) : '';
-  GPICK = new Set(g ? g.measures : []); GLEVER = new Map(g ? g.levers.map(l => [l.metric, l.lag]) : []); drawPicks(); }
-
-// the pad's line. a number is a reading, anything else is a note. the rows are pad.html's rows
-async function lastUnit(metric){
-  const { data, error } = await db.from('events').select('value, unit, occurred_at').eq('metric', metric).eq('event_type', 'measurement').not('value', 'is', null).order('occurred_at', { ascending: false }).limit(7);
-  if (error){ say(error.message); return undefined; }
-  return (data.find(r => r.unit) || {}).unit || null;
-}
-$('padf').addEventListener('submit', async e => { e.preventDefault(); say('');
-  const raw = $('pval').value.trim(); if (!raw){ bad($('pval')); return; }
-  $('padd').disabled = true;
-  const n = Number(raw), isNumber = Number.isFinite(n);
-  let metric = $('pstock').value, unit = null;
-  if (metric === ''){ metric = slug($('pname').value); if (!metric){ $('padd').disabled = false; bad($('pname')); return; } unit = $('punit').value.trim() || null; }
-  else { unit = await lastUnit(metric); if (unit === undefined){ $('padd').disabled = false; return; } }
-  const row = isNumber
-    ? { occurred_at: new Date().toISOString(), metric, value: n, unit, source: 'pad' }
-    : { occurred_at: new Date().toISOString(), metric, event_type: 'note', value: null, source: 'you', context: { text: raw } };
-  const { error } = await db.from('events').insert(row); $('padd').disabled = false;
-  if (error){ say(error.message); return; }
-  $('pval').value = ''; $('pname').value = ''; $('punit').value = ''; remember(metric);
-  await load(); render(); $('pstock').value = ALL.includes(metric) ? metric : ''; padNew();
-});
-
-// the commit line. a start row, and an end row if it has ended. the rows are commit.html's rows
-async function endCommit(id, to){
-  const c = COMMITS.find(x => x.id === id), day = to || (c && c.from > TODAY ? c.from : TODAY);   // never before its start, which can be a local today the ledger has not reached
-  const { error } = await db.from('events').insert({ occurred_at: new Date(day + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit_end', source: 'you', context: { to: day } });
-  if (error){ say(error.message); return false; }
-  return true;
-}
-$('cmf').addEventListener('submit', async e => { e.preventDefault(); say('');
-  const name = $('cwhat').value.trim(), from = $('cfrom').value, to = $('cto').value;
-  if (!name){ bad($('cwhat')); return; }
-  if (!from || from > latestDay()){ bad($('cfrom')); return; }
-  if (to && to < from){ bad($('cto')); return; }
-  const id = slugCommit(name);
-  if (COMMITS.some(c => c.id === id)){ bad($('cwhat')); say('exists'); return; }
-  $('cadd').disabled = true;
-  const { error } = await db.from('events').insert({ occurred_at: new Date(from + 'T12:00:00Z').toISOString(), metric: id, event_type: 'commit', source: 'you', context: { name, from } });
-  if (error){ $('cadd').disabled = false; say(error.message); return; }
-  if (to){ const ok = await endCommit(id, to); if (!ok){ $('cadd').disabled = false; await load(); render(); return; } }   // the start row is in, so a second add says exists
-  $('cadd').disabled = false; $('cwhat').value = ''; $('cto').value = ''; $('cfrom').value = TODAY;
-  await load(); render();
-});
-
-// the goal line. a name, a target on one stock if there is one, and the stocks it is made of
-function parseTarget(){
-  const metric = $('gtm').value, s = $('gtv').value.trim();
-  if (!metric && !s) return { target: null };
-  if (!metric) return { bad: $('gtm') };
-  if (!s) return { bad: $('gtv') };
-  const band = s.match(/^(-?\d+(?:\.\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:\.\d+)?)$/);
-  if (band){ const lo = Number(band[1]), hi = Number(band[2]); return hi > lo ? { target: { metric, lo, hi } } : { bad: $('gtv') }; }
-  const v = Number(s); return Number.isFinite(v) ? { target: { metric, value: v } } : { bad: $('gtv') };
-}
-$('goalf').addEventListener('submit', async e => { e.preventDefault(); say('');
-  const name = $('gname').value.trim(); if (!name || !slug(name)){ bad($('gname')); return; }
-  const measures = [...GPICK]; if (!measures.length){ bad($('gpicks')); return; }
-  const p = parseTarget(); if (p.bad){ bad(p.bad); return; }
-  $('gadd').disabled = true;
-  try { const { error } = await writeGoal(db, name, measures, p.target, [...GLEVER].map(([metric, lag]) => ({ metric, lag })));
-    if (error){ say(error.message); return; }
-    SEL = slugCommit(name); FM = null; FC = null; FX = null; BAND = false; await load(); fillGoalLine(); render(); }
-  finally { $('gadd').disabled = false; }   // held through the reload, so the same goal is not written twice
-});
 
 $('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
 db.auth.getSession().then(async ({ data }) => {
@@ -1010,7 +820,7 @@ db.auth.getSession().then(async ({ data }) => {
   try {
     // right after sign in the database can see a fresh token a second early and refuse it. once more, a moment later
     try { await load(); } catch (e) { if (!/jwt/i.test(e.message || '')) throw e; await new Promise(r => setTimeout(r, 1500)); await load(); }
-    fillGoalLine(); READY = true; applyView(); render(); lastW = Math.round($('chart').clientWidth);
+    READY = true; applyView(); render(); lastW = Math.round($('chart').clientWidth);
   } catch (e) { say(e.message || String(e)); }
 });
 </script>

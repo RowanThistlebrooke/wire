@@ -56,8 +56,8 @@ and will stay that way.
    Storage, Supabase, Open in Supabase. In the SQL editor run
    `sql/01_the_table.sql`. Then Authentication, Users, Add user, and tick
    auto confirm.
-3. **Add your first reading.** Open your site, sign in as that user, and
-   type a number on the pad.
+3. **Add your first reading.** Open your site, sign in as that user, then
+   open `pad.html` and type a number.
 
 The button cannot run the SQL, cannot make your login, and cannot make up
 a secret for you. Those stay with you on purpose.
