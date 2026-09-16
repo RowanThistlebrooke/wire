@@ -3,6 +3,17 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the index gate is a spread, not a day count.** Fourteen
+  was a correlation number, derived for comparing two series: the first n
+  where a relationship can clear 2/sqrt(n), and the first n holding two of
+  every weekday. It was never derived for scoring one stock against its
+  own past, and it had been gating the index anyway. An index exists when
+  its baseline has a spread, and that is the only real floor: under two
+  readings, or on a baseline that never moved, there is nothing to measure
+  a reading against. The three states, the channels and the silence are
+  unchanged. MIN_DAYS, SCAN_BAR and the two standard errors are untouched,
+  so fourteen stays exactly where it was derived, on the correlation and
+  commit tests.
 - **16 Sep 2026, the doors, and whether they are still feeding.** Nine
   doors write into the ledger, and every row already carried the source
   that wrote it. What was missing was the promise: youtube is six days

@@ -441,7 +441,7 @@ async function load(){
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
   // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
   // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
-  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m].length) !== 'none'); YOU = etfSeries(SERIES, OWNED);
+  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of rows) if (!voidedOn(voids, r.metric, r.day)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one
@@ -488,7 +488,7 @@ function spark(pts, cls){ const a = pts.slice(-45); if (a.length < 3) return '<s
   return `<svg viewBox="0 0 60 24" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${cls === 'pos' ? '#5fc4b4' : cls === 'neg' ? '#c9695c' : '#5c656b'}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`; }
 function drawRail(){
   // a goal under the gate has no index and no line to show: its name, and nothing more
-  const row = (g, pts) => { const drawn = !silent(g) && indexState(pts.length) !== 'none';
+  const row = (g, pts) => { const drawn = !silent(g) && indexState(pts) !== 'none';
     const p = drawn ? pts[pts.length-1] : null, mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
     return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
   $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES))).join('') + `<button type="button" class="gr add" id="plus" aria-label="goal">+</button>`;
@@ -539,7 +539,7 @@ function drawFlow(g){
   const state = m => { const s = SERIES[m]; if (!s) return RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : LAST[m] ? 'unscored' : 'empty'; return stale(m) ? 'stale' : ''; };
   // the index gate, in no words: under it there is no index to show, and while the baseline is still
   // filling the index is dimmed. The same three states the chart draws, from the same one function
-  const gate = m => indexState((SERIES[m] || []).length);
+  const gate = m => indexState(SERIES[m]);
   // a bar per fresh stock, on one scale that holds 100, padded the way the chart pads its own
   const ranks = ms.filter(m => SERIES[m] && !stale(m) && gate(m) !== 'none').map(m => SERIES[m][SERIES[m].length-1].rank);
   let lo = Math.min(100, ...ranks), hi = Math.max(100, ...ranks); const pad = Math.max(2, (hi - lo) * .16); lo -= pad; hi += pad;
@@ -548,7 +548,7 @@ function drawFlow(g){
     const bar = off ? `<span class="gv-b"><u class="gv-d"></u>${st ? `<i>${st}</i>` : ''}</span>` : `<span class="gv-b"><u style="width:${((last.rank - lo) / (hi - lo) * 100).toFixed(1)}%"></u></span>`;
     const idx = st === 'stale' ? `${since(lr.day)} d` : off ? '&#8212;' : `${last.rank}<span class="gl">${word(last.rank).w}</span>`;
     return `<button type="button" class="node m${off ? ' off' : ''}${gt === 'moving' ? ' gv-mv' : ''}${st === 'stale' ? ' gv-st' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" data-k="${k}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${bar}<span class="gv-i">${idx}</span></button>`; };
-  const gp = pointsOf(g), gl = silent(g) || indexState(gp.length) === 'none' ? null : gp[gp.length-1];   // a goal under the gate has no index to show either
+  const gp = pointsOf(g), gl = silent(g) || indexState(gp) === 'none' ? null : gp[gp.length-1];   // a goal under the gate has no index to show either
   const grouped = ms.length > FLOW_ROWS;
   f.classList.toggle('grouped', grouped);
   // the stocks under the source that writes them. scored ones by their index, stale last, a source placed by its first stock; the rest, the sources with the most stocks first
@@ -663,7 +663,7 @@ function drawChart(anim){
     else if (open){ area += `L${x(prev).toFixed(1)} ${H - B}Z`; open = false; } }
   // the index gate, drawn and never written: nothing under it, faded while the baseline is still
   // filling, solid once it is frozen. indexState lives in you-reader.js and the MCP reads the same one
-  const gate = indexState(pts.length);
+  const gate = indexState(pts);
   if (gate !== 'none'){
     if (area) s += `<path class="area" d="${area}" fill="url(#ga)"/>`;
     if (path) s += `<path class="ln ${gate}" d="${path}" pathLength="1" stroke="${col}"/>`;
@@ -831,7 +831,7 @@ function drawLedger(){
     // the raw reading is the record and always shows. Everything drawn from the index, the word and
     // the tone and the line, follows the gate: under it the line falls back to the readings
     // themselves, the way it already does for a stock that has no index at all
-    const gt = indexState(pts ? pts.length : 0), scored = gt !== 'none';
+    const gt = indexState(pts), scored = gt !== 'none';
     const last = scored ? pts[pts.length-1] : null, w = word(!st && last ? last.rank : null);
     const tone = st || !scored ? 'mute' : w.cls === 'pos' ? 'up' : w.cls === 'neg' ? 'down' : 'flat';
     const vals = scored ? pts.slice(-30).map(p => p.rank) : DAYS.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));

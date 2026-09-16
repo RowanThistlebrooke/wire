@@ -31,7 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readVoids, writeVoid, readingOn, voidedOn, liveRows,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
-           indexState, INDEX_MIN, BASELINE,
+           indexState, BASELINE,
            FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
@@ -201,10 +201,10 @@ export function wireServer() {
           rule: rules[m],
           days: p.length,
           latest_reading: last.value,
-          index: R.indexState(p.length) === 'none' ? null : last.rank,
-          index_state: R.indexState(p.length),
-          note: R.indexState(p.length) === 'none' ? `under ${R.INDEX_MIN} readings, no index yet`
-              : R.indexState(p.length) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
+          index: R.indexState(p) === 'none' ? null : last.rank,
+          index_state: R.indexState(p),
+          note: R.indexState(p) === 'none' ? 'no index yet: this stock\'s baseline has no spread, so there is nothing to score a reading against'
+              : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
               : undefined
         };
       });
@@ -243,11 +243,11 @@ export function wireServer() {
           return {
             goal: g.name,
             id: g.id,
-            index: R.indexState(p.length) === 'none' || !last ? null : last.rank,
-            index_state: R.indexState(p.length),
+            index: R.indexState(p) === 'none' || !last ? null : last.rank,
+            index_state: R.indexState(p),
             note: !g.measures.some(m => series[m]) ? 'no measure has a rule yet'
-                : R.indexState(p.length) === 'none' ? `under ${R.INDEX_MIN} days, no index yet`
-                : R.indexState(p.length) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
+                : R.indexState(p) === 'none' ? 'no index yet: this line has no spread, so there is nothing to score a day against'
+                : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
                 : undefined,
             day: last ? last.day : null,
             target: g.target,

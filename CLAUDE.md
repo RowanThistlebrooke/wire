@@ -35,6 +35,12 @@ out loud. Keep it that way.
    smaller than two standard errors, the test says so. A scan across many
    stocks uses the raised bar and returns leads, never findings. Do not
    soften either one to make a page feel more useful.
+   The test gates are day counts. The index gate is not. `MIN_DAYS`,
+   `SCAN_BAR` and the two standard errors were derived for comparing two
+   series; an index is gated by whether its own baseline has a spread, and
+   marked as moving until that baseline freezes at thirty. Never carry a
+   number from one into the other. Fourteen is a correlation threshold and
+   it spent a while wrongly gating the index.
 6. **The maths lives in one file.** `you-reader.js` is loaded by the
    website and read by the MCP server. Do not copy a formula into a second
    place. If a number needs changing, change it there.
@@ -83,11 +89,12 @@ out loud. Keep it that way.
 - The **index** is 100 at the frozen baseline, which is the first thirty
   readings, and ten points is one standard deviation of that baseline.
   It has three states and `indexState` in `you-reader.js` is all of them:
-  under fourteen readings there is no index and nothing is drawn; from
-  fourteen to twenty-nine the baseline is still filling, so the index is
-  drawn and marked as still moving; at thirty the baseline freezes and it
-  is drawn solid. A goal line counts only the stocks that pass that gate.
-  The page shows the state and never writes it in words.
+  with no spread in its baseline there is no index and nothing is drawn,
+  because there is nothing to measure a reading against; with a spread the
+  index is drawn and marked as still moving, since a reading landing
+  inside the baseline still changes what 100 means; at thirty the baseline
+  freezes and it is drawn solid. A goal line counts only the stocks that
+  pass that gate. The page shows the state and never writes it in words.
 
 ## How to help someone build it
 

@@ -263,19 +263,29 @@ function distanceOf(value, rule) {
 // moves. A rolling window would compare you to your recent self, which puts
 // you at 50 forever no matter how much you improve.
 //
-// Until it is full, the baseline is still filling, so the index standing on
-// it is still moving: the same reading can score differently tomorrow. Under
-// INDEX_MIN there is too little of it to mean anything at all, and the honest
-// answer is no index rather than a number that will not hold.
+// An index exists when its baseline has a spread. spreadOf is 0 under two
+// readings, and 0 for a baseline that never moved, and either way there is
+// nothing to measure a reading against: the index would stand on a unit this
+// file invented. So the honest answer is no index at all, and that is the
+// only real floor there is.
+//
+// It is not a day count. MIN_DAYS and the two standard errors gate the tests,
+// which ask whether one series moved another; this asks whether one series
+// can be scored against its own past. Different questions, so a number
+// derived for one of them was never derived for the other.
+//
+// Until the baseline is full the index still moves, because a reading landing
+// inside it changes what 100 means. At BASELINE it freezes.
 //
 // The gate lives here, once, because it is the same question everywhere: the
 // page draws it, the MCP reports it, and a goal line counts only the stocks
 // that pass it. Three states and nothing else.
-const INDEX_MIN = 14;
 const BASELINE = 30;
 
-function indexState(n) {
-  return n < INDEX_MIN ? 'none' : n < BASELINE ? 'moving' : 'firm';
+function indexState(pts) {
+  const p = pts || [];
+  if (!(p.spread > 0)) return 'none';
+  return p.length < BASELINE ? 'moving' : 'firm';
 }
 
 function baselineOf(values) {
@@ -308,7 +318,8 @@ function indexOf(value, baseline, lowerIsBetter) {
   return Math.round((100 + (lowerIsBetter ? -away : away) * 10) * 10) / 10;
 }
 
-// Returns { metric: [{ day, value, rank }] }
+// Returns { metric: [{ day, value, rank }] }, each series carrying the spread
+// of its own baseline, which is what decides whether it has an index at all.
 // value is always the real reading. rank is the index.
 //
 // A voided reading is in none of this: no series, so no index, and so
@@ -326,11 +337,18 @@ function rankSeries(rows, rules, voids = {}) {
     const scored = values.map(v => distanceOf(v, rule));
     const base = baselineOf(scored);
     const lower = rule.kind === 'down' || rule.kind === 'band';
-    out[metric] = mine.map((r, i) => ({
+    const pts = mine.map((r, i) => ({
       day: r.day,
       value: values[i],
       rank: indexOf(scored[i], base, lower)
     }));
+    // The baseline's spread rides with the series, because only here is the
+    // baseline still in hand: a band rule scores a reading by its distance
+    // from the band, so nothing downstream could work it out from the points.
+    // It belongs to the series and not to a point, so it does not repeat on
+    // every one of them and never reaches the wire as data.
+    pts.spread = spreadOf(base);
+    out[metric] = pts;
   }
   return out;
 }
@@ -351,7 +369,7 @@ function etfSeries(series, members) {
   // A stock with no index of its own cannot lend one to a line. The gate is
   // the one indexState names, so a goal, YOU and the MCP all count the same
   // stocks, and a young stock joins the line on the day it earns an index.
-  members = members.filter(m => indexState((series[m] || []).length) !== 'none');
+  members = members.filter(m => indexState(series[m]) !== 'none');
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))].sort();
   const byMetric = {}, born = {};
   for (const m of members) {
@@ -374,13 +392,16 @@ function etfSeries(series, members) {
       rank: Math.round(fresh.reduce((a, s) => a + s.rank, 0) / fresh.length * 10) / 10
     });
   }
+  // A line is an index too and is gated the same way: with one day or none, or
+  // a line that has never moved, there is no spread to read a day against.
+  out.spread = spreadOf(out.map(p => p.rank));
   return out;
 }
 
 // How many days YOU could actually be worked out, and how many it skipped.
 function coverage(series, members) {
   // both halves speak of the same stocks: the ones the line is actually drawn from
-  const counted = members.filter(m => indexState((series[m] || []).length) !== 'none');
+  const counted = members.filter(m => indexState(series[m]) !== 'none');
   const days = [...new Set(counted.flatMap(m => (series[m] || []).map(p => p.day)))];
   return { drawn: etfSeries(series, counted).length, days: days.length };
 }
@@ -964,7 +985,7 @@ function weakPoint(goal, series) {
   for (const m of goal.measures) {
     const pts = series[m];
     if (!pts || !pts.length) continue;
-    if (indexState(pts.length) === 'none') continue;   // no index yet, so it cannot be the weakest
+    if (indexState(pts) === 'none') continue;   // no index yet, so it cannot be the weakest
     const p = pts[pts.length - 1];
     if (!weak || p.rank < weak.rank) weak = { metric: m, rank: p.rank, day: p.day };
   }
