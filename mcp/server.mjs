@@ -31,7 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readAll, readSources, staleAfter, staleBounds, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
-           indexState, noIndexWhy, outgrownBy, OUTGROWN, BASELINE, LAGS,
+           indexState, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
@@ -330,8 +330,8 @@ export function wireServer() {
       // the gate is indexState in you-reader.js; health only asks it which stocks have outgrown their baseline
       const outgrown = async () => {
         const { series } = await load();
-        return index(Object.keys(series).filter(m => R.outgrownBy(series[m]) >= R.OUTGROWN)
-          .map(m => ({ metric: m, by: Math.round(R.outgrownBy(series[m]) * 10) / 10, why: R.noIndexWhy(series[m]) })));
+        return index(Object.keys(series).filter(m => R.offScaleBy(series[m]))
+          .map(m => ({ metric: m, by: Math.round(R.offScaleBy(series[m]) * 10) / 10, why: R.noIndexWhy(series[m]) })));
       };
       const [c, t, f, x] = await Promise.all([
         code(),

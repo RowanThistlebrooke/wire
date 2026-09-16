@@ -550,6 +550,23 @@ const BASELINE = 30;
 // meet the reading measures nothing. A total that grows has no level to
 // measure around: track a rate, which does, or start the stock clean under a
 // new name.
+// The unit is left behind in two directions, not one.
+//
+// A stock that grew leaves it above: four watch minutes a day becomes three
+// hundred, it varies by a hundred and fifty and not by two, and an ordinary
+// day reads thousands of points from 100.
+//
+// A stock that shrank leaves it below, and does it quietly. A channel whose
+// first thirty days were four people watching a whole video varies by twenty
+// points of percentage; the same channel with strangers clicking varies by
+// three. The index is then drawn in a unit seven times too big: it barely
+// moves whatever happens, and reads as settled when nothing is settled. That
+// is not the safer failure. It is the same arithmetic, and it is harder to
+// see, because a number that sits still looks like a number that is telling
+// you something.
+//
+// So the test is the ratio either way, OUTGROWN times as much or OUTGROWN
+// times as little, and in both the honest answer is no index and a reason.
 const OUTGROWN = 8;
 
 // How many times its baseline's variation the stock varies by now, over the
@@ -560,10 +577,19 @@ function outgrownBy(pts) {
   return p.spreadNow / p.spread;
 }
 
+// How many times off the unit is, whichever way it went: 0 while it still fits.
+function offScaleBy(pts) {
+  const by = outgrownBy(pts);
+  if (!by) return 0;
+  if (by >= OUTGROWN) return by;
+  if (by <= 1 / OUTGROWN) return 1 / by;
+  return 0;
+}
+
 function indexState(pts) {
   const p = pts || [];
   if (!(p.spread > 0)) return 'none';
-  if (outgrownBy(p) >= OUTGROWN) return 'none';
+  if (offScaleBy(p)) return 'none';
   return p.length < BASELINE ? 'moving' : 'firm';
 }
 
@@ -572,8 +598,9 @@ function indexState(pts) {
 function noIndexWhy(pts) {
   const p = pts || [];
   if (!(p.spread > 0)) return 'this stock\'s baseline never moved, so there is nothing to score a reading against';
-  const by = outgrownBy(p);
-  if (by >= OUTGROWN) return `this stock has outgrown its baseline: it varies about ${Math.round(by)} times as much now as across its first ${BASELINE} readings, so an index drawn in the old unit would be arithmetic and not a reading. A total that grows has no level to measure around: track a rate, or start the stock clean under a new name`;
+  const by = outgrownBy(p), off = offScaleBy(p);
+  if (off && by >= OUTGROWN) return `this stock has outgrown its baseline: it varies about ${Math.round(off)} times as much now as across its first ${BASELINE} readings, so an index drawn in the old unit would be arithmetic and not a reading. A total that grows has no level to measure around: track a rate, or start the stock clean under a new name`;
+  if (off) return `this stock no longer varies the way its baseline did: it varies about ${Math.round(off)} times as little now as across its first ${BASELINE} readings, so an index drawn in the old unit would barely move whatever happened, and would read as settled when nothing is. Its first thirty readings describe something this stock is not any more: take those readings out of the count, or start the stock clean under a new name`;
   return '';
 }
 

@@ -74,21 +74,30 @@ out loud. Keep it that way.
    earlier one for that day as a correction row signed `photo`, with the
    model that read it, at a correction's friction, a yes. The earlier
    reading stays on the record with the model that produced it.
-9. **A stock that grows has no level.** The index scores a reading against
+9. **A baseline's unit has to still fit.** The index scores a reading against
    its own stock's ordinary variation, so it means something only while
    that variation still describes the stock. A total that grows does not
    settle around a level: measured against a baseline taken when it was
    small, an ordinary day reads thousands of points from 100, and the
-   number is arithmetic and not a reading. When a stock varies many times
-   as much now as across its first thirty readings, the system refuses the
-   index and says why, the way it already refuses a baseline with no
+   number is arithmetic and not a reading. A stock can leave the unit
+   behind in the other direction too, and does it more quietly: one whose
+   first thirty readings came from a handful of people and whose readings
+   now come from thousands varies a fraction of what it did, so its index
+   barely moves whatever happens and reads as settled when nothing is.
+   Under-reading is not the safer failure, only the harder one to see. So
+   the system refuses the index when a stock varies many times as much, or
+   many times as little, as across its first thirty readings, and says
+   which and by how much, the way it already refuses a baseline with no
    spread. Never fix this by moving the baseline. A baseline that moves to
    meet the reading measures nothing, and a rolling one puts you at 100
    forever. The test reads the variation and never the level, because a
    stock that simply got better must keep its number: there is no ceiling,
-   and refusing a high index would take that away. The honest fix is the
+   and refusing a high index would take that away. Never move the
+   threshold to catch one stock you have already looked at, either: a test
+   chosen after its answer is known is not a test. The honest fix is the
    user's, not the code's: track a rate, which has a level, instead of a
-   total, which does not, or start the stock clean under a new name.
+   total, which does not, take the readings that are not this stock any
+   more out of the count, or start the stock clean under a new name.
 10. **Read all of it, or say so.** A query's page size belongs to the
     database, not to the code. Ask for twenty thousand rows and Postgres
     hands back the thousand its settings allow, with no error and nothing

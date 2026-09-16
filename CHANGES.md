@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, the unit is left behind in two directions.** This morning's
+  gate refused a stock that varied far more than its baseline did and let one
+  that varied far less go through, on the argument that a stock which went
+  quiet still reads honestly. It does not. A channel whose first thirty days
+  were a few people watching a whole video varies by twenty points of
+  percentage; the same channel with thousands clicking varies by three, and an
+  index drawn in the old unit then moves a seventh as much as it should. It
+  sits still and reads as settled when nothing is settled, which is the same
+  arithmetic as an index that explodes and is harder to notice. The gate now
+  asks the ratio either way, eight times as much or eight times as little, and
+  says which it is and by how much. The threshold is unchanged, and is not
+  moved to catch a stock already looked at: a test chosen after its answer is
+  known is not a test. CLAUDE.md law 9 says both halves and that too.
 - **16 Sep 2026, a reading is stale when its own door cannot explain it.**
   Every stock went stale after seven days, whichever door fed it, and that is
   the wrong shape: whoop promises a reading a day, so six days old means the
