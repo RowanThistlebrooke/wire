@@ -246,17 +246,41 @@ async function landRows(db, rows, tick = () => {}) {
 // with several dayless rows asks for them at once, not a round trip each.
 // The asker can be handed in: the MCP hands in its own, which names day_of
 // and health when the day cannot be read.
+//
+// ---- corrections: the right number on a day, without editing anything ----
+//
+// A void stops a reading counting, and on its own it leaves the day blank:
+// the reading that was mistyped cannot be written again, because the same
+// reading twice lands once. A correction is one more row that puts the right
+// number on the day instead. context { metric, day, value, was, readings }:
+// the stock, the day, the value the day reads from now on, the value it read
+// when the correction was written, and how many readings the day held then.
+// Nothing is edited and nothing is removed. The reading stays in the ledger,
+// and the latest correction per stock and day wins, as rules and goals do.
+//
+// A correction names its day, so it is read here beside the voids, in the
+// order they were written: a correction later than a void on that day counts
+// the day again, at the corrected value, and a void naming the day later than
+// a correction stops it counting, until one more row counts it again, still
+// corrected. A dayless void does not reach a day a correction names, as it
+// never reached a day a void row names. A row that cannot be read, a day that
+// is not a date or a value that is not a number, changes nothing.
+//
+// A correction holds only while its day holds the readings it saw. Readings
+// are never removed, so a different count means one landed after the
+// correction, and which of the two numbers the day should read would be a
+// guess: the day reads nothing until it is corrected again.
 const isDay = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
 async function readVoids(db, dayOf) {
   const { data, error } = await db
     .from('events')
-    .select('metric, context, occurred_at')
-    .eq('event_type', 'void')
+    .select('metric, event_type, context, occurred_at')
+    .in('event_type', ['void', 'correction'])
     .order('occurred_at', { ascending: true })
     .limit(20000);
   if (error) throw error;
-  const latest = new Map();
+  const latest = new Map(), values = new Map();
   // A row that does not say voided says nothing, and its readings keep counting. A
   // row that cannot be read must never be the reason a reading is dropped.
   for (const r of data) {
@@ -264,6 +288,12 @@ async function readVoids(db, dayOf) {
     if (c.commit) continue;                  // a commit's void is not a reading's; commitVoided reads those
     const metric = typeof c.metric === 'string' ? c.metric : r.metric;
     const day = isDay(c.day) ? c.day : null;
+    if (r.event_type === 'correction') {
+      if (!day || typeof c.value !== 'number' || !Number.isFinite(c.value)) continue;
+      values.set(metric + '|' + day, { metric, day, value: c.value, seen: Number.isInteger(c.readings) && c.readings > 0 ? c.readings : null });
+      latest.set(metric + '|' + day, { metric, day, voided: false, at: r.occurred_at });   // a correction counts its day
+      continue;
+    }
     latest.set(metric + '|' + (day || ''), { metric, day, voided: !!c.voided, at: r.occurred_at });
   }
   const rows = [...latest.values()];
@@ -271,9 +301,10 @@ async function readVoids(db, dayOf) {
   const at = dayOf || (ts => readDay(db, ts));
   const days = await Promise.all(wide.map(r => at(r.at)));    // the ledger's day of each of those rows
   const out = {};
-  const of = m => out[m] || (out[m] = { days: {}, upTo: null });
+  const of = m => out[m] || (out[m] = { days: {}, upTo: null, values: {}, seen: {} });
   for (const r of rows) if (r.day) of(r.metric).days[r.day] = r.voided;
   wide.forEach((r, i) => { of(r.metric).upTo = days[i]; });
+  for (const v of values.values()) { of(v.metric).values[v.day] = v.value; if (v.seen) of(v.metric).seen[v.day] = v.seen; }
   return out;
 }
 
@@ -299,7 +330,40 @@ function voidedOn(voids, metric, day) {
   if (day in v.days) return v.days[day];   // the row that names the day is the last word on it
   return !!v.upTo && day <= v.upTo;
 }
-function liveRows(rows, voids) { return voids && Object.keys(voids).length ? rows.filter(r => !voidedOn(voids, r.metric, r.day)) : rows; }
+// The correction's rule, beside it: the value a corrected day reads, or undefined for a day never corrected.
+function correctedOn(voids, metric, day) {
+  const v = voids && voids[metric];
+  return v && v.values && day in v.values ? v.values[day] : undefined;
+}
+// A corrected day whose readings changed after its correction: it reads nothing until corrected again.
+function staleOn(voids, metric, day, readings) {
+  const v = voids && voids[metric];
+  return correctedOn(voids, metric, day) !== undefined && !!v.seen && day in v.seen && Number(readings) !== v.seen[day];
+}
+// The day rows that count, each at the value it reads: a voided or stale day left out, a corrected day at its
+// corrected value, with the value day_metrics made kept beside it as was. Every reader of the day rows
+// that counts anything reads them through here.
+function liveRows(rows, voids) {
+  if (!voids || !Object.keys(voids).length) return rows;
+  const out = [];
+  for (const r of rows) {
+    if (voidedOn(voids, r.metric, r.day) || staleOn(voids, r.metric, r.day, r.readings)) continue;
+    const c = correctedOn(voids, r.metric, r.day);
+    out.push(c === undefined ? r : { ...r, mean: c, was: r.mean });
+  }
+  return out;
+}
+
+async function writeCorrection(db, metric, day, value, was, readings) {
+  return db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric,
+    event_type: 'correction',
+    value: null,
+    source: 'you',
+    context: { metric, day, value, was, readings }
+  });
+}
 
 // The one reading a void names: the day row as day_metrics made it, or null
 // when that metric has nothing on that day. Read, never guessed.
@@ -429,11 +493,11 @@ function indexOf(value, baseline, lowerIsBetter) {
 // readings that remain, so a metric can start clean without changing its
 // name, and voided away to nothing it has no series at all.
 function rankSeries(rows, rules, voids = {}) {
-  const out = {};
+  const out = {}, live = liveRows(rows, voids);   // a voided day left out, a corrected day at its corrected value
   for (const metric of Object.keys(rules)) {
     const rule = rules[metric];
     if (rule.kind === 'ignore') continue;
-    const mine = rows.filter(r => r.metric === metric && !voidedOn(voids, metric, r.day));
+    const mine = live.filter(r => r.metric === metric);
     if (!mine.length) continue;
     const values = mine.map(r => Number(r.mean));
     const scored = values.map(v => distanceOf(v, rule));

@@ -154,6 +154,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 #ledgerview{margin-top:28px}
 .vd td{color:var(--dim);text-decoration:line-through}
 .vd td:first-child{text-decoration:none}
+.cd s{color:var(--dim);margin-right:10px}
 .how{display:flex;align-items:stretch}
 .hb{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--edge2);padding:14px 14px 12px}
 .hb > i{font-style:normal;font:400 9.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
@@ -405,7 +406,7 @@ async function load(){
   SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED);
   DAYS = rows; LEDGER = null; LTOKEN++;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
-  LAST = {}; for (const r of rows) if (!voidedOn(voids, r.metric, r.day)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one
+  LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // each stock's unit and every source that has written it, newest first
   const { data: u, error: ue } = await db.from('events').select('metric, unit, source').eq('event_type', 'measurement').order('occurred_at', { ascending: false }).limit(20000);
   if (ue) throw ue;
@@ -719,8 +720,8 @@ function drawWeak(g){
 // notes are counted here and nothing more: their text is never read by a page
 const laneOf = s => s === 'claude' || s === 'photo' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';   // an estimate comes through the MCP door too, under its own source
 const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes', 'cross'];   // the tools in mcp/wire.mjs that read
-const MCP_WRITES = ['record', 'estimate', 'did', 'rule', 'goal', 'remember', 'void', 'void_commit'];   // and the ones that write: claude, except estimate, which signs photo
-const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note', 'void'];
+const MCP_WRITES = ['record', 'estimate', 'did', 'rule', 'goal', 'remember', 'void', 'correct', 'void_commit'];   // and the ones that write: claude, except estimate, which signs photo
+const TYPES = ['measurement', 'rule', 'commit', 'commit_end', 'goal', 'note', 'void', 'correction'];
 const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' };
 const fmt = n => Number(n).toLocaleString('en-US');
 function applyView(){
@@ -743,7 +744,7 @@ function tiny(vals, tone){
   return `<svg class="tiny" viewBox="0 0 120 30" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${TONE[tone]}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 function drawLedger(){
-  const rows = LEDGER, bySrc = {}, lastSrc = {}, byType = {}, stocks = {};
+  const rows = LEDGER, bySrc = {}, lastSrc = {}, byType = {}, stocks = {}, live = liveRows(DAYS, VOIDS);
   for (const r of rows){
     const s = r.source || '', k = r.event_type || 'measurement';
     bySrc[s] = (bySrc[s] || 0) + 1; if (!lastSrc[s] || r.occurred_at > lastSrc[s]) lastSrc[s] = r.occurred_at;
@@ -775,7 +776,7 @@ function drawLedger(){
     const gt = indexState(pts), scored = gt !== 'none';
     const last = scored ? pts[pts.length-1] : null, w = word(!st && last ? last.rank : null);
     const tone = st || !scored ? 'mute' : w.cls === 'pos' ? 'up' : w.cls === 'neg' ? 'down' : 'flat';
-    const vals = scored ? pts.slice(-30).map(p => p.rank) : DAYS.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));
+    const vals = scored ? pts.slice(-30).map(p => p.rank) : live.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));   // the readings that count, at the value each day reads
     return `<button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : ''}</span>
       <b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${tiny(vals, tone)}
       <span class="meta">${fmt(stocks[m][s])} rows${lr ? ` &#183; ${lr.day.slice(5)}` : ''}</span></button>`;
@@ -799,14 +800,20 @@ function drawLedger(){
   const offn = off.length + offc.length;
   const voided = !offn ? '' : `<section class="lane"><div class="lh"><div class="lt">voided</div><b>${fmt(offn)}</b><span>row${offn === 1 ? '' : 's'}</span>${off.length > 30 ? '<em>latest 30</em>' : ''}</div><div class="tw"><table>${offc.map(c =>
     `<tr class="vd"><td>${esc(c.from)}</td><td>${esc(c.name)}</td><td class="r">commit</td></tr>`).join('')}${off.slice(-30).reverse().map(d =>
-    `<tr class="vd"><td>${esc(d.day)}</td><td>${esc(d.metric)}</td><td class="r">${num(Number(d.mean))}${UNITS[d.metric] ? ' ' + esc(UNITS[d.metric]) : ''}</td></tr>`).join('')}</table></div></section>`;
+    `<tr class="vd"><td>${esc(d.day)}</td><td>${esc(d.metric)}</td><td class="r">${num(correctedOn(VOIDS, d.metric, d.day) ?? Number(d.mean))}${UNITS[d.metric] ? ' ' + esc(UNITS[d.metric]) : ''}</td></tr>`).join('')}</table></div></section>`;
+  // the corrected readings: the value day_metrics made struck through, and the value the day reads now, both exactly.
+  // A voided one is in the voided lane; one whose readings changed after its correction reads nothing, so all of it is struck
+  const fixed = DAYS.filter(d => correctedOn(VOIDS, d.metric, d.day) !== undefined && !voidedOn(VOIDS, d.metric, d.day));
+  const unit = m => UNITS[m] ? ' ' + esc(UNITS[m]) : '';
+  const corrected = !fixed.length ? '' : `<section class="lane"><div class="lh"><div class="lt">corrected</div><b>${fmt(fixed.length)}</b><span>day${fixed.length === 1 ? '' : 's'}</span>${fixed.length > 30 ? '<em>latest 30</em>' : ''}</div><div class="tw"><table>${fixed.slice(-30).reverse().map(d =>
+    `<tr class="${staleOn(VOIDS, d.metric, d.day, d.readings) ? 'vd' : 'cd'}"><td>${esc(d.day)}</td><td>${esc(d.metric)}</td><td class="r"><s>${esc(String(Number(d.mean)))}</s>${esc(String(correctedOn(VOIDS, d.metric, d.day)))}${unit(d.metric)}</td></tr>`).join('')}</table></div></section>`;
   // the ledger itself, newest first: every row is a line that is never changed
   const tape = `<section class="lane"><div class="lh"><div class="lt">latest</div></div><div class="tw"><table>${rows.filter(r => r.event_type !== 'note').slice(0, 14).map(r =>
     `<tr><td>${esc(String(r.occurred_at).slice(0, 16).replace('T', ' '))}</td><td>${laneOf(r.source)}</td><td>${esc(r.source || '')}</td><td>${esc(r.event_type || 'measurement')}</td><td>${esc(r.metric)}</td><td class="r">${r.value != null ? num(Number(r.value)) + (r.unit ? ' ' + esc(r.unit) : '') : '&#183;'}</td></tr>`).join('')}</table></div></section>`;
   // the doors: one line each, how long since it last wrote, its state in the colour of the bar and in no word
   const doors = `<section class="lane"><div class="lh"><div class="lt">fed</div><b>${fmt(FEEDS.filter(d => d.state !== 'none').length)}</b><span>promised</span></div><div class="fd">${FEEDS.map(d =>
     `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
-  $('ledgerview').innerHTML = how + doors + types + key + lanes.map(lane).join('') + voided + tape;
+  $('ledgerview').innerHTML = how + doors + types + key + lanes.map(lane).join('') + voided + corrected + tape;
 }
 
 // ---- a csv dropped on the page: read by csv-reader.js, shown, written only after a go ----

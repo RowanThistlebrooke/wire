@@ -29,7 +29,7 @@ const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
-           readVoids, writeVoid, readingOn, voidedOn, liveRows,
+           readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, BASELINE, LAGS,
            FED, readFeeds, feedOf,
@@ -237,7 +237,7 @@ export function wireServer() {
       'When the user asks to track something new, read the ledger first and say whether a stock ' +
       'already carries that fact, naming it and why in one line: a new metric is a cost, not a free ' +
       'addition. ' +
-      'Voiding costs more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
+      'Voiding and correcting cost more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
       'write only once the user sends that phrase back. A number the user gave you goes through ' +
       'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +
       'a name ending _est. Never the other way round.'
@@ -624,8 +624,8 @@ export function wireServer() {
       if (!r) return text({ error: `no reading of ${metric} on ${day}: nothing to ${voided ? 'void' : 'count again'}` });
       if (R.voidedOn(voids, metric, day) === voided)
         return text({ error: `${metric} on ${day} is already ${voided ? 'voided' : 'counted'}` });
-      // the number in the phrase is the reading itself, as day_metrics made it. typing it back is the yes
-      const value = Number(r.mean);
+      // the number in the phrase is the reading as the day reads it, corrected if it was. typing it back is the yes
+      const value = R.correctedOn(voids, metric, day) ?? Number(r.mean);
       const phrase = `${voided ? 'void' : 'unvoid'} ${metric} ${value} on ${day}`;
       // the phrase exactly, give or take the spacing and the capital a keyboard adds
       const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
@@ -639,6 +639,47 @@ export function wireServer() {
       return text(error ? { error: error.message }
                         : { written: { metric, event_type: 'void', source: 'claude', context: { metric, day, voided } },
                             [voided ? 'not_counted' : 'counted_again']: { metric, value, day } });
+    }
+  );
+
+  server.tool(
+    'correct',
+    'Put the right number on one reading that was mistyped. It edits nothing and removes nothing: it writes one ' +
+    'correction row, and the latest correction per stock and day wins, as rules do. From then on the day reads the ' +
+    'new value in every series, index, goal and scan, a voided day counts again, and the old reading stays in the ' +
+    'ledger, struck through, with the correction row saying what it replaced. A correction holds while its day ' +
+    'holds the readings it saw: if another reading lands on that day later, the day reads nothing until it is ' +
+    'corrected again, because which number to count would be a guess. Call it first with no confirm: it ' +
+    'answers with the reading it would replace and the phrase that corrects it, which carries the new value. Print ' +
+    'those two lines to the user exactly as they are. Nothing is written until the user sends that phrase back and ' +
+    'you pass it as confirm. A yes is not enough: the new number is typed back, so it cannot be written by accident ' +
+    'or by a misread. Only a number the user gave you, and never on an estimate: an _est reading was read off a ' +
+    'picture, and a typed number is not that instrument. Signed claude.',
+    { metric: z.string(), day: z.string(), value: z.number(), confirm: z.string().optional() },
+    async ({ metric, day, value, confirm }) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-09-15, not ${day}` });
+      if (!Number.isFinite(value)) return text({ error: 'the value is not a number' });
+      if (/_est$/.test(metric)) return text({ error: `${metric} is an estimate, read off a picture; a typed number does not correct it` });
+      const { rows, voids } = await load();
+      const r = R.readingOn(rows, metric, day);
+      if (!r) return text({ error: `no reading of ${metric} on ${day}: nothing to correct` });
+      const was = R.correctedOn(voids, metric, day) ?? Number(r.mean), voided = R.voidedOn(voids, metric, day);
+      const readings = Number(r.readings), stale = R.staleOn(voids, metric, day, readings);   // a reading landed after its last correction
+      if (was === value && !voided && !stale) return text({ error: `${metric} on ${day} already reads ${value}` });
+      // the phrase carries the new value, because that is the number the user has to type
+      const phrase = `correct ${metric} ${value} on ${day}`;
+      // the phrase exactly, give or take the spacing and the capital a keyboard adds
+      const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (said !== phrase.toLowerCase()) return text({
+        metric, day, reads: was, voided, stale, value, readings,
+        print: `${metric}  ${was}  ${day}${voided ? '  voided' : ''}${stale ? '  a reading landed after its correction' : ''}\nto make it ${value}, send: ${phrase}`,
+        say: 'print the two lines in print to the user, exactly as they are, and nothing else. Write nothing ' +
+             'until the user sends that phrase back; then call correct again with confirm set to what they sent.'
+      });
+      const { error } = await R.writeCorrection(asClaude, metric, day, value, was, readings);
+      return text(error ? { error: error.message }
+                        : { written: { metric, event_type: 'correction', source: 'claude', context: { metric, day, value, was, readings } },
+                            corrected: { metric, day, was, now: value } });
     }
   );
 

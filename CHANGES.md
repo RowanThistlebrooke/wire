@@ -3,6 +3,32 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **16 Sep 2026, a correction puts the right number on a day.** A void
+  stops a mistyped reading counting, and on its own it left the day blank:
+  the right number could not be written, because the same reading twice
+  lands once, and a reading on a voided day is voided too. The MCP's new
+  `correct` tool writes one more row, `event_type` correction, context `{
+  metric, day, value, was, readings }`. Nothing is edited and nothing is
+  removed: the latest correction per stock and day wins, as rules do, and
+  the old reading stays in the ledger, struck through on the ledger tab
+  beside the value the day reads now. From then on the day reads the new
+  value in every series, index, goal and scan. Corrections are read with
+  the voids in the order they were written, so a correction after a void
+  counts the day again, and a void naming the day after a correction stops
+  it; a dayless void does not reach a corrected day, as it never reached a
+  day a void row names. A correction holds while its day holds the
+  readings it saw: if another reading lands on that day later, the day
+  reads nothing until it is corrected again, and `correct` says so,
+  because which number to count would be a guess. The friction is void's:
+  `correct` answers first with the reading it would replace and the
+  phrase, `correct weight 156.1 on 2026-09-16`, and writes only when that
+  exact phrase comes back, the new value being the number that has to be
+  typed. `void` now types back the value a corrected day reads. An `_est`
+  reading is not corrected by a typed number. Known limit: a void and a
+  correction name a stock and a day, never a source, so on a day two doors
+  both wrote one stock, neither can reach one door's reading without the
+  other's. Readings import.html wrote a day early before this stay where
+  they landed.
 - **16 Sep 2026, import.html writes a date on its own day.** import.html
   wrote a date cell like 2026-09-14 as midnight UTC, and the ledger's day,
   which ends at 6am in your timezone, put that on the day before wherever

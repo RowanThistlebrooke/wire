@@ -87,6 +87,27 @@ out loud. Keep it that way.
   through and its name stays taken. The friction matches: voiding a
   reading costs typing its number back, voiding a commit costs typing its
   name and its start.
+- A **correction** puts the right number on a day a reading was mistyped:
+  `event_type = 'correction'`, `context { metric, day, value, was,
+  readings }`. It edits nothing and removes nothing. The latest correction
+  per metric and day wins, as rules do: the day reads `value` in every
+  series, index, YOU, goal and scan, `was` says what it read before, and
+  `readings` how many readings the day held. A void alone leaves a
+  mistyped day blank, because the same reading twice lands once and a
+  reading on a voided day is voided too; a correction is how the day gets
+  its number back. It is read with the voids, in the order they were
+  written, so a correction after a void counts the day again, at its
+  value, and a void naming the day after a correction stops it. A dayless
+  void does not reach a day a correction names, as it never reached a day
+  a void row names. A correction holds only while its day holds the
+  readings it saw: if another reading lands on the day afterwards, the day
+  reads nothing until it is corrected again, because which number to count
+  would be a guess. The reading stays in the ledger, struck through beside
+  the value the day reads now. The friction matches void, and the phrase
+  carries the new value, because that is the number typed back. An `_est`
+  reading is never corrected by a typed number. A void and a correction
+  name a stock and a day, never a source: that is a known limit, not a
+  promise.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.
