@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a door for a picture.** `/api/photo` takes one photo from the
+  phone's share sheet, checked by the same `WIRE_TOKEN` in the same header as
+  `/api/at` and `/api/mcp`, and keeps it in a private bucket beside a row that
+  names where it went. A photo is not a reading: it carries no value, it is in
+  no series, no index, no goal and no scan, and `day_metrics` never sees it,
+  because that view takes only rows whose event_type is `measurement`. What the
+  picture is worth as data still comes the way it always did, Claude reading it
+  and writing what it read through `estimate` under a name ending `_est`. This
+  keeps the picture itself, because for a body a series of photographs taken the
+  same way is the better instrument, and a model reading one to a single decimal
+  is not. The file lands under the ledger day and the moment, so a second photo
+  on one day never lands on the first: nothing here replaces anything, as
+  nothing in the table does. It signs in as the owner through the same
+  publishable key and password every other door uses, so there is no
+  service_role key anywhere and no new secret to keep. The bucket needs its own
+  SQL once, and it carries the same two policies the table does: read your own,
+  write your own, no update and no delete.
 - **17 Sep 2026, connecting a source is a routine, and it ships.** Adding
   YouTube took a whole evening and cost two wrong turns that every copy of the
   Wire would have taken in the same order: a year of totals backfilled into a

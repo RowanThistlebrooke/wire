@@ -68,6 +68,14 @@ function signIn() {
   return authed;
 }
 
+// The signed in client, for a door that is not a tool: /api/photo writes a file
+// and a row and needs the same session the tools write through. Signing in lives
+// here once, so no door invents a second way to hold the password.
+export async function signedIn() {
+  await signIn();
+  return db;
+}
+
 // The ledger's day for a moment, now unless one is given. It is defined once, by day_of in the
 // database, in the owner's timezone, and here it is only ever asked for. When day_of cannot be
 // read the answer says so, and health names what is missing.
