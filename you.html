@@ -453,12 +453,6 @@ async function load(){
   TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids; STARTS = starts;
   FEEDS = feedOf(feeds);   // which doors are feeding the ledger, and which have stopped
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
-  // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
-  // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
-  SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
-  DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
-  CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
-  LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // each stock's unit and every source that has written it, newest first
   // read a page at a time, never one capped read: readAll is in you-reader.js and says why
   let u = null, ue = null;
@@ -467,7 +461,15 @@ async function load(){
   if (ue) throw ue;
   UNITS = {}; SOURCES = {};
   for (const r of u){ if (r.unit && !(r.metric in UNITS)) UNITS[r.metric] = r.unit; const s = SOURCES[r.metric] || (SOURCES[r.metric] = []); if (r.source && !s.includes(r.source)) s.push(r.source); }
-  STALEBY = staleBounds(SOURCES);   // each stock's own limit: its door's promise plus the slack
+  // each stock's own limit, its door's promise plus the slack, before anything reads a stock as stale:
+  // YOU is drawn through it below, and a goal line and the rail draw through it at every draw
+  STALEBY = staleBounds(SOURCES);
+  // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
+  // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
+  SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
+  DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
+  CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
+  LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // progress photos: the newest of each day for the goal it names, latest wins as a correction does. the row says where the private file is
   const ps = await readAll(() => db.from('events').select('context').eq('event_type', 'photo').order('occurred_at', { ascending: false }).order('id', { ascending: false }));
   const took = new Set(); PHOTOS = [];
@@ -631,7 +633,7 @@ function drawTarget(g){
     const a = t.value != null ? num(t.value) : `${num(t.lo)}&#8211;${num(t.hi)}`;
     aim = `<span>${a}${unit}</span>`;
     if (!lr) tg = `<i>${esc(t.metric)}</i><span>${a}${unit}</span><b>empty</b>`;
-    else { const now = Number(lr.mean), age = since(lr.day); old = age > STALE_DAYS;
+    else { const now = Number(lr.mean), age = since(lr.day); old = age > STALEBY(t.metric);   // the target reads its own stock's limit, as every other freshness check does
       const gap = Math.round((t.value != null ? now - t.value : now < t.lo ? now - t.lo : now > t.hi ? now - t.hi : 0) * 100) / 100;
       const g2 = old ? '<b>stale</b>' : `<b class="${gap === 0 ? 'pos' : 'neg'}">${gap === 0 ? '0' : (gap>0?'+':'')+num(gap)}</b>`;
       // the reading and the target drawn on one scale from zero: a picture of the two numbers, not a new one
