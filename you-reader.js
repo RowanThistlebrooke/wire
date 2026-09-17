@@ -656,8 +656,13 @@ function noIndexWhy(pts) {
   return '';
 }
 
-function baselineOf(values) {
-  return values.slice(0, BASELINE);
+// The first BASELINE readings, or the first BASELINE on or after the day a
+// start row named. days runs alongside values: same length, same order.
+function baselineOf(values, days, from) {
+  if (!from || !days) return values.slice(0, BASELINE);
+  const out = [];
+  for (let i = 0; i < values.length && out.length < BASELINE; i++) if (days[i] >= from) out.push(values[i]);
+  return out;
 }
 
 // An index, not a rank. 100 is the person you were across your first
@@ -699,14 +704,20 @@ function rankSeries(rows, rules, voids = {}, starts = {}) {
   for (const metric of Object.keys(rules)) {
     const rule = rules[metric];
     if (rule.kind === 'ignore') continue;
-    // the series begins where the stock does, so the baseline, the spread, the
-    // gate and every point past them all follow from this one line
-    const from = starts[metric];
-    const mine = live.filter(r => r.metric === metric && (!from || r.day >= from));
+    const mine = live.filter(r => r.metric === metric);
     if (!mine.length) continue;
     const values = mine.map(r => Number(r.mean));
     const scored = values.map(v => distanceOf(v, rule));
-    const base = baselineOf(scored);
+    // A start row moves where the baseline is taken from, and moves nothing
+    // else. Every reading stays in the series and on the chart, the early ones
+    // scored against the later baseline, so a fall is still a fall and can
+    // still be seen. What changes is only the unit today is drawn in: a stock's
+    // first thirty readings decide how big one index point is, and when those
+    // thirty came from something the stock no longer is, every reading after
+    // them is drawn in a unit that measures nothing. Taking the readings out
+    // instead would fix the unit and lose the fall, which is a worse trade:
+    // the fall is the true part.
+    const base = baselineOf(scored, mine.map(r => r.day), starts[metric]);
     const lower = rule.kind === 'down' || rule.kind === 'band';
     const pts = mine.map((r, i) => ({
       day: r.day,
@@ -723,7 +734,9 @@ function rankSeries(rows, rules, voids = {}, starts = {}) {
     // most thirty of them, so a stock that has outgrown its baseline can be
     // told from one that has simply got better. Under two such readings there
     // is nothing to ask, and spreadOf answers 0.
-    pts.spreadNow = spreadOf(scored.slice(BASELINE).slice(-BASELINE));
+    // past the baseline means past the readings the baseline was taken from
+    const after = starts[metric] ? mine.findIndex(r => r.day >= starts[metric]) + BASELINE : BASELINE;
+    pts.spreadNow = spreadOf(scored.slice(Math.max(0, after)).slice(-BASELINE));
     out[metric] = pts;
   }
   return out;

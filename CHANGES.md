@@ -3,6 +3,22 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a start moves the baseline and nothing else.** As it shipped
+  an hour ago, a start row took the readings before its day out of the series
+  altogether, and another Claude reading the same ledger said the obvious thing
+  about that: it would hide the fall. It would have. A channel that ran sixty
+  percent viewed and now runs fifteen has genuinely fallen, and cutting the
+  first hundred and forty days off the chart would have removed the evidence
+  while claiming to fix the number. Two things were being conflated. The fall is
+  true and belongs in the picture; the unit today is drawn in is not, because a
+  stock's first thirty readings decide how big one index point is and those
+  thirty came from six viewers a day. So a start now moves only where the
+  baseline is taken from. Every reading stays in the series and on the chart,
+  the early ones scored against the later baseline. The fall does not go: it
+  gets plainer. Against the old baseline the decline read 96 to 79, seventeen
+  points, because the unit was five times too big to show it; against a real one
+  it reads 173 to 86, which is its true size. Removing readings to fix a unit
+  was the worse trade, and it took someone else's objection to see it.
 - **17 Sep 2026, a stock can say which day it begins on.** One name can carry two
   different things. A channel four people a day watched and the same channel
   with thousands share a column, a unit and nothing else, and because the

@@ -806,44 +806,46 @@ export function wireServer() {
 
   server.tool(
     'start',
-    'Say which day a stock\'s series begins on, when its early readings are a different thing under the same ' +
-    'name: a channel that four people a day watched and the same channel with thousands share a column, a unit ' +
-    'and nothing else, and the baseline is the first thirty readings, so the second is scored in a unit the ' +
-    'first invented. It removes nothing. It writes one start row, the latest per stock wins as a rule does, and ' +
-    'the readings before that day stay in the ledger, in no series, no index, no goal and no scan. The baseline, ' +
-    'the spread and the gate are all rebuilt from the day named on. Voiding is the wrong tool for this: a void ' +
-    'says one reading should not count and costs typing its number back, which is about being on the right row, ' +
-    'and here there is no wrong row but a hundred right ones belonging to something else. Call it first with no ' +
-    'confirm: it answers with what the series would become and the phrase that does it, which carries how many ' +
-    'readings it takes out, so the size of the act is on the page before it happens. Nothing is written until ' +
-    'the user sends that phrase back. A day earlier than the stock\'s first reading, or no day at all, gives the ' +
-    'stock its whole self again.',
+    'Say which day a stock\'s baseline is taken from, when its first readings came from something the stock ' +
+    'no longer is: a channel six people a day watched and the same channel with thousands share a column, a ' +
+    'unit and nothing else. The first thirty readings decide how big one index point is, so when those thirty ' +
+    'came from the old thing, every reading since is drawn in a unit that measures nothing, and a real fall ' +
+    'reads as a small one. It removes nothing and hides nothing: every reading stays in the series and on the ' +
+    'chart, the early ones scored against the later baseline, so a fall is still a fall and is usually plainer ' +
+    'afterwards, not fainter. Only the unit changes. It writes one start row, latest per stock wins as a rule ' +
+    'does, and a day before the stock\'s first reading puts the baseline back to the beginning. Call it first ' +
+    'with no confirm: it answers with what the index reads now and what it would read, at the stock\'s first ' +
+    'day and today, so the size of the change is on the page before anything is written. Nothing is written ' +
+    'until the user sends the phrase back.',
     { metric: z.string(), day: z.string(), confirm: z.string().optional() },
     async ({ metric, day, confirm }) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-05-01, not ${day}` });
       const { rules, rows, voids, starts } = await load();
       if (!(metric in rules)) return text({ error: `no stock called ${metric}, or it has no rule yet` });
       const live = R.liveRows(rows, voids).filter(r => r.metric === metric);
-      if (!live.length) return text({ error: `no reading of ${metric} counts, so it has no series to begin` });
-      const before = live.filter(r => r.day < day).length, after = live.length - before;
-      if (!after) return text({ error: `no reading of ${metric} falls on or after ${day}: a stock cannot begin after its last reading` });
-      if (starts[metric] === day) return text({ error: `${metric} already begins on ${day}` });
-      const was = R.rankSeries(rows, { [metric]: rules[metric] }, voids, starts)[metric];
-      const now = R.rankSeries(rows, { [metric]: rules[metric] }, voids, { ...starts, [metric]: day })[metric];
-      const phrase = `start ${metric} on ${day}, ${before} readings before it`;
+      if (!live.length) return text({ error: `no reading of ${metric} counts, so it has no baseline to move` });
+      const from = live.filter(r => r.day >= day).length;
+      if (!from) return text({ error: `no reading of ${metric} falls on or after ${day}: a baseline cannot begin after the last reading` });
+      if (starts[metric] === day) return text({ error: `${metric}'s baseline already begins on ${day}` });
+      const one = st => R.rankSeries(rows, { [metric]: rules[metric] }, voids, st)[metric];
+      const was = one(starts), now = one({ ...starts, [metric]: day });
+      const at = (p, i) => p && p[i] ? { day: p[i].day, index: p[i].rank } : null;
+      const phrase = `start ${metric} on ${day}`;
       const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
       if (said !== phrase) return text({
-        metric, day, takes_out: before, keeps: after,
-        now: was ? { readings: was.length, index: R.indexState(was) === 'none' ? null : was[was.length - 1].rank, state: R.indexState(was) } : null,
-        after: now ? { readings: now.length, index: R.indexState(now) === 'none' ? null : now[now.length - 1].rank, state: R.indexState(now) } : null,
-        print: `${metric} begins ${day}\n${before} readings before it leave the count, ${after} stay\nto do this, send: ${phrase}`,
-        say: 'print the three lines in print to the user, exactly as they are, and nothing else. Write nothing ' +
-             'until the user sends that phrase back; then call start again with confirm set to what they sent.'
+        metric, day, baseline_from: Math.min(from, R.BASELINE), readings_kept: live.length,
+        now: was ? { first: at(was, 0), latest: at(was, was.length - 1), state: R.indexState(was) } : null,
+        after: now ? { first: at(now, 0), latest: at(now, now.length - 1), state: R.indexState(now) } : null,
+        print: `${metric} baseline from ${day}\nevery reading stays; only the unit changes\n`
+             + `${was && was.length ? `${was[0].day} reads ${was[0].rank} -> ${now[0].rank}, today ${was[was.length-1].rank} -> ${now[now.length-1].rank}` : ''}\n`
+             + `to do this, send: ${phrase}`,
+        say: 'print the lines in print to the user, exactly as they are, and nothing else. Write nothing until ' +
+             'the user sends that phrase back; then call start again with confirm set to what they sent.'
       });
       const { error } = await R.writeStart(asClaude, metric, day);
       return text(error ? { error: error.message }
                         : { written: { metric, event_type: 'start', source: 'claude', context: { day } },
-                            begins: { metric, day, took_out: before, keeps: after } });
+                            baseline_from: { metric, day, readings_kept: live.length } });
     }
   );
 
