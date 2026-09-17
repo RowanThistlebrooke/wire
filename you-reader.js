@@ -48,7 +48,10 @@ async function readAll(make) {
 const FED = {
   github: 1,
   whoop: 1,
-  youtube: 6,
+  // 48 to 72 hours, per Google's own docs, and the API returns a day only once
+  // every metric of it is processed: an unready day comes back missing, never
+  // half counted, and the puller already skips what is missing. So three.
+  youtube: 3,
   instagram: 3,
   tiktok: 1,
   claude: null,

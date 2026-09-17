@@ -40,7 +40,13 @@ const TOKENS_FILE = path.join(os.homedir(), '.life', 'tokens.json');
 const CLOUD_MARKER = path.join(ANALYTICS, '.life-social-cloud-managed');
 const GRAPH = 'https://graph.facebook.com/v26.0';
 const DAYS = 14;
-const SETTLE = { youtube: 6, instagram: 3 };
+// How many days back the newest day written is: a door's promise, and a door
+// promises what its source can actually deliver. That number lives once, in
+// you-reader.js, where the page reads it to draw the doors and the ledger
+// reads it to know when a reading has gone stale. Two copies of it would drift
+// the first time one moved, and the ledger would hold a door to a promise the
+// puller had stopped keeping.
+const SETTLE = new Function(fs.readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8') + '; return FED;')();
 const DRY = process.argv.includes('--dry');
 
 // Channel totals from the Analytics API. Not per-video numbers, so they do

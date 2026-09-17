@@ -3,6 +3,21 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a door's promise is one number, and YouTube's is three days.**
+  The promise lived twice, as `FED` in you-reader.js and as `SETTLE` in
+  pull/social.mjs, and two copies of one number drift the first time either
+  moves: the puller would write on one schedule while the ledger held it to
+  another, and a door keeping its word would read as a dead cable. The puller
+  now reads `FED` out of you-reader.js, the same file the page and the MCP read
+  it from. And YouTube's promise drops from six days to three, which is what
+  Google's own documentation says the processing delay is: the Analytics API
+  returns a day only once every metric of it is processed, so an unready day
+  comes back missing rather than half counted, and the puller already skips
+  what is missing. Channel readings now land three days sooner and their stale
+  limit tightens from thirteen days to ten by itself, because the limit is
+  built from the promise. There is no real time to be had beyond this: the
+  Analytics API has no real time endpoint, and the numbers that are live are
+  lifetime totals, which have no level and so no index.
 - **16 Sep 2026, the unit is left behind in two directions.** This morning's
   gate refused a stock that varied far more than its baseline did and let one
   that varied far less go through, on the argument that a stock which went
