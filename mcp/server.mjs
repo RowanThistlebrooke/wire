@@ -226,7 +226,19 @@ async function readingsOf(rows, writer, context = null) {
 export async function writeReadings(rows, writer, context = null) {
   const got = await readingsOf(rows, writer, context);
   if (got.error) return got;
-  const { out } = got;
+  const { out, days } = got;
+
+  // Different values for one stock and ledger day cannot be deduped by picking the first.
+  // Refuse the whole call before any insert, naming every conflicting value exactly as supplied.
+  const values = new Map();
+  out.forEach((r, i) => {
+    const k = r.metric + '|' + r.source_id;
+    if (!values.has(k)) values.set(k, { metric: r.metric, day: days[i], values: new Set() });
+    values.get(k).values.add(r.value);
+  });
+  const conflicts = [...values.values()].filter(r => r.values.size > 1)
+    .map(r => ({ metric: r.metric, day: r.day, values: [...r.values] }));
+  if (conflicts.length) return { error: 'nothing written', why: 'different values for the same stock and day', conflicts };
 
   // the same metric on the same day, already in the ledger or twice in this call, lands once. The
   // source is part of the question, so an estimate never dedupes against a measurement, or the reverse
@@ -330,7 +342,7 @@ export function wireServer() {
     'exact SQL that puts it right, to run in the Supabase SQL editor. keys names the settings that are not ' +
     'set, never a value. feed names every door that writes into the ledger, how many days behind its newest ' +
     'row is, and whether that is the lag the door promises or a cable that has stopped. index names every stock ' +
-    'that has outgrown its baseline, varying many times as much now as across its first thirty readings, so its ' +
+    'that no longer fits its baseline, varying many times as much or as little now as across its first thirty readings, so its ' +
     'index would be arithmetic and not a reading. The first three say whether this copy is built correctly; ' +
     'feed and index say whether what comes in can still be read. It writes nothing.',
     {},
