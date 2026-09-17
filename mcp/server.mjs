@@ -28,7 +28,7 @@ const src = readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8');
 const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
-           readGoals, goalSeries, weakPoint, writeRule, writeGoal,
+           readGoals, goalSeries, weakPoint, writeRule, writeGoal, readNotes,
            readAll, readSources, staleAfter, staleBounds, readStarts, writeStart, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, indexOn, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
@@ -112,24 +112,6 @@ const uncountedOf = (m, rules, rows, voids) => {
   return { metric: m, rule: rules[m], day_rows: mine.length, counted: R.liveRows(mine, voids).length,
            why: rules[m] && rules[m].kind === 'ignore' ? 'its rule ignores it' : 'no reading counts: each is voided, or corrected and stale' };
 };
-
-// Notes are rows with event_type 'note'. They never appear on a page and
-// never enter the maths. A note you wrote on the pad (source 'you') always
-// beats one the AI wrote (source 'claude'), whatever the date.
-async function readNotes(subject) {
-  await signIn();
-  const q = () => { let b = db.from('events')
-    .select('metric, source, occurred_at, context')
-    .eq('event_type', 'note')
-    .order('occurred_at', { ascending: true })
-    .order('id', { ascending: true });
-    return subject === undefined ? b : b.eq('metric', R.slugCommit(subject)); };
-  const data = await R.readAll(q);
-  return data.map(r => ({
-    metric: r.metric, source: r.source, occurred_at: r.occurred_at,
-    text: (r.context || {}).text ?? null
-  }));
-}
 
 // ---- the writers ----
 //
@@ -320,6 +302,8 @@ export function wireServer() {
       'never removed. Print every row before you write it and wait for a yes. Transcribe only: ' +
       'never estimate, round, fill or infer a number, and say so plainly when one cannot be read. ' +
       'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
+      'Notes are what the ledger knows that is not a number; read them before advising, as you read the ledger before asking for a number. ' +
+      'Write a note only through remember, only what the user said in this conversation, never a conclusion, and only on a yes. ' +
       'When the user asks to track something new, read the ledger first and say whether a stock ' +
       'already carries that fact, naming it and why in one line: a new metric is a cost, not a free ' +
       'addition. ' +
@@ -500,18 +484,12 @@ export function wireServer() {
     'one Claude wrote, whatever the date. Pass a subject for its full history.',
     { subject: z.string().optional() },
     async ({ subject }) => {
-      const rows = await readNotes(subject);
+      await signIn();
+      const rows = await R.readNotes(db, subject);
       if (subject !== undefined) {
         return text({ subject: R.slugCommit(subject), notes: rows });
       }
-      // rows arrive oldest first, so a later row of equal standing replaces
-      // an earlier one. a 'you' row is never replaced by a 'claude' row.
-      const latest = {};
-      for (const r of rows) {
-        const cur = latest[r.metric];
-        if (!cur || r.source === 'you' || cur.source !== 'you') latest[r.metric] = r;
-      }
-      return text({ notes: Object.values(latest) });
+      return text({ notes: rows });
     }
   );
 

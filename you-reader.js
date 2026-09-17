@@ -194,6 +194,31 @@ async function readDays(db, metrics) {
     .order('metric', { ascending: true }));
 }
 
+// Notes never enter the maths. The signed-in page and the MCP read the same
+// current note per subject; asking for a subject returns its whole history.
+async function readNotes(db, subject) {
+  const q = () => { let b = db.from('events')
+    .select('metric, source, occurred_at, context')
+    .eq('event_type', 'note')
+    .order('occurred_at', { ascending: true })
+    .order('id', { ascending: true });
+    return subject === undefined ? b : b.eq('metric', slugCommit(subject)); };
+  const data = await readAll(q);
+  const rows = data.map(r => ({
+    metric: r.metric, source: r.source, occurred_at: r.occurred_at,
+    text: (r.context || {}).text ?? null
+  }));
+  if (subject !== undefined) return rows;
+  // rows arrive oldest first, so a later row of equal standing replaces
+  // an earlier one. a 'you' row is never replaced by a 'claude' row.
+  const latest = Object.create(null);
+  for (const r of rows) {
+    const cur = latest[r.metric];
+    if (!cur || r.source === 'you' || cur.source !== 'you') latest[r.metric] = r;
+  }
+  return Object.values(latest);
+}
+
 // The ledger's day for a moment, now unless another is given. The day is
 // defined once, by day_of in the database: your timezone, ending at 6am.
 // The pages and the MCP ask for it here and never work it out themselves.

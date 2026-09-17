@@ -156,6 +156,10 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .tab[aria-pressed="true"]{color:var(--amber);box-shadow:inset 0 -1px var(--amber)}
 .tab[disabled]{opacity:.35;cursor:default}
 #ledgerview{margin-top:28px}
+.note{padding:16px 0;border-bottom:1px solid var(--edge2);overflow-wrap:anywhere}
+.note-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;font:400 10px/1.5 var(--mono);color:var(--dim)}
+.note-head b{font:400 13px/1.5 var(--mono);color:var(--ink)}
+.note-text{margin:8px 0 0;white-space:pre-wrap}
 .vd td{color:var(--dim);text-decoration:line-through}
 .vd td:first-child{text-decoration:none}
 .cd s{color:var(--dim);margin-right:10px}
@@ -448,7 +452,7 @@ let SEL = YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picke
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
-let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
+let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
 let LM = null;   // the stock opened in the ledger, showing everything it holds and every day it has read
 
 async function load(){
@@ -471,7 +475,7 @@ async function load(){
   // OWNED counts the stocks with an index. YOU keeps every stock, so an active stock without an
   // index makes the day silent instead of disappearing from the average.
   SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, Object.keys(SERIES), STALEBY);
-  DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
+  DAYS = rows; LEDGER = null; NOTES = []; LTOKEN++; LIVE = null;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // progress photos: the newest of each day for the goal it names, latest wins as a correction does. the row says where the private file is
@@ -887,7 +891,7 @@ function drawWeak(g){
 }
 
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
-// notes are counted here and nothing more: their text is never read by a page
+// notes are counted here; this signed-in page also shows each subject's current note, author and time
 const laneOf = s => s === 'claude' || s === 'photo' ? 'mcp' : s === 'pad' || s === 'you' ? 'pad' : s === 'csv' ? 'import' : 'api';   // an estimate comes through the MCP door too, under its own source
 const MCP_READS = ['stocks', 'history', 'goals', 'commits', 'did_it_work', 'notes', 'cross'];   // the tools in mcp/wire.mjs that read
 const MCP_WRITES = ['record', 'estimate', 'did', 'rule', 'goal', 'remember', 'void', 'correct', 'void_commit'];   // and the ones that write: claude, except estimate, which signs photo
@@ -901,13 +905,18 @@ function applyView(){
 async function showLedger(){
   $('eyebrow').textContent = 'ledger';
   if (!LEDGER){ const k = ++LTOKEN;
-    let data = null, error = null;
-    try { data = await readAll(() => db.from('events').select('occurred_at, metric, value, unit, source, event_type').order('occurred_at', { ascending: false }).order('id', { ascending: false })); }
+    let data = null, notes = null, error = null;
+    try { [data, notes] = await Promise.all([readAll(() => db.from('events').select('occurred_at, metric, value, unit, source, event_type').order('occurred_at', { ascending: false }).order('id', { ascending: false })), readNotes(db)]); }
     catch (e) { error = e; }
     if (k !== LTOKEN) return;
     if (error){ say(error.message); return; }
-    LEDGER = data; }
+    LEDGER = data; NOTES = notes; }
   if (SHOWLEDGER) drawLedger();
+}
+function notesPanel(){
+  return `<section class="lane" aria-label="notes"><div class="lh"><div class="lt">notes</div><span>current per subject</span></div>`
+    + (NOTES.length ? NOTES.map(n => `<article class="note"><div class="note-head"><b>${esc(n.metric)}</b><span>${esc(n.source || '')}</span><time datetime="${esc(n.occurred_at || '')}">${esc(n.occurred_at || '')}</time></div><p class="note-text">${esc(n.text ?? '')}</p></article>`).join('') : '<p class="empty">No notes yet.</p>')
+    + '</section>';
 }
 function tiny(vals, tone){
   const numbers = vals.filter(Number.isFinite);
@@ -1025,7 +1034,7 @@ function drawLedger(){
     `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
   // the way back, for a hand that would rather press a button than hold the page
   const bar = `<div class="lbar"><button type="button" class="back" id="lback">back</button></div>`;
-  $('ledgerview').innerHTML = bar + how + doors + types + key + lanes.map(lane).join('') + voided + corrected + tape;
+  $('ledgerview').innerHTML = bar + how + doors + types + notesPanel() + key + lanes.map(lane).join('') + voided + corrected + tape;
 }
 
 // ---- a csv dropped on the page: read by csv-reader.js, shown, written only after a go ----
@@ -1167,7 +1176,7 @@ document.addEventListener('input', e => {
 // and anything with words to select keep the clicks they already had, and the ledger tab still just clicks.
 const HOLD_MS = 2000;
 let HELD = null, SKIPCLICK = false;
-const holdable = t => !t.closest('button, a, input, label, select, textarea, table, .rail, .chart, #shots, #full, #dropview');
+const holdable = t => !t.closest('button, a, input, label, select, textarea, table, .rail, .chart, .note, #shots, #full, #dropview');
 function fadeTo(o, ms){ const f = $('fade'); f.style.transition = ms ? `opacity ${ms}ms` : ''; f.style.opacity = o; }
 function holdEnd(){ if (!HELD) return; cancelAnimationFrame(HELD.raf); HELD = null; document.body.classList.remove('holding'); fadeTo(0, 180); }
 // the turn itself, under the fade: the far side is drawn before the fade lifts, so it is never half up
