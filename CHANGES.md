@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a picture and what it was read for, and two of them against
+  each other.** The strip moves to the foot of the goal page, and under each
+  picture stands what that day read: the goal's own measures and every estimate,
+  because an estimate is what was read off that picture. A day a stock was not
+  read shows nothing for it, never a zero and never the day before's. A picture
+  opens full, and takes a second day beside it: both days' readings and the
+  difference between them, the newer minus the older whichever was clicked
+  first. A stock only one of the two days read is left out of the difference
+  rather than counted from one end. The difference is arithmetic on two readings
+  already in the ledger, shown and never written. Escape or a click outside
+  closes it. The point of keeping the picture at all is that the eye and the
+  instrument can disagree, and they can only disagree where they can be seen
+  together: the estimate read 13 on two days running while the scale moved 1.8
+  pounds, and only the picture can say which of them was looking at something.
 - **17 Sep 2026, the pictures under the lean chart.** `you.html` now shows the
   photos `/api/photo` keeps, below the chart of the goal each photo names, which
   today is only lean. Newest day first, one a day: a second photo on a day stands

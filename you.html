@@ -298,6 +298,21 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .shot{margin:0;flex:0 0 auto;width:132px}
 .shot img,.shot i{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--panel);border:1px solid var(--edge)}
 .shot figcaption{margin-top:6px;font:400 10px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
+.shot img{cursor:zoom-in}
+.reads{margin-top:5px;display:grid;gap:2px;font:400 10px/1.3 var(--mono)}
+.reads span{display:flex;justify-content:space-between;gap:8px;color:var(--dim)}
+.reads b{font-weight:400;color:var(--ink)}
+.big[hidden]{display:none}
+.big{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:22px;overflow:auto}
+.big .pair{display:flex;gap:22px;align-items:flex-start;max-width:100%}
+.big figure{margin:0;flex:1 1 0;min-width:0;max-width:520px}
+.big img{display:block;width:100%;max-height:74vh;object-fit:contain;background:var(--panel)}
+.big figcaption{margin-top:8px;font:400 11px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
+.big .reads{font-size:11px;max-width:320px}
+.big .bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.big .bar button{background:none;border:1px solid var(--edge2);color:var(--dim);font:400 11px/1 var(--mono);letter-spacing:.08em;padding:7px 12px;cursor:pointer;border-radius:0}
+.big .bar button:hover,.big .bar button.on{border-color:var(--teal);color:var(--ink)}
+.diff b{color:var(--teal)}
 .gv-cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:34px 40px;margin-top:22px;border-top:1px solid var(--edge);padding-top:22px}
 .gv-cols:not(:has(.node,.cr,.gv-h)){display:none}
 .gv-col{min-width:0}
@@ -361,14 +376,15 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 
     <div class="chart" id="chart"><svg id="c" aria-label="chart"></svg></div>
     <div class="gv-under"><div class="rules" id="rules"></div><div class="ranges" id="ranges"></div></div>
-    <div class="shots" id="shots"></div>
     <div class="cross" id="cross"></div>
 
     <div class="gv-cols">
       <div class="gv-col"><div class="flow" id="flow"></div></div>
       <div class="gv-col"><div id="gvw"></div><div class="cm" id="cm"></div><div id="gvl"></div></div>
     </div>
+    <div class="shots" id="shots"></div>
     </div>
+    <div class="big" id="big" hidden></div>
     <div id="ledgerview" hidden></div>
     <div id="dropview" hidden></div>
     <p class="err" id="err"></p>
@@ -412,7 +428,7 @@ async function load(){
   // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
   // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
   SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
-  DAYS = rows; LEDGER = null; LTOKEN++;
+  DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // each stock's unit and every source that has written it, newest first
@@ -466,7 +482,7 @@ function draw(anim = true){ const g = cur(), m = shown();
 // the bucket is private, so every photo's address is signed in one call, and asked for again before the hour runs out
 async function drawShots(g){
   const box = $('shots'), mine = PHOTOS.filter(p => p.goal === g.id);
-  if (!mine.length){ box.innerHTML = ''; SHOTKEY = ''; return; }
+  if (!mine.length){ box.innerHTML = ''; SHOTKEY = ''; SHOTS = []; return; }
   if (!SIGNED || Date.now() - SIGNAT > 50 * 60e3){
     SIGNAT = Date.now();
     SIGNED = db.storage.from('photos').createSignedUrls(PHOTOS.map(p => p.path), 3600)
@@ -476,7 +492,78 @@ async function drawShots(g){
   if (SHOWLEDGER || cur().id !== g.id) return;   // the page moved on while the addresses were signed
   const key = g.id + '|' + SIGNAT; if (SHOTKEY === key) return; SHOTKEY = key;
   // a photo whose address could not be signed keeps its frame and its day, empty: silence, not a gap closed over
-  box.innerHTML = mine.map(p => `<figure class="shot">${url[p.path] ? `<img src="${esc(url[p.path])}" alt="" loading="lazy" decoding="async">` : '<i></i>'}<figcaption>${esc(p.day)}</figcaption></figure>`).join('');
+  box.innerHTML = mine.map((p, i) => `<figure class="shot">${url[p.path] ? `<img src="${esc(url[p.path])}" alt="" loading="lazy" decoding="async" data-shot="${i}">` : '<i></i>'}<figcaption>${esc(p.day)}</figcaption>${readsOf(g, p.day)}</figure>`).join('');
+  SHOTS = mine.map(p => ({ ...p, url: url[p.path] || '' }));
+}
+
+// ---- what the day read, under its picture ----
+//
+// The picture and the numbers taken from it, on one day, side by side. That is
+// the whole point of keeping both: the eye and the instrument disagreeing is
+// information, and they can only disagree where they can be seen together.
+//
+// Which numbers: the goal's own measures, and every estimate, because an
+// estimate is what was read off this picture. A day a stock was not read shows
+// nothing for it rather than a zero or the day before's.
+function shotStocks(g) {
+  const own = g && g.measures ? g.measures.slice() : [];
+  for (const m of Object.keys(RULES).sort()) if (/_est$/.test(m) && !own.includes(m)) own.push(m);
+  return own;
+}
+
+// the day rows that count, worked out once a render rather than once a picture
+let LIVE = null;
+const liveNow = () => LIVE || (LIVE = liveRows(DAYS, VOIDS));
+
+function readsOf(g, day) {
+  const live = liveNow(), out = [];
+  for (const m of shotStocks(g)) {
+    const r = live.find(x => x.metric === m && x.day === day);
+    if (r) out.push(`<span>${esc(m)}<b>${num(Number(r.mean))}${UNITS[m] ? ' ' + esc(UNITS[m]) : ''}</b></span>`);
+  }
+  return out.length ? `<div class="reads">${out.join('')}</div>` : '';
+}
+
+// ---- one picture, full, and two of them against each other ----
+//
+// A photo on its own says how you look. Two of them, far enough apart, say what
+// changed, which is the only question a body series is asked. So the full view
+// takes a second day and shows both, with what each day read and the difference
+// between them. The difference is arithmetic on two readings that are both in
+// the ledger; it is shown and never written.
+let SHOTS = [], BIGA = -1, BIGB = -1;
+
+function bigOne(i) {
+  const p = SHOTS[i];
+  if (!p) return '';
+  return `<figure>${p.url ? `<img src="${esc(p.url)}" alt="">` : '<i></i>'}<figcaption>${esc(p.day)}</figcaption>${readsOf(cur(), p.day)}</figure>`;
+}
+
+// every stock both days read, and what it did between them
+function bigDiff(a, b) {
+  if (!SHOTS[a] || !SHOTS[b]) return '';
+  const live = liveNow(), at = d => m => live.find(x => x.metric === m && x.day === d);
+  // the newer day minus the older one, whichever was clicked first
+  const [older, newer] = SHOTS[a].day < SHOTS[b].day ? [a, b] : [b, a];
+  const A = at(SHOTS[newer].day), B = at(SHOTS[older].day);
+  const out = [];
+  for (const m of shotStocks(cur())) {
+    const ra = A(m), rb = B(m);
+    if (!ra || !rb) continue;
+    const d = Number(ra.mean) - Number(rb.mean);
+    out.push(`<span>${esc(m)}<b>${d > 0 ? '+' : ''}${num(d)}${UNITS[m] ? ' ' + esc(UNITS[m]) : ''}</b></span>`);
+  }
+  return out.length ? `<div class="reads diff">${out.join('')}</div>` : '';
+}
+
+function drawBig() {
+  const box = $('big');
+  if (BIGA < 0){ box.hidden = true; box.innerHTML = ''; return; }
+  const days = SHOTS.map((p, i) => i === BIGA ? '' : `<button type="button" data-cmp="${i}"${i === BIGB ? ' class="on"' : ''}>${esc(p.day)}</button>`).filter(Boolean).join('');
+  box.hidden = false;
+  box.innerHTML = `<div class="pair">${bigOne(BIGA)}${BIGB >= 0 ? bigOne(BIGB) : ''}</div>`
+    + (BIGB >= 0 ? bigDiff(BIGA, BIGB) : '')
+    + (days ? `<div class="bar">${days}</div>` : '');
 }
 
 // ---- goals, listed like stocks: name, the line, the index and its move ----
@@ -976,6 +1063,7 @@ document.addEventListener('drop', e => {
     applyView(); drawDrop(); dropDays(DROP);
   }, err => say(err.message || String(err)));
 });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
 document.addEventListener('input', e => {
   const el = e.target.closest && e.target.closest('#dropview input[data-col]');
   if (!el || !DROP || DROP.writing || DROP.done) return;
@@ -992,6 +1080,15 @@ document.addEventListener('input', e => {
 const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
+  // the full view holds the page: a day picks the second picture, anywhere else leaves
+  if (BIGA >= 0){
+    const cmp = e.target.closest('#big [data-cmp]');
+    if (cmp){ const i = Number(cmp.dataset.cmp); BIGB = BIGB === i ? -1 : i; drawBig(); return; }
+    if (e.target.closest('#big figure')) return;
+    BIGA = BIGB = -1; drawBig(); return;
+  }
+  const shot = e.target.closest('#shots [data-shot]');
+  if (shot){ BIGA = Number(shot.dataset.shot); BIGB = -1; drawBig(); return; }
   // a dropped file holds the page until it is written or left: a go writes, a click outside it leaves
   if (DROP){ if (e.target.closest('#dgo')){ goDrop(); return; } if (DROP.writing || e.target.closest('#dropview')) return; closeDrop(); }
   const rg = e.target.closest('[data-range]');
