@@ -412,7 +412,7 @@ const num = v => Number.isInteger(v) ? String(v) : Math.abs(v) >= 100 ? String(M
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
-let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, STALEBY = () => STALE_DAYS, VOIDS = {}, CVOIDS = {}, FEEDS = [];   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record. FEEDS: each door, how far behind it is, and whether that is its promise or a dead cable
+let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, STARTS = {}, STALEBY = () => STALE_DAYS, VOIDS = {}, CVOIDS = {}, FEEDS = [];   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record. FEEDS: each door, how far behind it is, and whether that is its promise or a dead cable
 let SEL = YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
@@ -420,14 +420,14 @@ let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal 
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
-  const [today, all, rules, goals, voids, cvoids, feeds] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db)]);
+  const [today, all, rules, goals, voids, cvoids, feeds, starts] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db)]);
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
-  TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids;
+  TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids; STARTS = starts;
   FEEDS = feedOf(feeds);   // which doors are feeding the ledger, and which have stopped
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);   // a voided commit is in no test, no scan, and collides with nothing
   // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
   // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
-  SERIES = rankSeries(rows, rules, voids); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
+  SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
   DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction

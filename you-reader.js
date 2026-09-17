@@ -358,6 +358,52 @@ async function landRows(db, rows, tick = () => {}) {
 // guess: the day reads nothing until it is corrected again.
 const isDay = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 
+// ---- where a stock begins ----
+//
+// A stock can carry two different things under one name. A channel's first
+// hundred days, when four people a day watched, and the same channel with
+// thousands: the same column, the same units, and nothing in common. The
+// baseline is the first thirty readings, so the second thing is scored against
+// the first, in a unit the first invented, and the number that comes out is
+// arithmetic.
+//
+// Voiding is the wrong tool for it. A void says one reading is not to be
+// counted, and its friction, typing the number back, is about being on the
+// right row. Here there is no wrong row: there are a hundred and forty right
+// ones that belong to something else. A start row says so in one line: this
+// stock's series begins on this day, and the readings before it stay in the
+// ledger, in no series and no count, exactly where they were.
+//
+// Latest wins, as a rule does, and the old ones stay on the record. A start
+// moved back gives the readings their place again, so nothing here is one way.
+async function readStarts(db) {
+  const data = await readAll(() => db
+    .from('events')
+    .select('metric, context, occurred_at')
+    .eq('event_type', 'start')
+    .order('occurred_at', { ascending: true })
+    .order('id', { ascending: true }));
+  const out = {};
+  for (const r of data) {
+    const d = (r.context || {}).day;
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) out[r.metric] = d;
+    else delete out[r.metric];   // a row that names no day puts the stock back to its whole self
+  }
+  return out;
+}
+
+// One start row, signed by whoever writes it. The day is the first that counts.
+function writeStart(db, metric, day) {
+  return db.from('events').insert({
+    occurred_at: new Date().toISOString(),
+    metric,
+    event_type: 'start',
+    value: null,
+    source: 'you',
+    context: { day }
+  });
+}
+
 async function readVoids(db, dayOf) {
   const data = await readAll(() => db
     .from('events')
@@ -648,12 +694,15 @@ function indexOf(value, baseline, lowerIsBetter) {
 // nothing in YOU, in a goal or in the scan. The baseline rebuilds from the
 // readings that remain, so a metric can start clean without changing its
 // name, and voided away to nothing it has no series at all.
-function rankSeries(rows, rules, voids = {}) {
+function rankSeries(rows, rules, voids = {}, starts = {}) {
   const out = {}, live = liveRows(rows, voids);   // a voided day left out, a corrected day at its corrected value
   for (const metric of Object.keys(rules)) {
     const rule = rules[metric];
     if (rule.kind === 'ignore') continue;
-    const mine = live.filter(r => r.metric === metric);
+    // the series begins where the stock does, so the baseline, the spread, the
+    // gate and every point past them all follow from this one line
+    const from = starts[metric];
+    const mine = live.filter(r => r.metric === metric && (!from || r.day >= from));
     if (!mine.length) continue;
     const values = mine.map(r => Number(r.mean));
     const scored = values.map(v => distanceOf(v, rule));

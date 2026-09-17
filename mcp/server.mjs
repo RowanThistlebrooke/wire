@@ -29,7 +29,7 @@ const R = new Function(src + `
   return { readMetrics, readRules, readDays, readDay, isDate, lastDay, readWhen, momentOn, readingKey, rankSeries, etfSeries,
            readCommits, testCommit, dayNum, slugCommit,
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
-           readAll, readSources, staleAfter, staleBounds, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
+           readAll, readSources, staleAfter, staleBounds, readStarts, writeStart, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
@@ -91,15 +91,15 @@ const momentOn = date => R.momentOn(db, date, ledgerDay);
 // for through the same ledgerDay, so a day that cannot be read is said in words and never guessed.
 async function load({ day = false } = {}) {
   await signIn();
-  const [today, all, rules, voids, cvoids, sources] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay), R.readCommitVoids(db), R.readSources(db)]);
+  const [today, all, rules, voids, cvoids, sources, starts] = await Promise.all([day ? ledgerDay() : null, R.readMetrics(db), R.readRules(db), R.readVoids(db, ledgerDay), R.readCommitVoids(db), R.readSources(db), R.readStarts(db)]);
   const [allCommits, rows] = await Promise.all([day ? R.readCommits(db, today) : null, R.readDays(db, all)]);
-  const series = R.rankSeries(rows, rules, voids);
+  const series = R.rankSeries(rows, rules, voids, starts);
   // each stock is stale on its own door's promise plus the slack, never one number for all
   const staleBy = R.staleBounds(sources);
   // every question about commits is asked of the ones that count. The whole list is kept beside it, so a
   // voided commit can still be named and counted again, and so its name is still taken.
   const commits = allCommits && R.liveCommits(allCommits, cvoids);
-  return { all, rules, commits, allCommits, cvoids, series, rows, today, voids, staleBy };
+  return { all, rules, commits, allCommits, cvoids, series, rows, today, voids, starts, staleBy };
 }
 
 const text = o => ({ content: [{ type: 'text', text: JSON.stringify(o, null, 2) }] });
@@ -801,6 +801,49 @@ export function wireServer() {
       return text(error ? { error: error.message }
                         : { written: { metric, event_type: 'void', source: 'claude', context: { metric, day, voided } },
                             [voided ? 'not_counted' : 'counted_again']: { metric, value, day } });
+    }
+  );
+
+  server.tool(
+    'start',
+    'Say which day a stock\'s series begins on, when its early readings are a different thing under the same ' +
+    'name: a channel that four people a day watched and the same channel with thousands share a column, a unit ' +
+    'and nothing else, and the baseline is the first thirty readings, so the second is scored in a unit the ' +
+    'first invented. It removes nothing. It writes one start row, the latest per stock wins as a rule does, and ' +
+    'the readings before that day stay in the ledger, in no series, no index, no goal and no scan. The baseline, ' +
+    'the spread and the gate are all rebuilt from the day named on. Voiding is the wrong tool for this: a void ' +
+    'says one reading should not count and costs typing its number back, which is about being on the right row, ' +
+    'and here there is no wrong row but a hundred right ones belonging to something else. Call it first with no ' +
+    'confirm: it answers with what the series would become and the phrase that does it, which carries how many ' +
+    'readings it takes out, so the size of the act is on the page before it happens. Nothing is written until ' +
+    'the user sends that phrase back. A day earlier than the stock\'s first reading, or no day at all, gives the ' +
+    'stock its whole self again.',
+    { metric: z.string(), day: z.string(), confirm: z.string().optional() },
+    async ({ metric, day, confirm }) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-05-01, not ${day}` });
+      const { rules, rows, voids, starts } = await load();
+      if (!(metric in rules)) return text({ error: `no stock called ${metric}, or it has no rule yet` });
+      const live = R.liveRows(rows, voids).filter(r => r.metric === metric);
+      if (!live.length) return text({ error: `no reading of ${metric} counts, so it has no series to begin` });
+      const before = live.filter(r => r.day < day).length, after = live.length - before;
+      if (!after) return text({ error: `no reading of ${metric} falls on or after ${day}: a stock cannot begin after its last reading` });
+      if (starts[metric] === day) return text({ error: `${metric} already begins on ${day}` });
+      const was = R.rankSeries(rows, { [metric]: rules[metric] }, voids, starts)[metric];
+      const now = R.rankSeries(rows, { [metric]: rules[metric] }, voids, { ...starts, [metric]: day })[metric];
+      const phrase = `start ${metric} on ${day}, ${before} readings before it`;
+      const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (said !== phrase) return text({
+        metric, day, takes_out: before, keeps: after,
+        now: was ? { readings: was.length, index: R.indexState(was) === 'none' ? null : was[was.length - 1].rank, state: R.indexState(was) } : null,
+        after: now ? { readings: now.length, index: R.indexState(now) === 'none' ? null : now[now.length - 1].rank, state: R.indexState(now) } : null,
+        print: `${metric} begins ${day}\n${before} readings before it leave the count, ${after} stay\nto do this, send: ${phrase}`,
+        say: 'print the three lines in print to the user, exactly as they are, and nothing else. Write nothing ' +
+             'until the user sends that phrase back; then call start again with confirm set to what they sent.'
+      });
+      const { error } = await R.writeStart(asClaude, metric, day);
+      return text(error ? { error: error.message }
+                        : { written: { metric, event_type: 'start', source: 'claude', context: { day } },
+                            begins: { metric, day, took_out: before, keeps: after } });
     }
   );
 

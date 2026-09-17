@@ -3,6 +3,28 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a stock can say which day it begins on.** One name can carry two
+  different things. A channel four people a day watched and the same channel
+  with thousands share a column, a unit and nothing else, and because the
+  baseline is the first thirty readings, the second is scored in a unit the
+  first invented: a percentage that swings twenty points because one viewer
+  finished a video sets the size of an index point forever. Law 9 said the fix
+  was the user's, to take those readings out of the count or start the stock
+  clean under a new name, and gave no way to do either. Voiding is the wrong
+  tool: a void says one reading should not count, and its friction, typing the
+  number back, is about being on the right row, where here there is no wrong row
+  but a hundred right ones belonging to something else. So there is a `start`
+  row: `event_type` `start`, the stock's name, and the day its series begins.
+  Latest wins as a rule does, the readings before it stay in the ledger in no
+  series and no count, and the baseline, the spread and the gate are all rebuilt
+  from that day. A day before the stock's first reading gives it its whole self
+  back, so nothing here goes one way only. Its friction is the size of the act:
+  the phrase carries how many readings leave the count, and the answer shows
+  what the index is now and what it would become, before anything is written.
+  **Known limit:** sell.html's public read-only view does not know about start
+  rows — they are not in its allow-list and it draws the whole series — so a
+  stock with a start would read differently in public than in private. That page
+  is not live; this is written down so it is fixed before it is.
 - **17 Sep 2026, the full view had taken a name the page was already using.**
   The picture's full view was given the class `big`, which the page has used
   since the beginning for the headline number, the weak point's number and one
