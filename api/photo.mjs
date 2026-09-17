@@ -17,9 +17,14 @@
 //
 // It signs in as the owner, through mcp/server.mjs, with the same publishable
 // key and password every other door uses. No service_role key anywhere.
+//
+// It takes WIRE_PHOTO_TOKEN as well as WIRE_TOKEN, so the phone can carry a
+// token that opens this door and nothing else. A share sheet is the likeliest
+// place a token is lost, and losing one that can only put a picture in a bucket
+// costs far less than losing the one that drives the MCP.
 
 import { signedIn } from '../mcp/server.mjs';
-import { allowed, fromHeader } from '../mcp/token.mjs';
+import { allowedFor, fromHeader } from '../mcp/token.mjs';
 
 export const config = { api: { bodyParser: { sizeLimit: '4mb' } } };
 
@@ -48,7 +53,7 @@ async function bytes(req) {
 
 export default async function handler(req, res) {
   if (req.query && 'token' in req.query) return answer(res, 400, { error: 'the token goes in the Authorization header, never in the address' });
-  if (!allowed(fromHeader(req))) return answer(res, 401, { error: 'unauthorized' });
+  if (!allowedFor('WIRE_PHOTO_TOKEN', fromHeader(req))) return answer(res, 401, { error: 'unauthorized' });
   if (req.method !== 'POST') {
     res.setHeader('allow', 'POST');
     return answer(res, 405, { error: 'method not allowed' });
