@@ -3,6 +3,21 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, the setup ends with your history, not your first row.** Six
+  steps built the thing and stopped at one reading, which is a ledger that says
+  nothing, while everyone arrives with years of readings already sitting in an
+  app they pay for. There is a seventh step now: open your own you.html, export
+  from anything with an export button, drag the CSV on, name the columns you
+  want and leave the rest blank. It carries the one rule that saves a wasted
+  evening, take the rates and leave the totals, because a total that only climbs
+  leaves its own baseline behind and can never hold an index while a rate has a
+  level to vary around. And the walkthrough now ends by saying what a copy of
+  the Wire actually has: two doors, saying a reading to Claude and dropping an
+  export on the page, which between them cover most of it; and a third kind,
+  the puller that fetches every morning without you, which is not open, because
+  each one needs that service's keys and a schedule on a machine that stays on.
+  Until someone sets one up, every reading arrives because it was sent. Better
+  said in the setup than discovered in the second week.
 - **17 Sep 2026, a start moves the baseline and nothing else.** As it shipped
   an hour ago, a start row took the readings before its day out of the series
   altogether, and another Claude reading the same ledger said the obvious thing

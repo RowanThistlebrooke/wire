@@ -56,9 +56,15 @@ async function licensed(raw) {
   return keep({ ok: true });
 }
 
-// ---- the six steps ----
-const STEPS = ['fork the repo', 'deploy on Vercel', 'add the env vars', 'run the table', 'add your connector', 'say a number'];
-const EASE = ['easy', 'easy', 'medium', 'medium', 'easy', 'easy'];
+// ---- the seven steps ----
+//
+// Six of them build the thing. The seventh is the one that makes it worth
+// having: a ledger with one row in it says nothing, and everyone arrives with
+// years of readings already sitting in an app they pay for. So the last step
+// is bringing those in, and it is the last because it is the first one that
+// pays anything back.
+const STEPS = ['fork the repo', 'deploy on Vercel', 'add the env vars', 'run the table', 'add your connector', 'say a number', 'bring your history in'];
+const EASE = ['easy', 'easy', 'medium', 'medium', 'easy', 'easy', 'easy'];
 
 // MCP.md: during a step sequence show only NOW, its difficulty, and the steps with done marks.
 function now(i, lines, ask) {
@@ -119,7 +125,21 @@ function step(done, site, tz) {
     'Say a reading, like: my weight today is 81.4 kg.',
     'Claude shows you the row before it writes it. Say yes.'
   ], 'Say done when Claude says it wrote the row.');
-  return `Done. Your first row is in.\n\nYour connector is ${site}/api/mcp\nKeep your WIRE_TOKEN safe; it is what lets Claude in.`;
+  if (done === 6) return now(6, [
+    `Open ${site}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`,
+    'Export from something you already use. Whoop, Apple Health, Strava, a bank, a spreadsheet: anything with an export button gives you a CSV.',
+    'Drag the CSV onto the page. It reads every row it can and says how many it could not, and why.',
+    'Type a name beside each column you want. Leave the rest blank, and blank is left out.',
+    'Take the rates and leave the totals. Percentage watched, not views. Minutes a session, not minutes. A total that only climbs leaves its own baseline behind and can never hold an index; a rate has a level to vary around.',
+    'Press go.'
+  ], 'Say done when the rows have landed.');
+  return `Done. Your history is in.\n\nYour connector is ${site}/api/mcp\nKeep your WIRE_TOKEN safe; it is what lets Claude in.\n\n`
+    + `Two doors are open to you now and they cover most of it.\n`
+    + `  Say it     any reading, to Claude, in a chat with wire on\n`
+    + `  Drop it    any export, any app, onto ${site}/you.html\n\n`
+    + `A third kind of door exists, one that fetches your numbers every morning without you, and it is not open yet: `
+    + `each one needs that service's keys and a schedule on a machine that is always on. `
+    + `Until you set one up, every reading arrives because you sent it. That is worth knowing before you plan around it.`;
 }
 
 function setupServer() {
