@@ -293,6 +293,11 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .gv-under{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;column-gap:14px}
 .gv-under .rules{margin-top:6px}
 .gv-under .ranges{margin-left:auto}
+.shots{display:flex;gap:12px;overflow-x:auto;margin-top:22px;padding-bottom:4px}
+.shots:empty{display:none}
+.shot{margin:0;flex:0 0 auto;width:132px}
+.shot img,.shot i{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--panel);border:1px solid var(--edge)}
+.shot figcaption{margin-top:6px;font:400 10px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .gv-cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:34px 40px;margin-top:22px;border-top:1px solid var(--edge);padding-top:22px}
 .gv-cols:not(:has(.node,.cr,.gv-h)){display:none}
 .gv-col{min-width:0}
@@ -356,6 +361,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 
     <div class="chart" id="chart"><svg id="c" aria-label="chart"></svg></div>
     <div class="gv-under"><div class="rules" id="rules"></div><div class="ranges" id="ranges"></div></div>
+    <div class="shots" id="shots"></div>
     <div class="cross" id="cross"></div>
 
     <div class="gv-cols">
@@ -394,6 +400,7 @@ let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}
 let SEL = YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
+let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
 
 async function load(){
@@ -417,6 +424,14 @@ async function load(){
   UNITS = {}; SOURCES = {};
   for (const r of u){ if (r.unit && !(r.metric in UNITS)) UNITS[r.metric] = r.unit; const s = SOURCES[r.metric] || (SOURCES[r.metric] = []); if (r.source && !s.includes(r.source)) s.push(r.source); }
   STALEBY = staleBounds(SOURCES);   // each stock's own limit: its door's promise plus the slack
+  // progress photos: the newest of each day for the goal it names, latest wins as a correction does. the row says where the private file is
+  const ps = await readAll(() => db.from('events').select('context').eq('event_type', 'photo').order('occurred_at', { ascending: false }).order('id', { ascending: false }));
+  const took = new Set(); PHOTOS = [];
+  for (const r of ps){ const c = r.context || {}, k = c.goal + '|' + c.day;
+    if (typeof c.path !== 'string' || typeof c.day !== 'string' || typeof c.goal !== 'string' || took.has(k)) continue;
+    took.add(k); PHOTOS.push({ path: c.path, day: c.day, goal: c.goal }); }
+  PHOTOS.sort((a, b) => a.day < b.day ? 1 : a.day > b.day ? -1 : 0);
+  SIGNED = null; SHOTKEY = '';
   // a year back, further only to hold a reading or a commit's before
   const t = dayNum(TODAY); let lo = t - 364;
   for (const m of OWNED) lo = Math.min(lo, dayNum(SERIES[m][0].day));
@@ -445,7 +460,24 @@ function render(){ drawRail(); if (SHOWLEDGER) showLedger(); else draw(); }
 function draw(anim = true){ const g = cur(), m = shown();
   const fx = FX && cellOf(FX);
   if (!SHOWLEDGER) $('eyebrow').textContent = g.name + (fx ? ` · ${FX.o} · ${FX.l} +${fx.l.lag} d` : m ? ' · ' + m : '');
-  drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); drawWeak(g); }
+  drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); drawWeak(g); drawShots(g); }
+
+// ---- progress photos: under the chart of the goal a photo names, newest day first, the day under each ----
+// the bucket is private, so every photo's address is signed in one call, and asked for again before the hour runs out
+async function drawShots(g){
+  const box = $('shots'), mine = PHOTOS.filter(p => p.goal === g.id);
+  if (!mine.length){ box.innerHTML = ''; SHOTKEY = ''; return; }
+  if (!SIGNED || Date.now() - SIGNAT > 50 * 60e3){
+    SIGNAT = Date.now();
+    SIGNED = db.storage.from('photos').createSignedUrls(PHOTOS.map(p => p.path), 3600)
+      .then(({ data, error }) => { if (error) throw error; return Object.fromEntries(data.filter(s => s.signedUrl).map(s => [s.path, s.signedUrl])); });
+  }
+  let url; try { url = await SIGNED; } catch (e) { SIGNED = null; say(e.message || String(e)); return; }
+  if (SHOWLEDGER || cur().id !== g.id) return;   // the page moved on while the addresses were signed
+  const key = g.id + '|' + SIGNAT; if (SHOTKEY === key) return; SHOTKEY = key;
+  // a photo whose address could not be signed keeps its frame and its day, empty: silence, not a gap closed over
+  box.innerHTML = mine.map(p => `<figure class="shot">${url[p.path] ? `<img src="${esc(url[p.path])}" alt="" loading="lazy" decoding="async">` : '<i></i>'}<figcaption>${esc(p.day)}</figcaption></figure>`).join('');
+}
 
 // ---- goals, listed like stocks: name, the line, the index and its move ----
 function moveOf(pts){ if (pts.length < 8) return null; return Math.round((pts[pts.length-1].rank - pts[pts.length-8].rank) * 10) / 10; }

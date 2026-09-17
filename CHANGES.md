@@ -3,6 +3,18 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, the pictures under the lean chart.** `you.html` now shows the
+  photos `/api/photo` keeps, below the chart of the goal each photo names, which
+  today is only lean. Newest day first, one a day: a second photo on a day stands
+  in for the first on the page, latest wins as a correction does, and the first
+  stays in the bucket and on the record. The day is under each and nothing else.
+  The bucket is private, so the page signs every address it needs in one call,
+  good for an hour, and asks again before the hour is out. A file that cannot be
+  signed keeps its frame and its day, empty, rather than closing the gap. The
+  rows are read through `readAll` like every other read that grows. None of it
+  is in `you-reader.js`, so the public read-only page, which loads that file and
+  not this one, cannot show a photo.
+
 - **17 Sep 2026, YouTube today, from a total that only climbs.** The Analytics
   API is 48 to 72 hours behind and has no way to be faster, which is why the
   channel's numbers arrive on Thursday for Monday. The Data API is current, but
