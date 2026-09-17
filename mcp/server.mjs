@@ -307,7 +307,11 @@ export function wireServer() {
       'write only once the user sends that phrase back. A number the user gave you goes through ' +
       'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +
       'a name ending _est. Never the other way round. A wrong estimate is read again through estimate, never ' +
-      'corrected by a typed number.'
+      'corrected by a typed number. ' +
+      'Connecting a source: a total that grows keeps no index, because it leaves the unit its baseline was ' +
+      'drawn in behind, so track the rate the total hides and never the total. And never declare a rule for a ' +
+      'stock no door feeds: a stale stock means YOU has no value that day at all, so a number that arrives only ' +
+      'when the user remembers to fetch it stays undeclared, still in the ledger and still history.'
   });
 
   server.tool(

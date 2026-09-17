@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, connecting a source is a routine, and it ships.** Adding
+  YouTube took a whole evening and cost two wrong turns that every copy of the
+  Wire would have taken in the same order: a year of totals backfilled into a
+  stock that could never hold an index again, and three stocks declared with a
+  rule when only one of them had a door to feed it, which would have blanked
+  YOU a week later. Neither was a bug. Both were the absence of a routine.
+  MCP.md gains one: find the door's floor before anything and say it out loud,
+  ask of every column whether it has a level or grows and track the rate the
+  total hides, declare no rule for a stock no door feeds, schedule at the floor
+  and say what now runs without you, and finish on `health` because a door not
+  named in feed is not connected. The two that cost a page rather than an hour,
+  the rate and the door, ship in the server's own instructions, so a copy of
+  the Wire carries them whether or not anyone opens the file.
 - **17 Sep 2026, a door's promise is one number, and YouTube's is three days.**
   The promise lived twice, as `FED` in you-reader.js and as `SETTLE` in
   pull/social.mjs, and two copies of one number drift the first time either

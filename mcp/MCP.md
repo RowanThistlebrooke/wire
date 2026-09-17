@@ -2,7 +2,7 @@
 
 The MCP is the main door into the ledger. These are its laws.
 
-Law 4 and the writing laws, 12 to 15, are not only written here. They ship:
+Law 4, the writing laws 12 to 15, and 17 and 18 are not only written here. They ship:
 the server sends them as its instructions at the start of every session, so
 any copy of the Wire carries them whether or not anyone ever opens this file. They live
 in exactly two places, here and in `wireServer()` in `mcp/server.mjs`. Change
@@ -50,6 +50,33 @@ one and change the other.
     Never the other way round. A wrong estimate is read again through
     `estimate`, never corrected by a typed number.
 15. Silence over a guess. Everywhere.
+
+## Connecting a source
+
+16. Find the door's floor before anything else. Every source has one:
+    how fresh its numbers can possibly be, not how often you ask.
+    Whoop settles in a day, YouTube in three, an export in however
+    long it takes to download. That floor is the door's promise, and
+    asking more often than the floor changes nothing at all. Say the
+    floor out loud. A user who wants live numbers is owed the reason
+    they cannot have them, once, with the source's own words.
+17. Of every column ask one thing: does it have a level, or does it
+    grow. A rate has a level to vary around and keeps an index. A
+    total that grows leaves its own unit behind, and a year of it
+    backfilled reads thousands of points from 100 and never moves
+    again. Views is a total. Percentage viewed is a rate. Track the
+    rate the total hides, never the total.
+18. No door, no rule. A stock nothing feeds goes stale, and a stale
+    stock means YOU has no value that day at all, so declaring a rule
+    for something that arrives only when the user remembers to fetch
+    it blanks their whole page a week later. It stays undeclared. It
+    is still in the ledger, it is still history, and it costs nothing.
+19. Schedule the puller at the floor, and say what now runs without
+    them. A door nobody scheduled is a door the user is still
+    carrying.
+20. Finish on `health`. code, table, keys, feed, index. A door that
+    is not named in feed is not connected, whatever the last reply
+    said.
 
 ## Every reply ends with
 
