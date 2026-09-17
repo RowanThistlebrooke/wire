@@ -3,24 +3,6 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
-- **17 Sep 2026, the public page could not read its own ledger.** The page a
-  buyer sees before they buy shares one maths file with every other page, and
-  when the readers there started taking a thousand rows at a time the small
-  fake reader this page hands them still spoke the older language. Every read
-  threw on the first call. The page drew nothing at all, and nobody saw it,
-  because it is not linked from anywhere yet. That is the whole argument for
-  not having a second copy of anything: the page did not change, the thing
-  underneath it did, and a page that never runs cannot tell you it is broken.
-  It pages properly now. Two things came with it. It did not know about a
-  start row, so a stock with one would have read differently in public than it
-  does in private, which is the worst kind of wrong: quietly, and only where
-  other people are looking. And it could not say whether a reading was out of
-  date, because the snapshot it reads never said which door wrote which stock,
-  and a day behind means nothing until you know whose day it is. The snapshot
-  publishes that map now, for allowlisted stocks only, and publishes whether
-  the map is complete, because a page working freshness out from a partial
-  list is worse than one saying it cannot tell. The snapshot contract moves
-  from 3 to 4 and an older one is refused rather than half read.
 - **17 Sep 2026, the health check said the opposite of what happened.**
   `health` names every stock that has outgrown its baseline, and the gate it
   reports catches both directions: a stock varying eight times as much as it
