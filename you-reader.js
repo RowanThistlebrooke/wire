@@ -1,7 +1,7 @@
 const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
-// A reading is good for this many days. After that the stock is stale
-// and YOU refuses to draw, rather than guessing or quietly dropping it.
+// Slack beyond a door's promise, before its latest reading is called stale.
+// Freshness never supplies a missing day's index.
 const STALE_DAYS = 7;
 
 // ---- reading all of it, and never some of it ----
@@ -371,11 +371,11 @@ const isDay = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
 // counted, and its friction, typing the number back, is about being on the
 // right row. Here there is no wrong row: there are a hundred and forty right
 // ones that belong to something else. A start row says so in one line: this
-// stock's series begins on this day, and the readings before it stay in the
-// ledger, in no series and no count, exactly where they were.
+// stock's index begins on this day. Earlier readings keep their raw values,
+// but have no index: they never lived in the later baseline's unit.
 //
 // Latest wins, as a rule does, and the old ones stay on the record. A start
-// moved back gives the readings their place again, so nothing here is one way.
+// moved back makes the earlier readings eligible for an index again.
 async function readStarts(db) {
   const data = await readAll(() => db
     .from('events')
@@ -575,8 +575,8 @@ function distanceOf(value, rule) {
 // inside it changes what 100 means. At BASELINE it freezes.
 //
 // The gate lives here, once, because it is the same question everywhere: the
-// page draws it, the MCP reports it, and a goal line counts only the stocks
-// that pass it. Three states and nothing else.
+// page draws it and the MCP reports it. An active stock that cannot pass it
+// leaves a gap in its goal line. Three states and nothing else.
 const BASELINE = 30;
 
 // A stock can also outgrow its baseline, and then the baseline is intact and
@@ -642,13 +642,26 @@ function indexState(pts) {
   const p = pts || [];
   if (!(p.spread > 0)) return 'none';
   if (offScaleBy(p)) return 'none';
-  return p.length < BASELINE ? 'moving' : 'firm';
+  return (p.baselineCount ?? p.length) < BASELINE ? 'moving' : 'firm';
+}
+
+// A stock joins an aggregate at its start, or its first reading if that is later.
+function indexFrom(pts) {
+  const first = pts && pts[0];
+  return !first ? null : pts.start && pts.start > first.day ? pts.start : first.day;
+}
+
+// An index on this day only. A missing or rankless day never borrows another day.
+function indexOn(pts, day) {
+  if (indexState(pts) === 'none') return null;
+  return pts.find(p => p.day === day && Number.isFinite(p.rank)) || null;
 }
 
 // Why there is no index, in the stock's own terms, for every door that says
 // so. The gate lives in one place and so does its reason.
 function noIndexWhy(pts) {
   const p = pts || [];
+  if (p.start && p.baselineCount === 0) return `no readings on or after this stock's start on ${p.start}`;
   if (!(p.spread > 0)) return 'this stock\'s baseline never moved, so there is nothing to score a reading against';
   const by = outgrownBy(p), off = offScaleBy(p);
   if (off && by >= OUTGROWN) return `this stock has outgrown its baseline: it varies about ${Math.round(off)} times as much now as across its first ${BASELINE} readings, so an index drawn in the old unit would be arithmetic and not a reading. A total that grows has no level to measure around: track a rate, or start the stock clean under a new name`;
@@ -693,7 +706,7 @@ function indexOf(value, baseline, lowerIsBetter) {
 
 // Returns { metric: [{ day, value, rank }] }, each series carrying the spread
 // of its own baseline, which is what decides whether it has an index at all.
-// value is always the real reading. rank is the index.
+// value is always the real reading. rank is null, with why, when it has no index.
 //
 // A voided reading is in none of this: no series, so no index, and so
 // nothing in YOU, in a goal or in the scan. The baseline rebuilds from the
@@ -708,22 +721,19 @@ function rankSeries(rows, rules, voids = {}, starts = {}) {
     if (!mine.length) continue;
     const values = mine.map(r => Number(r.mean));
     const scored = values.map(v => distanceOf(v, rule));
-    // A start row moves where the baseline is taken from, and moves nothing
-    // else. Every reading stays in the series and on the chart, the early ones
-    // scored against the later baseline, so a fall is still a fall and can
-    // still be seen. What changes is only the unit today is drawn in: a stock's
-    // first thirty readings decide how big one index point is, and when those
-    // thirty came from something the stock no longer is, every reading after
-    // them is drawn in a unit that measures nothing. Taking the readings out
-    // instead would fix the unit and lose the fall, which is a worse trade:
-    // the fall is the true part.
-    const base = baselineOf(scored, mine.map(r => r.day), starts[metric]);
+    // The same baseline, taken from the start day. Earlier readings remain raw;
+    // scoring them in a later unit would invent both rises and falls.
+    const start = starts[metric] || null;
+    const base = baselineOf(scored, mine.map(r => r.day), start);
     const lower = rule.kind === 'down' || rule.kind === 'band';
     const pts = mine.map((r, i) => ({
       day: r.day,
       value: values[i],
-      rank: indexOf(scored[i], base, lower)
+      rank: start && r.day < start ? null : indexOf(scored[i], base, lower),
+      ...(start && r.day < start ? { why: `before this stock's start on ${start}` } : {})
     }));
+    pts.start = start;
+    pts.baselineCount = base.length;
     // The baseline's spread rides with the series, because only here is the
     // baseline still in hand: a band rule scores a reading by its distance
     // from the band, so nothing downstream could work it out from the points.
@@ -735,8 +745,11 @@ function rankSeries(rows, rules, voids = {}, starts = {}) {
     // told from one that has simply got better. Under two such readings there
     // is nothing to ask, and spreadOf answers 0.
     // past the baseline means past the readings the baseline was taken from
-    const after = starts[metric] ? mine.findIndex(r => r.day >= starts[metric]) + BASELINE : BASELINE;
+    const first = start ? mine.findIndex(r => r.day >= start) : 0;
+    const after = first < 0 ? mine.length : first + BASELINE;
     pts.spreadNow = spreadOf(scored.slice(Math.max(0, after)).slice(-BASELINE));
+    const why = noIndexWhy(pts);
+    if (why) for (const p of pts) { p.rank = null; if (!p.why) p.why = why; }
     out[metric] = pts;
   }
   return out;
@@ -746,40 +759,31 @@ const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 
 // YOU is not a row. It is the average of every index you own, per day.
 //
-// A stock joins YOU on the day of its first reading. It cannot be stale
-// before it existed, so adding a new stock never erases your history.
-//
-// After that, a stock that has not been read for STALE_DAYS is stale, and
-// on a stale day YOU has no value at all. It never carries a number
-// forward, because that invents a reading you did not take, and it never
-// quietly drops a stock, because then skipping a bad one would raise
-// your score.
+// A stock joins at indexFrom: its start day, or its first reading if later.
+// Every active stock must have an index on the day being drawn. A missing or
+// rankless reading leaves a gap in YOU; it never carries an earlier number or
+// drops a stock to make a day drawable. Freshness allowances still describe
+// doors, but cannot supply a missing day's index.
+// staleBy stays in the shared calling contract; it cannot fill a missing day.
 function etfSeries(series, members, staleBy = () => STALE_DAYS) {
-  // A stock with no index of its own cannot lend one to a line. The gate is
-  // the one indexState names, so a goal, YOU and the MCP all count the same
-  // stocks, and a young stock joins the line on the day it earns an index.
-  members = members.filter(m => indexState(series[m]) !== 'none');
+  members = members.filter(m => series[m] && series[m].length);
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))].sort();
   const byMetric = {}, born = {};
   for (const m of members) {
     const pts = series[m] || [];
-    byMetric[m] = Object.fromEntries(pts.map(p => [p.day, p.rank]));
-    born[m] = pts.length ? dayNum(pts[0].day) : Infinity;
+    byMetric[m] = Object.fromEntries((indexState(pts) === 'none' ? [] : pts)
+      .filter(p => Number.isFinite(p.rank)).map(p => [p.day, p.rank]));
+    born[m] = dayNum(indexFrom(pts));
   }
-  const last = {};
   const out = [];
   for (const day of days) {
     const t = dayNum(day);
-    for (const m of members) {
-      if (byMetric[m][day] !== undefined) last[m] = { rank: byMetric[m][day], t };
-    }
     const live = members.filter(m => born[m] <= t);
-    // each stock against its own door's limit, not one number for all of them
-    const fresh = live.map(m => last[m] && t - last[m].t <= staleBy(m) ? last[m] : null).filter(Boolean);
+    const fresh = live.map(m => byMetric[m][day]).filter(Number.isFinite);
     if (!live.length || fresh.length !== live.length) continue;   // silence, not a guess
     out.push({
       day,
-      rank: Math.round(fresh.reduce((a, s) => a + s.rank, 0) / fresh.length * 10) / 10
+      rank: Math.round(fresh.reduce((a, rank) => a + rank, 0) / fresh.length * 10) / 10
     });
   }
   // A line is an index too and is gated the same way: with one day or none, or
@@ -790,9 +794,10 @@ function etfSeries(series, members, staleBy = () => STALE_DAYS) {
 
 // How many days YOU could actually be worked out, and how many it skipped.
 function coverage(series, members, staleBy = () => STALE_DAYS) {
-  // both halves speak of the same stocks: the ones the line is actually drawn from
-  const counted = members.filter(m => indexState(series[m]) !== 'none');
-  const days = [...new Set(counted.flatMap(m => (series[m] || []).map(p => p.day)))];
+  // A rankless active stock blocks a day; it is never removed from either count.
+  const counted = members.filter(m => series[m] && series[m].length);
+  const first = counted.map(m => indexFrom(series[m])).sort()[0];
+  const days = [...new Set(counted.flatMap(m => series[m].map(p => p.day)))].filter(day => day >= first);
   return { drawn: etfSeries(series, counted, staleBy).length, days: days.length };
 }
 
@@ -850,7 +855,7 @@ function standardError(xs) {
 function ranksBetween(points, fromDay, toDay) {
   return points.filter(p => {
     const t = dayNum(p.day);
-    return t >= fromDay && t <= toDay;
+    return Number.isFinite(p.rank) && t >= fromDay && t <= toDay;
   }).map(p => p.rank);
 }
 
@@ -882,6 +887,13 @@ function testCommit(points, commit, commits, todayStr) {
              verdict: 'no index', why: noIndexWhy(points) || 'this line has no spread, so there is nothing to score a day against' };
   }
 
+  const unindexed = points.filter(p => !Number.isFinite(p.rank) && p.why
+    && dayNum(p.day) >= start - length - 1 && dayNum(p.day) <= end);
+  if (!before.length && !during.length && unindexed.length) {
+    return { during: 0, before: 0, clash, duringMean: null, beforeMean: null,
+             verdict: 'no index', why: unindexed[0].why };
+  }
+
   const out = {
     during: during.length,
     before: before.length,
@@ -893,9 +905,17 @@ function testCommit(points, commit, commits, todayStr) {
   // Nothing to compare against. Say so, and still show what is there.
   if (!before.length) {
     out.verdict = 'no before';
-    out.why = `${during.length} days while it ran, and nothing before it. ` +
+    out.why = unindexed.length ? `Earlier readings have no index: ${unindexed[0].why}. There is no indexed before period to compare against.`
+            : `${during.length} days while it ran, and nothing before it. ` +
               `Your data starts after this began, so there is no version of ` +
               `you without it to compare against.`;
+    return out;
+  }
+
+  if (!during.length) {
+    out.verdict = 'early';
+    out.needs = MIN_DAYS;
+    out.why = 'No indexed readings while this commit ran.';
     return out;
   }
 
@@ -1244,10 +1264,16 @@ function crossSplit(leverRows, outcomeAt, lag, openWeek, adjust = lag ? [0, -1] 
 // One lever against one outcome. The effect is in the outcome's index
 // points: + is better by its rule, - is worse.
 function crossTest(leverRows, outcomePoints, lag, asked, todayStr) {
-  const at = new Map(outcomePoints.map(p => [dayNum(p.day), p]));
+  const all = new Map(outcomePoints.map(p => [dayNum(p.day), p]));
+  const at = new Map([...all].filter(([, p]) => Number.isFinite(p.rank)));
   const open = weekOf(dayNum(todayStr));
   const s = crossSplit(leverRows, at, lag, open);
   const out = { lag, pairs: s.pairs, high: s.high, low: s.low, weeks: s.weeks };
+  if (!s.pairs.length) {
+    const refused = leverRows.map(r => dayNum(r.day) + lag).filter(t => weekOf(t) < open)
+      .map(t => all.get(t)).find(p => p && !Number.isFinite(p.rank) && p.why);
+    if (refused) return { ...out, verdict: 'no index', why: refused.why };
+  }
   // fixed: on each of its weekdays the lever read the same every time, in at least three weeks each, and not the
   // same on all of them. The lever is the week itself, and nothing in these days can tell it from the week's rhythm.
   const fixedWeek = pairs => { const seen = {}, n = {}; for (const p of pairs) { const k = weekdayOf(p.t); n[k] = (n[k] || 0) + 1; if (!(k in seen)) seen[k] = p.value; else if (seen[k] !== p.value) return false; } return new Set(Object.values(seen)).size > 1 && Object.values(n).every(c => c >= 3); };
@@ -1372,19 +1398,20 @@ async function writeGoal(db, name, measures, target, levers) {
 }
 
 // A goal's line is YOU over only its measures. The same silence rule holds:
-// one stale measure and the goal has no value that day.
+// one active measure without an index and the goal has no value that day.
 function goalSeries(goal, series, staleBy = () => STALE_DAYS) {
   return etfSeries(series, goal.measures, staleBy);
 }
 
 // The measure with the lowest latest index. Where the goal is weakest now.
-function weakPoint(goal, series) {
+function weakPoint(goal, series, day) {
   let weak = null;
   for (const m of goal.measures) {
     const pts = series[m];
     if (!pts || !pts.length) continue;
     if (indexState(pts) === 'none') continue;   // no index yet, so it cannot be the weakest
-    const p = pts[pts.length - 1];
+    const p = day === undefined ? pts[pts.length - 1] : indexOn(pts, day);
+    if (!p || !Number.isFinite(p.rank)) continue;
     if (!weak || p.rank < weak.rank) weak = { metric: m, rank: p.rank, day: p.day };
   }
   return weak;

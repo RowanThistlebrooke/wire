@@ -133,7 +133,7 @@ function drawRead() {
   const x = cell(c, PICK.k), r = x.r;
   const nums = r.verdict === 'no index' ? `<b>${r.before}</b> days before &#183; <b>${r.during}</b> days since &#183; no index`
     : r.beforeMean != null
-    ? `before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean}</b> &#183; needs more than <b>${r.bar}</b> &#183; <b>${r.before}</b> days before &#183; <b>${r.during}</b> days since${r.needs ? ` &#183; <b>${r.needs}</b> more days` : ''}`
+    ? `before <b>${r.beforeMean}</b> &#183; since <b>${r.duringMean != null ? r.duringMean : '··'}</b>${r.bar != null ? ` &#183; needs more than <b>${r.bar}</b>` : ''} &#183; <b>${r.before}</b> days before &#183; <b>${r.during}</b> days since${r.needs ? ` &#183; <b>${r.needs}</b> more days` : ''}`
     : `since <b>${r.duringMean != null ? r.duringMean : '··'}</b> &#183; your usual is <b>100</b> &#183; <b>${r.during}</b> days since &#183; nothing before it`;
   box.className = 'read on';
   box.innerHTML = `<div class="h"><b>${esc(c.name)}</b><span class="x">${c.from} &#8594; ${c.to || 'today'} &#183; on ${esc(PICK.k)}</span><button class="px" aria-label="close">&#215;</button></div>` +

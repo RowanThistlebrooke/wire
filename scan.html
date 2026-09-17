@@ -150,7 +150,7 @@ function show() {
       <div class="stat"><b>${PICK.days}</b><span>days &#183; ${PICK.from} &#8594; ${PICK.to || 'today'}</span></div>
     </div>
     ${bars}
-    <div class="scale"><div></div><div><span>worse</span><span>the raised bar</span><span>better</span></div><div></div></div>`;
+    <div class="scale"><div></div><div><span>worse</span><span>the raised bar</span><span>better</span></div><div></div></div>${left}`;
 }
 
 document.getElementById('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };

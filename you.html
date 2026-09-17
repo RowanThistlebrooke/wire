@@ -464,9 +464,9 @@ async function load(){
   // each stock's own limit, its door's promise plus the slack, before anything reads a stock as stale:
   // YOU is drawn through it below, and a goal line and the rail draw through it at every draw
   STALEBY = staleBounds(SOURCES);
-  // OWNED is the stocks that actually have an index, so "stocks scored" counts only those and the
-  // chart's window opens on a day something is drawn on. YOU is built from them through the same gate
-  SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, OWNED, STALEBY);
+  // OWNED counts the stocks with an index. YOU keeps every stock, so an active stock without an
+  // index makes the day silent instead of disappearing from the average.
+  SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, Object.keys(SERIES), STALEBY);
   DAYS = rows; LEDGER = null; LTOKEN++; LIVE = null;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
@@ -488,17 +488,16 @@ async function load(){
   if (FX && !cellOf(FX)) FX = null;
 }
 const dstr = n => new Date(n * 864e5).toISOString().slice(0, 10);
-const arrOf = pts => { const a = new Array(N).fill(null); for (const p of pts){ const i = dayNum(p.day) - D0; if (i >= 0 && i < N) a[i] = p.rank; } return a; };
+const arrOf = pts => { const a = new Array(N).fill(null); for (const p of pts){ const i = dayNum(p.day) - D0; if (i >= 0 && i < N && Number.isFinite(p.rank)) a[i] = p.rank; } return a; };
 // YOU is the goal made of every stock with a rule
-const youGoal = () => ({ id: YOU_ID, name: 'YOU', measures: OWNED, target: null });
+const youGoal = () => ({ id: YOU_ID, name: 'YOU', measures: Object.keys(SERIES), target: null });
 const cur = () => SEL === YOU_ID ? youGoal() : GOALS.find(g => g.id === SEL);
 const pointsOf = g => g.id === YOU_ID ? YOU : goalSeries(g, SERIES, STALEBY);
 const listOf = g => g.id === YOU_ID ? ALL : g.measures;   // YOU lists every stock, so what it leaves out shows
 const say = m => { $('err').textContent = m || ''; };
-// the reader draws no day on which a scored stock is stale, so while one is stale today the index is silent too
+// Raw freshness belongs to the door. A goal's current index also needs an actual aggregate point today.
 const stale = m => !!SERIES[m] && dayNum(TODAY) - dayNum(SERIES[m][SERIES[m].length-1].day) > STALEBY(m);
 const since = day => dayNum(TODAY) - dayNum(day);   // days since a reading, as a stale stock and the target show it
-const silent = g => g.measures.some(stale);
 const shown = () => FX && SERIES[FX.o] ? FX.o : FM && SERIES[FM] ? FM : null;   // the stock the chart shows: a picked outcome, or a picked scored stock
 const cellOf = x => { const b = CROSS && CROSS.blocks.find(b => b.id === x.g), l = b && b.levers.find(l => l.metric === x.l), c = l && l.cells[x.o]; return c ? { b, l, c } : null; };
 
@@ -597,15 +596,16 @@ function drawBig() {
 }
 
 // ---- goals, listed like stocks: name, the line, the index and its move ----
-function moveOf(pts){ if (pts.length < 8) return null; return Math.round((pts[pts.length-1].rank - pts[pts.length-8].rank) * 10) / 10; }
+function moveOf(pts){ if (pts.length < 8 || !Number.isFinite(pts[pts.length-1].rank) || !Number.isFinite(pts[pts.length-8].rank)) return null; return Math.round((pts[pts.length-1].rank - pts[pts.length-8].rank) * 10) / 10; }
 function spark(pts, cls){ const a = pts.slice(-45); if (a.length < 3) return '<svg viewBox="0 0 60 24"></svg>';
-  const v = a.map(p => p.rank), lo = Math.min(...v), hi = Math.max(...v), span = (hi - lo) || 1;
-  const d = a.map((p, i) => (i ? 'L' : 'M') + (i * 60 / (a.length - 1)).toFixed(1) + ' ' + (2 + (hi - p.rank) * 20 / span).toFixed(1)).join('');
+  const v = a.map(p => p.rank).filter(Number.isFinite); if (!v.length) return '<svg viewBox="0 0 60 24"></svg>';
+  const lo = Math.min(...v), hi = Math.max(...v), span = (hi - lo) || 1, first = dayNum(a[0].day), days = Math.max(1, dayNum(a[a.length-1].day) - first);
+  const d = a.map((p, i) => !Number.isFinite(p.rank) ? '' : (!i || !Number.isFinite(a[i-1].rank) || dayNum(p.day) - dayNum(a[i-1].day) > 1 ? 'M' : 'L') + ((dayNum(p.day) - first) * 60 / days).toFixed(1) + ' ' + (2 + (hi - p.rank) * 20 / span).toFixed(1)).join('');
   return `<svg viewBox="0 0 60 24" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${cls === 'pos' ? '#5fc4b4' : cls === 'neg' ? '#c9695c' : '#5c656b'}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`; }
 function drawRail(){
   // a goal under the gate has no index and no line to show: its name, and nothing more
-  const row = (g, pts) => { const drawn = !silent(g) && indexState(pts) !== 'none';
-    const p = drawn ? pts[pts.length-1] : null, mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
+  const row = (g, pts) => { const drawn = indexState(pts) !== 'none';
+    const p = indexOn(pts, TODAY), mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
     return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
   $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES, STALEBY))).join('');
 }
@@ -613,13 +613,13 @@ function pickGoal(id){ SEL = id; FM = null; FC = null; FX = null; SHOWLEDGER = f
 
 // ---- the number: the index now, or where the pointer is, and its move across the window ----
 function drawHead(hi){
-  const g = cur(), v = VIEW, m = v.m;
+  const v = VIEW, m = v.m;
   let val = null, day = null;
   // under the gate there is no index, so the big number stays empty the way it does for a stock with
   // no readings at all. The header never writes a number the chart did not draw
   if (v.gate !== 'none'){
-    if (hi != null && v.line[hi] != null){ val = v.line[hi]; day = dstr(D0 + hi); }
-    else if (!(m ? stale(m) : silent(g))){ const p = v.pts[v.pts.length-1]; if (p){ val = p.rank; day = p.day; } }
+    if (hi != null){ if (Number.isFinite(v.line[hi])){ val = v.line[hi]; day = dstr(D0 + hi); } }
+    else { const p = m ? !stale(m) && v.pts[v.pts.length-1] : indexOn(v.pts, TODAY); if (p && Number.isFinite(p.rank)){ val = p.rank; day = p.day; } }
   }
   let first = null; for (let i = v.i0; i <= v.i1; i++) if (v.line[i] != null){ first = v.line[i]; break; }
   const ch = val != null && first != null ? Math.round((val - first) * 10) / 10 : null;
@@ -647,26 +647,26 @@ function drawTarget(g){
 // ---- what is counted: sources, the stocks they write, the goal those stocks make ----
 const FLOW_ROWS = 6;   // up to this many stocks, full names; past it, a source's shared prefix is left off
 function drawFlow(g){
-  const ms = listOf(g), weak = weakPoint(g, SERIES), f = $('flow');
+  const ms = listOf(g), weak = weakPoint(g, SERIES, TODAY), f = $('flow');
   if (!ms.length){ f.innerHTML = ''; f.classList.remove('grouped'); return; }
   const state = m => { const s = SERIES[m]; if (!s) return RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : LAST[m] ? 'unscored' : 'empty'; return stale(m) ? 'stale' : ''; };
   // the index gate, in no words: under it there is no index to show, and while the baseline is still
   // filling the index is dimmed. The same three states the chart draws, from the same one function
   const gate = m => indexState(SERIES[m]);
   // a bar per fresh stock, on one scale that holds 100, padded the way the chart pads its own
-  const ranks = ms.filter(m => SERIES[m] && !stale(m) && gate(m) !== 'none').map(m => SERIES[m][SERIES[m].length-1].rank);
+  const ranks = ms.filter(m => SERIES[m] && !stale(m) && gate(m) !== 'none').map(m => SERIES[m][SERIES[m].length-1].rank).filter(Number.isFinite);
   let lo = Math.min(100, ...ranks), hi = Math.max(100, ...ranks); const pad = Math.max(2, (hi - lo) * .16); lo -= pad; hi += pad;
   const chip = (m, label, k) => { const st = state(m), gt = gate(m), pts = SERIES[m] || [], last = pts[pts.length-1], lr = LAST[m];
-    const off = st || gt === 'none';   // nothing to draw: a dashed rule where the bar would be
+    const off = st || gt === 'none' || !Number.isFinite(last?.rank);   // nothing to draw: a dashed rule where the bar would be
     const bar = off ? `<span class="gv-b"><u class="gv-d"></u>${st ? `<i>${st}</i>` : ''}</span>` : `<span class="gv-b"><u style="width:${((last.rank - lo) / (hi - lo) * 100).toFixed(1)}%"></u></span>`;
     const idx = st === 'stale' ? `${since(lr.day)} d` : off ? '&#8212;' : `${last.rank}<span class="gl">${word(last.rank).w}</span>`;
     return `<button type="button" class="node m${off ? ' off' : ''}${gt === 'moving' ? ' gv-mv' : ''}${st === 'stale' ? ' gv-st' : ''}${FM === m ? ' on' : ''}${weak && weak.metric === m ? ' weak' : ''}" data-m="${esc(m)}" data-k="${k}" title="${esc(m)}"><span class="nm">${esc(label)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${bar}<span class="gv-i">${idx}</span></button>`; };
-  const gp = pointsOf(g), gl = silent(g) || indexState(gp) === 'none' ? null : gp[gp.length-1];   // a goal under the gate has no index to show either
+  const gp = pointsOf(g), gl = indexOn(gp, TODAY);   // a goal shows only the index actually recorded today
   const grouped = ms.length > FLOW_ROWS;
   f.classList.toggle('grouped', grouped);
   // the stocks under the source that writes them. scored ones by their index, stale last, a source placed by its first stock; the rest, the sources with the most stocks first
   // a stock under the gate has no index to be placed by, so it follows the ones that do, by name
-  const gated = m => gate(m) === 'none', tip = m => SERIES[m][SERIES[m].length-1].rank;
+  const tip = m => SERIES[m]?.[SERIES[m].length-1]?.rank, gated = m => gate(m) === 'none' || !Number.isFinite(tip(m));
   const byIndex = (a, b) => stale(a) - stale(b) || gated(a) - gated(b) || (gated(a) ? a.localeCompare(b) : tip(a) - tip(b));
   const bySource = (list, order) => { const by = new Map(); for (const m of list){ const s = (SOURCES[m] || [])[0] || ''; if (!by.has(s)) by.set(s, []); by.get(s).push(m); }
     if (order) for (const l of by.values()) l.sort(order);
@@ -777,22 +777,23 @@ function drawChart(anim){
     s += `<line x1="0" x2="${W - R}" y1="${y(c.lowMean).toFixed(1)}" y2="${y(c.lowMean).toFixed(1)}" stroke="#8d959a" stroke-width="1.2" stroke-dasharray="5 4"/>`
       + `<line x1="0" x2="${W - R}" y1="${y(c.highMean).toFixed(1)}" y2="${y(c.highMean).toFixed(1)}" stroke="${hc}" stroke-width="1.4" stroke-dasharray="5 4"/>`; }
   if (fx && fx.c.verdict === 'fixed') s += `<text x="${W - R - 6}" y="${T + 46}" text-anchor="end">fixed</text>`;
-  if (fx && fx.c.verdict !== 'empty' && fx.c.verdict !== 'fixed'){ const c = fx.c, ec = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : c.verdict === 'early' ? '#5c656b' : '#e6e3dc';
+  if (fx && Number.isFinite(fx.c.effect)){ const c = fx.c, ec = c.verdict === 'lead' ? (c.effect > 0 ? '#5fc4b4' : '#c9695c') : c.verdict === 'before' ? '#c9a25a' : c.verdict === 'early' ? '#5c656b' : '#e6e3dc';
     s += `<text class="eff" x="${W - R - 6}" y="${T + 30}" text-anchor="end" style="fill:${ec}">${sgn(c.effect)}</text><text x="${W - R - 6}" y="${T + 46}" text-anchor="end">${c.high} &#183; ${c.low}${c.verdict === 'before' ? ' &#183; before' : ''}</text>`; }
-  if (!fc && !fx && li >= 0 && li < today && i1 === today && (m ? stale(m) : silent(g))){ const X = x(li).toFixed(1);
-    s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...(m ? [m] : g.measures.filter(stale)).map(x => since(LAST[x].day)))} d</text>`; }
+  const stopped = m ? stale(m) ? [m] : [] : g.measures.filter(m => indexFrom(SERIES[m]) && indexFrom(SERIES[m]) <= TODAY && stale(m));
+  if (!fc && !fx && li >= 0 && li < today && i1 === today && stopped.length){ const X = x(li).toFixed(1);
+    s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...stopped.map(x => since(LAST[x].day)))} d</text>`; }
   if (li >= 0 && gate !== 'none'){ const X = x(li).toFixed(1), Y = tagY.toFixed(1);   // the latest index is a number too: under the gate it is not written either
     s += `<circle class="pulse" cx="${X}" cy="${Y}" r="9" fill="${col}"/><circle cx="${X}" cy="${Y}" r="3.2" fill="${col}"/><text class="tag" x="${W - R + 10}" y="${(tagY + 3.5).toFixed(1)}" style="fill:${col}">${line[li]}</text>`; }
   s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text><g id="hov"></g>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.classList.toggle('still', !anim); svg.innerHTML = s;
   VIEW = { m, pts, line, i0, i1, x, y, W, H, T, B, R, col, gate };   // the gate travels with the view, so reading the chart can never show what it did not draw
 }
-// reading the chart: the nearest drawn day under the pointer
+// reading the chart: only the day under the pointer, silent where the reader drew no index
 $('c').addEventListener('pointermove', e => { const v = VIEW; if (!v || v.gate === 'none') return;   // nothing is drawn under the gate, so there is nothing to read off it
   const b = $('c').getBoundingClientRect(), px = (e.clientX - b.left) * v.W / b.width;
   const i = Math.max(v.i0, Math.min(v.i1, Math.round(v.i0 + px / (v.W - v.R) * (v.i1 - v.i0))));
-  let k = -1; for (let d = 0; d <= v.i1 - v.i0 && k < 0; d++){ if (i - d >= v.i0 && v.line[i - d] != null) k = i - d; else if (i + d <= v.i1 && v.line[i + d] != null) k = i + d; }
-  if (k < 0) return; const X = v.x(k).toFixed(1), Y = v.y(v.line[k]).toFixed(1);
+  if (!Number.isFinite(v.line[i])){ $('hov').innerHTML = ''; drawHead(i); return; }
+  const k = i, X = v.x(k).toFixed(1), Y = v.y(v.line[k]).toFixed(1);
   $('hov').innerHTML = `<line x1="${X}" x2="${X}" y1="${v.T}" y2="${v.H - v.B}" stroke="#8d959a" stroke-opacity=".4"/><circle cx="${X}" cy="${Y}" r="4.5" fill="${v.col}" stroke="#070809" stroke-width="2"/>`;
   drawHead(k); });
 $('c').addEventListener('pointerleave', () => { const h = $('hov'); if (h) h.innerHTML = ''; if (VIEW) drawHead(null); });
@@ -816,7 +817,8 @@ function drawCross(g){
   const box = $('cross');
   if (g.id !== YOU_ID || !CROSS || !CROSS.blocks.length){ box.innerHTML = ''; return; }
   const cell = (b, l, o) => { const c = l.cells[o];
-    if (!c || c.verdict === 'empty' || c.verdict === 'no index') return '<td>&#183;</td>';
+    if (!c || c.verdict === 'empty') return '<td>&#183;</td>';
+    if (c.verdict === 'no index') return `<td title="${esc(c.why || '')}">no index</td>`;
     const on = FX && FX.g === b.id && FX.l === l.metric && FX.o === o;
     const cls = c.verdict === 'lead' ? (c.effect > 0 ? 'pos' : 'neg') : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'bef' : '';
     const sub = c.verdict === 'early' ? `<i>${c.high} &#183; ${c.low}</i>` : c.verdict === 'before' ? '<i>before</i>' : c.verdict === 'fixed' ? '<i>fixed</i>' : '';
@@ -829,7 +831,7 @@ function drawCross(g){
 function leadRows(g){
   const b = g.id !== YOU_ID && CROSS && CROSS.blocks.find(b => b.id === g.id);
   if (!b) return '';
-  const weak = weakPoint(g, SERIES), rows = b.levers.flatMap(l => Object.entries(l.cells).filter(([, c]) => c.verdict === 'lead').map(([o, c]) => ({ l, o, c })));
+  const weak = weakPoint(g, SERIES, TODAY), rows = b.levers.flatMap(l => Object.entries(l.cells).filter(([, c]) => c.verdict === 'lead').map(([o, c]) => ({ l, o, c })));
   rows.sort((a, z) => ((weak && z.o === weak.metric) - (weak && a.o === weak.metric)) || Math.abs(z.c.effect) - Math.abs(a.c.effect));
   return rows.map(({ l, o, c }) => { const on = FX && FX.g === b.id && FX.l === l.metric && FX.o === o;
     return `<div class="cr lead${on ? ' on' : ''}" data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"><div class="cn"><b>${esc(l.metric)} &#8594; ${esc(o)}</b><span>+${l.lag} d &#183; ${c.high} &#183; ${c.low}</span></div>${miniX(c)}<div class="ce"><i>lead</i><b class="${c.effect > 0 ? 'pos' : 'neg'}">${sgn(c.effect)}</b></div></div>`; }).join('');
@@ -838,11 +840,11 @@ function leadRows(g){
 function leverRows(g){
   const b = g.id !== YOU_ID && CROSS && CROSS.blocks.find(b => b.id === g.id);
   if (!b) return '';
-  const weak = weakPoint(g, SERIES);
+  const weak = weakPoint(g, SERIES, TODAY);
   return b.levers.filter(l => !Object.values(l.cells).some(c => c.verdict === 'lead')).map(l => {
-    const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty' && l.cells[o].verdict !== 'no index'), c = o ? l.cells[o] : null;
+    const os = Object.keys(l.cells).sort((a, z) => (weak && z === weak.metric) - (weak && a === weak.metric)), o = os.find(o => l.cells[o].verdict !== 'empty' && l.cells[o].verdict !== 'no index') || os.find(o => l.cells[o].verdict === 'no index'), c = o ? l.cells[o] : null;
     const on = c && FX && FX.g === b.id && FX.l === l.metric && FX.o === o, cls = !c ? '' : c.verdict === 'early' || c.verdict === 'fixed' ? 'early' : c.verdict === 'before' ? 'tan' : 'mid';
-    return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c && c.effect !== undefined ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
+    return `<div class="cr ${cls}${on ? ' on' : ''}"${c ? ` data-x="${esc(b.id)}|${esc(l.metric)}|${esc(o)}"${c.why ? ` title="${esc(c.why)}"` : ''}` : ''}><div class="cn"><b>${esc(l.metric)}${c ? ` &#8594; ${esc(o)}` : ''}</b><span>+${l.lag} d${c ? ` &#183; ${c.high} &#183; ${c.low}` : ''}</span></div>${c ? miniX(c) : '<svg class="mini" viewBox="0 0 130 34"></svg>'}<div class="ce"><i>${c ? c.verdict : 'empty'}</i><b class="${cls}">${c && Number.isFinite(c.effect) ? sgn(c.effect) : '&#183;'}</b></div></div>`; }).join('');
 }
 // the outcome over its last sixty pairs, amber ticks after the lever's high days
 function miniX(c){
@@ -858,7 +860,7 @@ function drawCommits(){
     const st = r.verdict === 'early' ? `${r.needs} d` : r.verdict === 'tangled' ? 'tangled' : r.verdict === 'no finding' ? '&lt; 2 se' : '';
     const glyph = r.verdict === 'finding' ? (r.effect > 0 ? UP : DOWN) : '';
     const end = c.to ? c.to.slice(5) : 'now';
-    return `<div class="cr ${cl}${on ? ' on' : ''}" data-c="${esc(c.id)}">
+    return `<div class="cr ${cl}${on ? ' on' : ''}" data-c="${esc(c.id)}"${r.verdict === 'no index' ? ` title="${esc(r.why || '')}"` : ''}>
       <div class="cn"><b>${esc(c.name)}</b><span>${c.from.slice(5)} &#8594; ${end} &#183; ${c.days} d</span></div>
       ${mini(line, c, r)}
       <div class="ce">${st ? `<i>${st}</i>` : ''}${glyph}<b class="${cl}">${val}</b></div>
@@ -867,7 +869,7 @@ function drawCommits(){
 }
 // the goal's weak point, weakPoint's measure and its index, over the rows that move it
 function drawWeak(g){
-  const w = weakPoint(g, SERIES);
+  const w = weakPoint(g, SERIES, TODAY);
   $('gvw').innerHTML = (w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '') + ($('cm').children.length || $('gvl').children.length ? '<p class="gv-h">WHAT MOVES IT</p>' : '');
 }
 
@@ -895,9 +897,10 @@ async function showLedger(){
   if (SHOWLEDGER) drawLedger();
 }
 function tiny(vals, tone){
-  if (vals.length < 2) return '<svg class="tiny" viewBox="0 0 120 30"></svg>';
-  const lo = Math.min(...vals), hi = Math.max(...vals), sp = (hi - lo) || 1;
-  const d = vals.map((v, i) => (i ? 'L' : 'M') + (i * 120 / (vals.length - 1)).toFixed(1) + ' ' + (3 + (hi - v) * 24 / sp).toFixed(1)).join('');
+  const numbers = vals.filter(Number.isFinite);
+  if (numbers.length < 2) return '<svg class="tiny" viewBox="0 0 120 30"></svg>';
+  const lo = Math.min(...numbers), hi = Math.max(...numbers), sp = (hi - lo) || 1;
+  const d = vals.map((v, i) => !Number.isFinite(v) ? '' : (!i || !Number.isFinite(vals[i-1]) ? 'M' : 'L') + (i * 120 / (vals.length - 1)).toFixed(1) + ' ' + (3 + (hi - v) * 24 / sp).toFixed(1)).join('');
   return `<svg class="tiny" viewBox="0 0 120 30" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${TONE[tone]}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 // ---- one stock, opened: what the ledger holds about it, and every day it has ever read ----
@@ -909,8 +912,8 @@ function detail(m){
   if (DETDRAWN === m) return '';   // a stock two doors write is still one stock, and opens once
   DETDRAWN = m;
   const pts = SERIES[m] || [], rule = RULES[m], lr = LAST[m], mine = DAYS.filter(d => d.metric === m);
-  const rank = {}; for (const p of pts) rank[p.day] = p.rank;
-  const gt = indexState(pts), why = gt === 'none' ? noIndexWhy(pts) : '';
+  const at = {}; for (const p of pts) at[p.day] = p;
+  const gt = indexState(pts), last = pts[pts.length-1], why = gt === 'none' ? noIndexWhy(pts) : '';
   const gone = mine.filter(d => voidedOn(VOIDS, d.metric, d.day)).length;
   const fixed = mine.filter(d => correctedOn(VOIDS, d.metric, d.day) !== undefined).length;
   const unit = UNITS[m] ? ' ' + esc(UNITS[m]) : '';
@@ -920,16 +923,16 @@ function detail(m){
     + fact('read', lr ? `${lr.day} &#183; ${since(lr.day)} d` : '&#183;')
     + fact('days', fmt(mine.length))
     + fact('first', mine.length ? mine[0].day : '&#183;')
-    + fact('index', gt === 'none' ? 'none' : `${pts[pts.length-1].rank}${gt === 'moving' ? ' moving' : ''}`)
+    + fact('index', gt === 'none' || !Number.isFinite(last?.rank) ? 'none' : `${last.rank}${gt === 'moving' ? ' moving' : ''}`)
     + fact('rule', !rule ? 'none' : rule.kind === 'band' ? `band ${num(rule.lo)}&#8211;${num(rule.hi)}` : rule.kind)
     + fact('door', fed || '&#183;')
     + (gone ? fact('voided', fmt(gone)) : '') + (fixed ? fact('corrected', fmt(fixed)) : '');
   // every day it has read, not the latest few: a stock's record is the whole of it
   const log = mine.slice().reverse().map(d => {
     const out = voidedOn(VOIDS, d.metric, d.day), fix = correctedOn(VOIDS, d.metric, d.day), waits = staleOn(VOIDS, d.metric, d.day, d.readings);
-    const was = num(Number(d.mean)), r = rank[d.day];
+    const was = num(Number(d.mean)), p = at[d.day], r = p && p.rank;
     return `<tr class="${out || waits ? 'vd' : fix !== undefined ? 'cd' : ''}"><td>${esc(d.day)}</td><td>${d.readings > 1 ? fmt(d.readings) + ' readings' : ''}</td>` +
-      `<td class="r">${fix === undefined ? was : `<s>${was}</s>${waits ? '' : num(fix)}`}${unit}</td><td class="r">${r == null ? '&#183;' : r}</td></tr>`;
+      `<td class="r">${fix === undefined ? was : `<s>${was}</s>${waits ? '' : num(fix)}`}${unit}</td><td class="r"${p && p.why ? ` title="${esc(p.why)}"` : ''}>${Number.isFinite(r) ? r : '&#183;'}</td></tr>`;
   }).join('');
   return `<div class="det"><div class="dh"><span class="nm">${esc(m)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>`
     + `<button type="button" class="go" data-dchart="${esc(m)}">chart</button><button type="button" class="x" data-dx aria-label="close">&#215;</button></div>`

@@ -31,7 +31,7 @@ const R = new Function(src + `
            readGoals, goalSeries, weakPoint, writeRule, writeGoal,
            readAll, readSources, staleAfter, staleBounds, readStarts, writeStart, readVoids, writeVoid, readingOn, voidedOn, liveRows, correctedOn, staleOn, writeCorrection,
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
-           indexState, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
+           indexState, indexOn, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
            scanLead, scanCommit, crossTest, crossGrid };`)();
 
@@ -373,37 +373,46 @@ export function wireServer() {
   server.tool(
     'stocks',
     'What you measure, which way is better, and where each one stands today. ' +
-    '100 is the person you were across your first thirty readings. uncounted lists stocks that have readings ' +
+    'The baseline comes from the first thirty readings on or after the stock\'s start, or its first readings ' +
+    'when no start is set. Current indexes require a reading on the ledger\'s current day. uncounted lists stocks that have readings ' +
     'but no series, because their rule ignores them or no reading counts, each voided or corrected and stale: ' +
     'they are still stocks, and correct reaches their days.',
     {},
     async () => {
-      const { all, rules, series, rows, voids, staleBy } = await load();
+      const { all, rules, series, rows, voids, staleBy, today } = await load({ day: true });
       const out = Object.keys(series).map(m => {
         const p = series[m];
         const last = p[p.length - 1];
+        const current = R.indexOn(p, today), reading = p.find(r => r.day === today);
         return {
           metric: m,
           rule: rules[m],
           days: p.length,
           latest_reading: last.value,
-          index: R.indexState(p) === 'none' ? null : last.rank,
+          latest_reading_day: last.day,
+          start: p.start,
+          baseline_readings: p.baselineCount,
+          index: current ? current.rank : null,
+          day: today,
           index_state: R.indexState(p),
-          note: R.indexState(p) === 'none' ? 'no index: ' + R.noIndexWhy(p)
-              : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
+          note: reading && reading.why ? 'no index: ' + reading.why
+              : R.indexState(p) === 'none' ? 'no index: ' + R.noIndexWhy(p)
+              : !current ? 'no reading on the ledger\'s current day'
+              : R.indexState(p) === 'moving' ? `baseline still filling, ${p.baselineCount} of ${R.BASELINE}: this index will move`
               : undefined
         };
       });
       const undeclared = all.filter(m => !(m in rules));
       const uncounted = all.filter(m => m in rules && !series[m]).map(m => uncountedOf(m, rules, rows, voids));
-      return text({ you: R.etfSeries(series, Object.keys(series), staleBy).slice(-1)[0] || null,
+      return text({ day: today, you: R.indexOn(R.etfSeries(series, Object.keys(series), staleBy), today),
                     stocks: out, ...(uncounted.length ? { uncounted } : {}), undeclared });
     }
   );
 
   server.tool(
     'history',
-    'The day by day readings for one metric, oldest first, each with its index. A stock the gate gives no index, ' +
+    'The day by day readings for one metric, oldest first, with an index only where one can be read. ' +
+    'Readings before a stock\'s start remain raw history with a null rank and a reason. A stock the gate gives no index, ' +
     'its baseline never moved or it has outgrown it, returns its readings without an index and says why. ' +
     'A stock with a rule whose readings do not count, ' +
     'each voided or ignored, answers with no points and why, and is still a stock correct can reach.',
@@ -414,10 +423,10 @@ export function wireServer() {
       if (!p && all.includes(metric) && metric in rules) return text({ ...uncountedOf(metric, rules, rows, voids), points: [],
         say: 'it is a stock with a rule and no series, for the reason in why: correct reaches its days' });
       if (!p) return text({ error: `no stock called ${metric}, or it has no rule yet` });
-      // a stock the gate gives no index returns its readings and never an index: the same reason the tests refuse it
-      if (R.indexState(p) === 'none') return text({ metric, index_state: 'none', note: 'no index: ' + R.noIndexWhy(p),
-        points: p.slice(-days).map(({ day, value }) => ({ day, value })) });
-      return text({ metric, points: p.slice(-days) });
+      // The shared reader keeps raw history and puts its refusal beside each rank it cannot supply.
+      return text({ metric, start: p.start, baseline_readings: p.baselineCount, index_state: R.indexState(p),
+        ...(R.indexState(p) === 'none' ? { note: 'no index: ' + R.noIndexWhy(p) } : {}),
+        points: p.slice(-days) });
     }
   );
 
@@ -428,23 +437,24 @@ export function wireServer() {
     'point is the measure with the lowest index right now.',
     {},
     async () => {
-      const { series, staleBy } = await load();
+      const { series, staleBy, today } = await load({ day: true });
       const goals = await R.readGoals(db);
       return text({
         goals: goals.map(g => {
           const p = R.goalSeries(g, series, staleBy);
-          const last = p[p.length - 1];
-          const weak = R.weakPoint(g, series);
+          const current = R.indexOn(p, today);
+          const weak = R.weakPoint(g, series, today);
           return {
             goal: g.name,
             id: g.id,
-            index: R.indexState(p) === 'none' || !last ? null : last.rank,
+            index: current ? current.rank : null,
             index_state: R.indexState(p),
             note: !g.measures.some(m => series[m]) ? 'no measure has a rule yet'
                 : R.indexState(p) === 'none' ? 'no index: ' + (R.noIndexWhy(p) || 'this line has no spread, so there is nothing to score a day against')
+                : !current ? 'no goal index on the ledger\'s current day'
                 : R.indexState(p) === 'moving' ? `baseline still filling, ${p.length} of ${R.BASELINE}: this index will move`
                 : undefined,
-            day: last ? last.day : null,
+            day: today,
             target: g.target,
             measures: g.measures,
             levers: g.levers,
@@ -821,13 +831,12 @@ export function wireServer() {
     'Say which day a stock\'s baseline is taken from, when its first readings came from something the stock ' +
     'no longer is: a channel six people a day watched and the same channel with thousands share a column, a ' +
     'unit and nothing else. The first thirty readings decide how big one index point is, so when those thirty ' +
-    'came from the old thing, every reading since is drawn in a unit that measures nothing, and a real fall ' +
-    'reads as a small one. It removes nothing and hides nothing: every reading stays in the series and on the ' +
-    'chart, the early ones scored against the later baseline, so a fall is still a fall and is usually plainer ' +
-    'afterwards, not fainter. Only the unit changes. It writes one start row, latest per stock wins as a rule ' +
+    'came from the old thing, every reading since is drawn in a unit that measures nothing. Every reading ' +
+    'stays as raw history. Readings before the start have no index and say why; readings on or after it ' +
+    'use the new baseline when the index gate permits it. It writes one start row, latest per stock wins as a rule ' +
     'does, and a day before the stock\'s first reading puts the baseline back to the beginning. Call it first ' +
-    'with no confirm: it answers with what the index reads now and what it would read, at the stock\'s first ' +
-    'day and today, so the size of the change is on the page before anything is written. Nothing is written ' +
+    'with no confirm: it answers with the raw reading and index, or the reason there is no index, before and ' +
+    'after the proposed start at the stock\'s first and latest reading. Nothing is written ' +
     'until the user sends the phrase back.',
     { metric: z.string(), day: z.string(), confirm: z.string().optional() },
     async ({ metric, day, confirm }) => {
@@ -841,15 +850,25 @@ export function wireServer() {
       if (starts[metric] === day) return text({ error: `${metric}'s baseline already begins on ${day}` });
       const one = st => R.rankSeries(rows, { [metric]: rules[metric] }, voids, st)[metric];
       const was = one(starts), now = one({ ...starts, [metric]: day });
-      const at = (p, i) => p && p[i] ? { day: p[i].day, index: p[i].rank } : null;
+      const at = (p, i) => {
+        const reading = p && p[i];
+        if (!reading) return null;
+        const indexed = R.indexOn(p, reading.day);
+        return { day: reading.day, value: reading.value, index: indexed ? indexed.rank : null,
+                 ...(!indexed ? { why: reading.why || R.noIndexWhy(p) } : {}) };
+      };
+      const preview = p => p ? { first: at(p, 0), latest: at(p, p.length - 1), state: R.indexState(p),
+                                start: p.start, baseline_readings: p.baselineCount } : null;
+      const before = preview(was), after = preview(now);
+      const shown = p => p ? `${p.day} reading ${p.value}; ${p.index == null ? 'no index: ' + p.why : 'index ' + p.index}` : 'no series';
       const phrase = `start ${metric} on ${day}`;
       const said = String(confirm == null ? '' : confirm).trim().replace(/\s+/g, ' ').toLowerCase();
       if (said !== phrase) return text({
-        metric, day, baseline_from: Math.min(from, R.BASELINE), readings_kept: live.length,
-        now: was ? { first: at(was, 0), latest: at(was, was.length - 1), state: R.indexState(was) } : null,
-        after: now ? { first: at(now, 0), latest: at(now, now.length - 1), state: R.indexState(now) } : null,
-        print: `${metric} baseline from ${day}\nevery reading stays; only the unit changes\n`
-             + `${was && was.length ? `${was[0].day} reads ${was[0].rank} -> ${now[0].rank}, today ${was[was.length-1].rank} -> ${now[now.length-1].rank}` : ''}\n`
+        metric, day, baseline_from: now ? now.baselineCount : null, readings_kept: live.length,
+        now: before,
+        after,
+        print: `${metric} baseline from ${day}\nevery reading stays as raw history; before the start there is no index\n`
+             + `${before && after ? `first before: ${shown(before.first)}\nfirst after: ${shown(after.first)}\nlatest before: ${shown(before.latest)}\nlatest after: ${shown(after.latest)}\n` : ''}`
              + `to do this, send: ${phrase}`,
         say: 'print the lines in print to the user, exactly as they are, and nothing else. Write nothing until ' +
              'the user sends that phrase back; then call start again with confirm set to what they sent.'
