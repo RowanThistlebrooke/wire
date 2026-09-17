@@ -299,6 +299,32 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .shot img,.shot i{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--panel);border:1px solid var(--edge)}
 .shot figcaption{margin-top:6px;font:400 10px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .shot img{cursor:zoom-in}
+/* holding the page: the screen fades the longer you hold, and at two seconds the other side is up */
+#fade{position:fixed;inset:0;z-index:60;background:var(--ground);opacity:0;pointer-events:none}
+body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.lbar{display:flex;align-items:center;margin-bottom:6px}
+.back{background:none;border:0;color:var(--dim);font:400 10px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;padding:10px 12px 10px 0;cursor:pointer}
+.back:hover{color:var(--ink)}
+.back::before{content:'';display:inline-block;width:0;height:0;border-style:solid;border-width:3.5px 5px 3.5px 0;border-color:transparent var(--dim) transparent transparent;margin-right:8px;vertical-align:middle}
+/* one stock opened: what the ledger holds about it, and every day it has ever read */
+.det{grid-column:1/-1;background:var(--panel);border:1px solid var(--edge2);padding:14px 14px 12px;margin-top:8px}
+.det .dh{display:flex;align-items:baseline;gap:10px}
+.det .dh .nm{font:400 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.det .dh b{font:300 26px/1 var(--ui);letter-spacing:-.01em}
+.det .dh b small{font:400 10px/1 var(--mono);color:var(--muted);margin-left:3px}
+.det .dh .go{margin-left:auto;background:none;border:1px solid var(--edge2);color:var(--dim);font:400 10px/1 var(--mono);letter-spacing:.08em;padding:7px 9px;cursor:pointer}
+.det .dh .go:hover{border-color:var(--teal);color:var(--ink)}
+.det .dh .x{background:none;border:0;color:var(--dim);font:400 15px/1 var(--mono);padding:4px 2px 4px 8px;cursor:pointer}
+.det .dh .x:hover{color:var(--ink)}
+.det .facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.det .facts span{font:400 10px/1.1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border:1px solid var(--edge2);padding:7px 9px}
+.det .facts span b{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink);margin-left:6px}
+.det .why{margin-top:10px;font:400 10px/1.5 var(--mono);color:var(--muted);max-width:74ch}
+.det .log{margin-top:12px;max-height:320px;overflow-y:auto}
+.det .log table{border-collapse:collapse;width:100%;font:400 10px/1 var(--mono)}
+.det .log td{border-top:1px solid var(--edge);padding:7px 10px 7px 0;color:var(--dim);white-space:nowrap}
+.det .log td.r{text-align:right;color:var(--ink);padding-right:0}
+.det .log tr.cd td.r s{color:var(--dim);margin-right:8px}
 .reads{margin-top:5px;display:grid;gap:2px;font:400 10px/1.3 var(--mono)}
 .reads span{display:flex;justify-content:space-between;gap:8px;color:var(--dim)}
 .reads b{font-weight:400;color:var(--ink)}
@@ -389,6 +415,7 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
     <div id="dropview" hidden></div>
     <p class="err" id="err"></p>
   </main>
+  <div id="fade"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -418,6 +445,7 @@ let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can 
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
 let DAYS = [], LEDGER = null, LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows once its tab is open, and which view is up
+let LM = null;   // the stock opened in the ledger, showing everything it holds and every day it has read
 
 async function load(){
   const [today, all, rules, goals, voids, cvoids, feeds, starts] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db)]);
@@ -870,7 +898,44 @@ function tiny(vals, tone){
   const d = vals.map((v, i) => (i ? 'L' : 'M') + (i * 120 / (vals.length - 1)).toFixed(1) + ' ' + (3 + (hi - v) * 24 / sp).toFixed(1)).join('');
   return `<svg class="tiny" viewBox="0 0 120 30" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${TONE[tone]}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
+// ---- one stock, opened: what the ledger holds about it, and every day it has ever read ----
+// The record first, newest day first: a voided day struck through and a corrected day showing the number
+// it was beside the number it reads, exactly as the voided and corrected lanes below draw them. Nothing
+// is worked out here that you-reader.js does not work out already, the index and its refusal included.
+let DETDRAWN = '';
+function detail(m){
+  if (DETDRAWN === m) return '';   // a stock two doors write is still one stock, and opens once
+  DETDRAWN = m;
+  const pts = SERIES[m] || [], rule = RULES[m], lr = LAST[m], mine = DAYS.filter(d => d.metric === m);
+  const rank = {}; for (const p of pts) rank[p.day] = p.rank;
+  const gt = indexState(pts), why = gt === 'none' ? noIndexWhy(pts) : '';
+  const gone = mine.filter(d => voidedOn(VOIDS, d.metric, d.day)).length;
+  const fixed = mine.filter(d => correctedOn(VOIDS, d.metric, d.day) !== undefined).length;
+  const unit = UNITS[m] ? ' ' + esc(UNITS[m]) : '';
+  const fed = (SOURCES[m] || []).map(s => { const f = FEEDS.find(x => x.source === s); return esc(s) + (f && f.days != null ? ` ${f.days} d` : ''); }).join(' &#183; ');
+  const fact = (k, v) => `<span>${k}<b>${v}</b></span>`;
+  const facts = fact('latest', lr ? num(Number(lr.mean)) + unit : '&#183;')
+    + fact('read', lr ? `${lr.day} &#183; ${since(lr.day)} d` : '&#183;')
+    + fact('days', fmt(mine.length))
+    + fact('first', mine.length ? mine[0].day : '&#183;')
+    + fact('index', gt === 'none' ? 'none' : `${pts[pts.length-1].rank}${gt === 'moving' ? ' moving' : ''}`)
+    + fact('rule', !rule ? 'none' : rule.kind === 'band' ? `band ${num(rule.lo)}&#8211;${num(rule.hi)}` : rule.kind)
+    + fact('door', fed || '&#183;')
+    + (gone ? fact('voided', fmt(gone)) : '') + (fixed ? fact('corrected', fmt(fixed)) : '');
+  // every day it has read, not the latest few: a stock's record is the whole of it
+  const log = mine.slice().reverse().map(d => {
+    const out = voidedOn(VOIDS, d.metric, d.day), fix = correctedOn(VOIDS, d.metric, d.day), waits = staleOn(VOIDS, d.metric, d.day, d.readings);
+    const was = num(Number(d.mean)), r = rank[d.day];
+    return `<tr class="${out || waits ? 'vd' : fix !== undefined ? 'cd' : ''}"><td>${esc(d.day)}</td><td>${d.readings > 1 ? fmt(d.readings) + ' readings' : ''}</td>` +
+      `<td class="r">${fix === undefined ? was : `<s>${was}</s>${waits ? '' : num(fix)}`}${unit}</td><td class="r">${r == null ? '&#183;' : r}</td></tr>`;
+  }).join('');
+  return `<div class="det"><div class="dh"><span class="nm">${esc(m)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>`
+    + `<button type="button" class="go" data-dchart="${esc(m)}">chart</button><button type="button" class="x" data-dx aria-label="close">&#215;</button></div>`
+    + `<div class="facts">${facts}</div>${why ? `<div class="why">${esc(why)}</div>` : ''}`
+    + (log ? `<div class="log"><table>${log}</table></div>` : '');
+}
 function drawLedger(){
+  DETDRAWN = '';
   const rows = LEDGER, bySrc = {}, lastSrc = {}, byType = {}, stocks = {}, live = liveRows(DAYS, VOIDS);
   for (const r of rows){
     const s = r.source || '', k = r.event_type || 'measurement';
@@ -916,7 +981,7 @@ function drawLedger(){
       const ms = Object.keys(stocks).filter(m => stocks[m][s]).sort(), kinds = {};
       for (const r of rows) if (r.source === s && r.event_type && r.event_type !== 'measurement') kinds[r.event_type] = (kinds[r.event_type] || 0) + 1;
       return `<div class="src"><div class="sh"><span>${esc(s)}</span><b>${fmt(bySrc[s])}</b><em>${String(lastSrc[s]).slice(5, 10)}</em></div>
-        <div class="grid">${ms.map(m => box(m, s)).join('')}${TYPES.filter(k => k !== 'measurement' && kinds[k]).map(k => `<div class="lb count"><span class="ln1"><span class="nm">${k}</span></span><b>${fmt(kinds[k])}</b><span class="meta">rows</span></div>`).join('')}</div></div>`;
+        <div class="grid">${ms.map(m => box(m, s)).join('')}${ms.includes(LM) ? detail(LM) : ''}${TYPES.filter(k => k !== 'measurement' && kinds[k]).map(k => `<div class="lb count"><span class="ln1"><span class="nm">${k}</span></span><b>${fmt(kinds[k])}</b><span class="meta">rows</span></div>`).join('')}</div></div>`;
     }).join('');
     body = mcpRows + (body || (mcpRows ? '' : '<div class="empty">0</div>'));
     return `<section class="lane"><div class="lh"><div class="lt">${l}</div><b>${fmt(total(l))}</b><span>rows</span>${last ? `<em>${String(last).slice(5, 10)}</em>` : ''}</div>${body}</section>`;
@@ -940,7 +1005,9 @@ function drawLedger(){
   // the doors: one line each, how long since it last wrote, its state in the colour of the bar and in no word
   const doors = `<section class="lane"><div class="lh"><div class="lt">fed</div><b>${fmt(FEEDS.filter(d => d.state !== 'none').length)}</b><span>promised</span></div><div class="fd">${FEEDS.map(d =>
     `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
-  $('ledgerview').innerHTML = how + doors + types + key + lanes.map(lane).join('') + voided + corrected + tape;
+  // the way back, for a hand that would rather press a button than hold the page
+  const bar = `<div class="lbar"><button type="button" class="back" id="lback">back</button></div>`;
+  $('ledgerview').innerHTML = bar + how + doors + types + key + lanes.map(lane).join('') + voided + corrected + tape;
 }
 
 // ---- a csv dropped on the page: read by csv-reader.js, shown, written only after a go ----
@@ -1075,11 +1142,48 @@ document.addEventListener('input', e => {
   drawDrop();
 });
 
+// ---- holding the page turns it over ----
+// Two seconds held and the page is the other side: the ledger from a goal, the goal from the ledger. The
+// screen fades the whole time it is held, so it says what is about to happen before it happens, and letting
+// go early brings it straight back. Only the background holds. Buttons, stocks, photos, the rail, the chart
+// and anything with words to select keep the clicks they already had, and the ledger tab still just clicks.
+const HOLD_MS = 2000;
+let HELD = null, SKIPCLICK = false;
+const holdable = t => !t.closest('button, a, input, label, select, textarea, table, .rail, .chart, #shots, #full, #dropview');
+function fadeTo(o, ms){ const f = $('fade'); f.style.transition = ms ? `opacity ${ms}ms` : ''; f.style.opacity = o; }
+function holdEnd(){ if (!HELD) return; cancelAnimationFrame(HELD.raf); HELD = null; document.body.classList.remove('holding'); fadeTo(0, 180); }
+// the turn itself, under the fade: the far side is drawn before the fade lifts, so it is never half up
+async function turnTo(toLedger){
+  SHOWLEDGER = toLedger; applyView(); say('');
+  try { if (SHOWLEDGER) await showLedger(); else draw(); }
+  catch (err) { say(err.message || String(err)); }
+  finally { scrollTo(0, 0); fadeTo(0, 280); }
+}
+document.addEventListener('pointerdown', e => {
+  if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || DROP || BIGA >= 0 || !holdable(e.target)) return;
+  const at = Date.now();
+  HELD = { x: e.clientX, y: e.clientY, raf: 0 };
+  document.body.classList.add('holding');
+  const tick = () => {
+    if (!HELD) return;
+    const p = Math.min(1, (Date.now() - at) / HOLD_MS);
+    fadeTo((p * p).toFixed(3), 0);   // slow at first, so a click, a drag or a scroll never dims the page
+    if (p < 1){ HELD.raf = requestAnimationFrame(tick); return; }
+    HELD = null; document.body.classList.remove('holding'); SKIPCLICK = true;   // letting go after a turn is not a click on the side it landed on
+    turnTo(!SHOWLEDGER);
+  };
+  HELD.raf = requestAnimationFrame(tick);
+});
+for (const ev of ['pointerup', 'pointercancel', 'wheel', 'scroll', 'blur']) addEventListener(ev, holdEnd, { passive: true });
+addEventListener('pointermove', e => { if (HELD && Math.abs(e.clientX - HELD.x) + Math.abs(e.clientY - HELD.y) > 12) holdEnd(); }, { passive: true });
+addEventListener('contextmenu', e => { if (HELD) e.preventDefault(); });   // a phone's own long press would take the hold away
+
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----
 // a focus is drawn on the chart: when the row clicked sits far below it, the chart comes back into view
 const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
+  if (SKIPCLICK){ SKIPCLICK = false; return; }
   // the full view holds the page: a day picks the second picture, anywhere else leaves
   if (BIGA >= 0){
     const cmp = e.target.closest('#full [data-cmp]');
@@ -1094,8 +1198,12 @@ document.addEventListener('click', e => {
   const rg = e.target.closest('[data-range]');
   if (rg){ RANGE = rg.dataset.range; FC = null; FX = null; draw(); return; }
   if (e.target.closest('#ltab')){ SHOWLEDGER = !SHOWLEDGER; applyView(); if (SHOWLEDGER) showLedger(); else draw(); return; }
+  if (e.target.closest('#lback')){ turnTo(false); return; }
+  const dc = e.target.closest('#ledgerview [data-dchart]');
+  if (dc){ SHOWLEDGER = false; applyView(); SEL = YOU_ID; FC = null; FX = null; FM = dc.dataset.dchart; say(''); render(); scrollTo(0, 0); return; }   // from a stock's record to its line
+  if (e.target.closest('#ledgerview [data-dx]')){ LM = null; drawLedger(); return; }
   const lm = e.target.closest('#ledgerview [data-lm]');
-  if (lm){ SHOWLEDGER = false; applyView(); SEL = YOU_ID; FC = null; FX = null; FM = lm.dataset.lm; say(''); render(); scrollTo(0, 0); return; }   // a stock's box opens it on the chart
+  if (lm){ LM = LM === lm.dataset.lm ? null : lm.dataset.lm; drawLedger(); return; }   // a stock's box opens its whole record, and closes it again
   if (e.target.closest('#rules, #out, #ledgerview')) return;
   const gr = e.target.closest('.rail [data-id]');
   if (gr){ pickGoal(gr.dataset.id); return; }
