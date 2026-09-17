@@ -187,6 +187,16 @@ async function ledger() {
         if (page.length < 1000) return seen;
       }
     },
+    // The newest reading of one stock, whichever door wrote it, with the moment
+    // it was taken. A running total is only worth anything against the last
+    // time it was read, so the reading and its moment come back together.
+    async newestOf(metric) {
+      const q = new URLSearchParams({ select: 'value,occurred_at', metric: `eq.${metric}`,
+        event_type: 'eq.measurement', order: 'occurred_at.desc', limit: '1' });
+      const page = await call(`${url}/rest/v1/events?${q}`, { headers });
+      const r = page && page[0];
+      return r && r.value != null ? { value: Number(r.value), at: Date.parse(r.occurred_at) } : null;
+    },
     // Every (source_id, metric) this source already holds from FIRST on.
     async have(source) {
       const seen = new Set();
@@ -209,7 +219,10 @@ async function ledger() {
 
 // ---- YouTube: the Analytics API, one row per metric per day ----
 
-async function youtube() {
+// One token for both YouTube jobs, fetched once.
+let googleAt = null;
+async function googleToken() {
+  if (googleAt) return googleAt;
   let refresh = null;
   try { refresh = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf8')).youtube?.refresh_token || null; } catch (e) {}
   if (!refresh) throw new Error('no youtube refresh token in ~/.life/tokens.json');
@@ -221,6 +234,12 @@ async function youtube() {
       refresh_token: refresh, grant_type: 'refresh_token' })
   });
   keep(t.access_token);
+  googleAt = t.access_token;
+  return googleAt;
+}
+
+async function youtube() {
+  const t = { access_token: await googleToken() };
 
   const q = new URLSearchParams({ ids: 'channel==MINE', startDate: FIRST, endDate: newest('youtube'), dimensions: 'day',
     metrics: 'views,estimatedMinutesWatched,subscribersGained,averageViewPercentage', sort: 'day' });
@@ -239,6 +258,60 @@ async function youtube() {
     });
   }
   return { rows, empty };
+}
+
+// ---- YouTube, live: the Data API, a running total and the day it bought ----
+//
+// The Analytics API is 48 to 72 hours behind and has no way to be faster. The
+// Data API is current, but what it gives is a running total: the views a
+// channel has ever had. A total that only climbs has no level to vary around,
+// so it can never hold an index, and the gate would refuse it, correctly.
+//
+// The difference between two readings of it can. Views since the last reading
+// is a rate, it has a level, and it is available today rather than on Thursday.
+// So the total is kept on the record, ruled `ignore`, and what is scored is the
+// difference.
+//
+// The difference is only worth writing when the two readings are about a day
+// apart. Miss a run and the gap is two days of views wearing one day's name,
+// which reads as a day that never happened. So the window is checked and a gap
+// outside it writes nothing and says so. Silence over a guess, here as anywhere.
+//
+// It is not the Analytics `views` and must never share its name: the Data API
+// counts a view when playback starts, Analytics counts engaged views, and the
+// two numbers are different sizes for the same day. Hence `yt_views_live`.
+//
+// Subscribers are not here and cannot be: the Data API rounds subscriberCount
+// down to three significant figures, so the difference between two readings is
+// zero on most days and a jump of ten on the rest. That is not a reading.
+const LIVE_LO = 20 * 3600e3, LIVE_HI = 28 * 3600e3;   // a gap this far from a day is not a day
+
+async function ytLive(at, db) {
+  const token = await googleToken();
+  const q = new URLSearchParams({ part: 'statistics', mine: 'true' });
+  const got = await call(`https://www.googleapis.com/youtube/v3/channels?${q}`, { headers: bearer(token) });
+  const stats = got && got.items && got.items[0] && got.items[0].statistics;
+  if (!stats) throw new Error('no channel statistics came back');
+  const total = Number(stats.viewCount);
+  if (!Number.isFinite(total)) throw new Error(`viewCount is not a number: ${stats.viewCount}`);
+
+  const day = await db.today(at);
+  const rows = [{ occurred_at: at, metric: 'yt_views_total', value: total, unit: 'views',
+                  source: 'youtube_live', source_id: `yt_views_total:${day}` }];
+
+  // what it bought: the climb since the last time the total was read
+  const was = await db.newestOf('yt_views_total');
+  let skipped = null;
+  if (!was) skipped = 'the first reading of the total has nothing to be counted against';
+  else {
+    const gap = Date.parse(at) - was.at;
+    if (gap < LIVE_LO || gap > LIVE_HI) skipped = `the last reading was ${(gap / 3600e3).toFixed(1)} hours ago, and a climb over that is not a day`;
+    else if (total < was.value) skipped = `the total fell from ${was.value} to ${total}, so the climb is not views`;
+    else rows.push({ occurred_at: at, metric: 'yt_views_live', value: total - was.value, unit: 'views',
+                     source: 'youtube_live', source_id: `yt_views_live:${day}` });
+  }
+  if (skipped) say(`  yt_views_live not written: ${skipped}`);
+  return { rows, empty: 0 };
 }
 
 // ---- Instagram: the Graph API, two day series and one total ----
@@ -400,6 +473,7 @@ try {
 
 const jobs = [
   ['youtube', 'youtube', () => youtube()],
+  ['youtube live', 'youtube_live', () => ytLive(at, db)],
   ['instagram', 'instagram', () => instagram(today, at)],
   ...TIKTOK_ACCOUNTS.map(a => [`tiktok ${a.name}`, 'tiktok', () => tiktok(a, today, at)])
 ];

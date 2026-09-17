@@ -3,6 +3,25 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, YouTube today, from a total that only climbs.** The Analytics
+  API is 48 to 72 hours behind and has no way to be faster, which is why the
+  channel's numbers arrive on Thursday for Monday. The Data API is current, but
+  what it gives is a running total, the views a channel has ever had, and a
+  total that only climbs has no level to vary around and can never hold an
+  index: the gate would refuse it, correctly. The difference between two
+  readings of it can. So the puller now reads `channels.list` on every run,
+  keeps the total on the record as `yt_views_total`, and writes the climb since
+  the last reading as `yt_views_live`, which is a rate, has a level, and is
+  today's rather than Thursday's. The climb is written only when the two
+  readings are about a day apart, between twenty and twenty-eight hours: miss a
+  run and the gap is two days of views wearing one day's name, so it writes
+  nothing and says why. A total that fell, which happens when YouTube removes
+  views, writes nothing either. It is not the Analytics `views` and never shares
+  its name, because the Data API counts a view where Analytics counts an
+  engaged view and the two are different sizes for the same day. Subscribers
+  cannot be done this way at all: `subscriberCount` is rounded down to three
+  significant figures, so the difference between two readings is zero most days
+  and a jump of ten on the rest, which is not a reading.
 - **17 Sep 2026, a door for a picture.** `/api/photo` takes one photo from the
   phone's share sheet, checked by the same `WIRE_TOKEN` in the same header as
   `/api/at` and `/api/mcp`, and keeps it in a private bucket beside a row that

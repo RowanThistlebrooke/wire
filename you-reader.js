@@ -52,6 +52,9 @@ const FED = {
   // every metric of it is processed: an unready day comes back missing, never
   // half counted, and the puller already skips what is missing. So three.
   youtube: 3,
+  // The Data API's running total, read now and written as the climb since the
+  // last reading. Nothing is behind, so the promise is the run itself: a day.
+  youtube_live: 1,
   instagram: 3,
   tiktok: 1,
   claude: null,
