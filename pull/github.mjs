@@ -5,7 +5,11 @@
 // does, so the same row level security applies. There is no admin key
 // anywhere in this repo or in this script.
 
+import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+
+// Use the same complete-history reader as the pages and MCP; any page error stops the pull.
+const readAll = new Function(readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8') + '; return readAll;')();
 
 const { WIRE_URL, WIRE_KEY, WIRE_EMAIL, WIRE_PASSWORD, GH_TOKEN, GH_USER } = process.env;
 const DAYS = 14;
@@ -65,9 +69,9 @@ for (let n = 1; n <= DAYS; n++) {
 
 // The same file can run every day without piling up duplicates, because
 // source_id is the date and the database refuses the same one twice.
-const { data: have } = await db.from('events')
-  .select('source_id').eq('source', 'github').limit(20000);
-const seen = new Set((have || []).map(h => h.source_id));
+const have = await readAll(() => db.from('events')
+  .select('source_id').eq('source', 'github').order('id', { ascending: true }));
+const seen = new Set(have.map(h => h.source_id));
 const fresh = rows.filter(r => !seen.has(r.source_id));
 
 if (!fresh.length) {
