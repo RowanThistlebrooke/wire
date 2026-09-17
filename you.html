@@ -90,6 +90,10 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 
 /* the chart */
 .chart{margin-top:26px;position:relative}
+.chart-readout{position:absolute;top:12px;left:8px;z-index:1;max-width:calc(100% - 60px);padding:4px 12px 12px;background:var(--panel);border:1px solid var(--edge2);pointer-events:none;font:400 11px/1.5 var(--mono);color:var(--dim);overflow-wrap:anywhere}
+.chart-readout p{margin:8px 0 0}
+.chart-readout b{font-weight:400;color:var(--ink)}
+.chart-readout small{display:block;font:inherit}
 #c{display:block;width:100%;touch-action:pan-y;cursor:crosshair}
 #c .ln{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s cubic-bezier(.4,0,.2,1) forwards}
 #c.still .ln{animation:none;stroke-dashoffset:0}
@@ -400,7 +404,7 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
     <div class="gv-top"><div class="tg" id="gaim"></div><div class="head"><div class="big" id="bn">&#183;</div><div class="hs"><b id="bc"></b><span id="bd"></span></div></div></div>
     <div class="tg gv-tgt" id="tg"></div>
 
-    <div class="chart" id="chart"><svg id="c" aria-label="chart"></svg></div>
+    <div class="chart" id="chart"><svg id="c" aria-label="chart"></svg><div class="chart-readout" id="chart-readout" hidden></div></div>
     <div class="gv-under"><div class="rules" id="rules"></div><div class="ranges" id="ranges"></div></div>
     <div class="cross" id="cross"></div>
 
@@ -480,7 +484,7 @@ async function load(){
   SIGNED = null; SHOTKEY = '';
   // a year back, further only to hold a reading or a commit's before
   const t = dayNum(TODAY); let lo = t - 364;
-  for (const m of OWNED) lo = Math.min(lo, dayNum(SERIES[m][0].day));
+  for (const pts of Object.values(SERIES)) if (pts.length) lo = Math.min(lo, dayNum(pts[0].day));
   for (const c of COMMITS){ const s = dayNum(c.from), e = Math.min(dayNum(c.to || TODAY), t); lo = Math.min(lo, s - Math.max(2, e - s + 1) - 3); }
   D0 = lo; N = t - lo + 1;
   if (!(SEL === YOU_ID || GOALS.some(g => g.id === SEL))) SEL = YOU_ID;
@@ -719,13 +723,20 @@ const span = c => { const s = dayNum(c.from) - D0, e = Math.min(dayNum(c.to || T
 
 function drawChart(anim){
   const g = cur(), m = shown(), pts = m ? SERIES[m] : pointsOf(g), line = arrOf(pts), gate = indexState(pts);
+  // Raw readings keep their dates even where the shared reader refuses an index.
+  const raw = new Array(N);
+  for (const metric of m ? [m] : g.measures) for (const p of SERIES[metric] || []){
+    const i = dayNum(p.day) - D0;
+    if (i >= 0 && i < N) (raw[i] || (raw[i] = [])).push({ metric, p });
+  }
+  $('chart-readout').hidden = true; $('chart-readout').innerHTML = '';
   const svg = $('c'), W = Math.max(280, Math.round($('chart').clientWidth)), H = W < 560 ? 250 : 360, T = 18, B = 28, R = 44;
   const today = N - 1, fc = FC ? COMMITS.find(c => c.id === FC) : null, fx = !fc && FX ? cellOf(FX) : null;
   let i0, i1 = today;
   if (fc){ const p = span(fc); i0 = Math.max(0, p.b - 2); i1 = Math.min(today, Math.max(p.e, p.s) + 2); }
   else if (fx){ const p0 = fx.c.pairs[0]; i0 = p0 ? Math.max(0, Math.min(today, dayNum(p0.next) - D0)) : Math.max(0, today - 89); }
   else i0 = RANGES[RANGE] ? Math.max(0, today - RANGES[RANGE] + 1) : 0;
-  if (!fc && !fx){ const fd = line.findIndex(v => v != null); i0 = fd < 0 ? Math.max(0, today - 89) : Math.max(i0, fd); }   // a window opens on the first reading, not on empty days
+  if (!fc && !fx){ const fd = raw.findIndex(v => v && v.length); i0 = fd < 0 ? Math.max(i0, today - 89) : Math.max(i0, fd); }   // a window opens on the first raw reading, even before the index starts
   if (i1 - i0 < 6) i0 = Math.max(0, i1 - 6);
   const r = fc ? testCommit(pts, fc, COMMITS, TODAY) : null;
   const vals = gate === 'none' ? [] : line.slice(i0, i1 + 1).filter(v => v != null);   // a line under the gate is not drawn, so it does not set the scale or place 100 either
@@ -786,17 +797,19 @@ function drawChart(anim){
     s += `<circle class="pulse" cx="${X}" cy="${Y}" r="9" fill="${col}"/><circle cx="${X}" cy="${Y}" r="3.2" fill="${col}"/><text class="tag" x="${W - R + 10}" y="${(tagY + 3.5).toFixed(1)}" style="fill:${col}">${line[li]}</text>`; }
   s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text><g id="hov"></g>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.classList.toggle('still', !anim); svg.innerHTML = s;
-  VIEW = { m, pts, line, i0, i1, x, y, W, H, T, B, R, col, gate };   // the gate travels with the view, so reading the chart can never show what it did not draw
+  VIEW = { m, pts, line, raw, i0, i1, x, y, W, H, T, B, R, col, gate };   // the gate travels with the view, so reading the chart can never show what it did not draw
 }
-// reading the chart: only the day under the pointer, silent where the reader drew no index
-$('c').addEventListener('pointermove', e => { const v = VIEW; if (!v || v.gate === 'none') return;   // nothing is drawn under the gate, so there is nothing to read off it
+// Only the exact day under the pointer: raw values and the reader's reason stay separate from the index.
+$('c').addEventListener('pointermove', e => { const v = VIEW; if (!v) return;
   const b = $('c').getBoundingClientRect(), px = (e.clientX - b.left) * v.W / b.width;
   const i = Math.max(v.i0, Math.min(v.i1, Math.round(v.i0 + px / (v.W - v.R) * (v.i1 - v.i0))));
-  if (!Number.isFinite(v.line[i])){ $('hov').innerHTML = ''; drawHead(i); return; }
-  const k = i, X = v.x(k).toFixed(1), Y = v.y(v.line[k]).toFixed(1);
-  $('hov').innerHTML = `<line x1="${X}" x2="${X}" y1="${v.T}" y2="${v.H - v.B}" stroke="#8d959a" stroke-opacity=".4"/><circle cx="${X}" cy="${Y}" r="4.5" fill="${v.col}" stroke="#070809" stroke-width="2"/>`;
-  drawHead(k); });
-$('c').addEventListener('pointerleave', () => { const h = $('hov'); if (h) h.innerHTML = ''; if (VIEW) drawHead(null); });
+  const readings = v.raw[i] || [], indexed = v.gate !== 'none' && Number.isFinite(v.line[i]), box = $('chart-readout');
+  box.hidden = !readings.length;
+  box.innerHTML = readings.length ? `<p>${dstr(D0 + i)} · raw readings</p>` + readings.map(({ metric, p }) => `<p>${esc(metric)} · <b>${esc(p.value)}${UNITS[metric] ? ' ' + esc(UNITS[metric]) : ''}</b>${p.why ? `<small>No index: ${esc(p.why)}</small>` : ''}</p>`).join('') : '';
+  const X = v.x(i).toFixed(1);
+  $('hov').innerHTML = indexed || readings.length ? `<line x1="${X}" x2="${X}" y1="${v.T}" y2="${v.H - v.B}" stroke="#8d959a" stroke-opacity=".4"/>` + (indexed ? `<circle cx="${X}" cy="${v.y(v.line[i]).toFixed(1)}" r="4.5" fill="${v.col}" stroke="#070809" stroke-width="2"/>` : '') : '';
+  drawHead(i); });
+$('c').addEventListener('pointerleave', () => { const h = $('hov'); if (h) h.innerHTML = ''; $('chart-readout').hidden = true; $('chart-readout').innerHTML = ''; if (VIEW) drawHead(null); });
 function drawRanges(){ $('ranges').innerHTML = Object.keys(RANGES).map(k => `<button type="button" data-range="${k}" aria-pressed="${!FC && !FX && RANGE === k}">${k}</button>`).join(''); }
 
 // ---- the commitments: each one tested against the line above, and a small picture of its before and during ----
