@@ -3,6 +3,26 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, a reading before a stock's start day has no index.** The
+  start row shipped this morning moved only the baseline and left every
+  earlier reading in the series, scored against a baseline taken years
+  later, on the argument that taking them out would hide the fall. That was
+  half the thought. It keeps the fall, and it draws the rise: `yt_pct_viewed`
+  read 205.4 on 2025-09-29 and 403.9 on 2025-09-28, from a channel two
+  people a day watched. Percentage viewed goes up when almost nobody clicks,
+  because the few who do are the ones who already wanted to, so the metric
+  really was higher and the channel was not better. Both of those numbers
+  are arithmetic against a unit those days never lived in, and the system
+  already has a rule for that: when it cannot score a reading honestly it
+  returns nothing and says why. It was applying that rule in one direction
+  and not the other. So a reading before the start day now has no index at
+  all. It stays in the ledger, it stays readable as a raw value, and it
+  comes back with the reason naming the stock's start day instead of a rank.
+  The fall does not go anywhere: sixty-nine percent to fourteen is in the
+  readings, and that is a truer picture than a line drawn in a unit that did
+  not exist yet. A stock joins YOU at its start day, or at its first reading
+  if that is later, and after joining, a missing or unscored reading leaves
+  a gap rather than dropping the stock or carrying a number forward.
 - **17 Sep 2026, the health check said the opposite of what happened.**
   `health` names every stock that has outgrown its baseline, and the gate it
   reports catches both directions: a stock varying eight times as much as it

@@ -38,21 +38,34 @@ Version is 1.36.0 in the working tree, not yet committed.
 
 ## What is waiting and what blocks it
 
-- **Nothing is pushed.** Two commits ahead, plus an evening in the working
-  tree: `mcp/health.mjs`, `mcp/server.mjs`, `pull/github.mjs`, `scan.html`,
-  `test.html`, `CHANGES.md`, `package.json`, `HANDOFF.md`, and untracked
-  `sell.*`, `sql/sell_public_readonly.*`, `the-door.html`. Six CHANGES
-  entries and the version bump are drafted and waiting. The user pushes.
-- **`yt_views_live` has no rule.** `health` showed the door on time and
-  writing the same morning. The stock cannot be scored until it has `up`.
-  That is a ledger write and belongs to the user.
-- **`sql/sell_public_readonly.sql` has never been run.** Still a draft, now
-  at contract 4. Review it deliberately. Never run it for a demo.
-- **`sell.*` and `the-door.html` are untracked.** The user cleared editing
-  `sell.*` this session. Whether they join the repo is undecided.
+- **`yt_views_live` has no rule, and cannot have one yet.** Writing a rule
+  was refused: `no stock called yt_views_live`. A stock is born by its first
+  reading and this one has none, because the reading is a subtraction: today's
+  lifetime total minus the last one. One total exists, stamped 17 Sep 10:54.
+  The second must land 20 to 28 hours later, so between 06:54 and 14:54 on
+  18 Sep. Set the rule to `up` after that reading exists, not before.
+- **A start row draws readings it cannot honestly score.** `yt_pct_viewed`
+  reads 205.4 on 2025-09-29 and 403.9 on 2025-09-28, from a channel nobody
+  watched, because a start moves only the baseline and leaves every earlier
+  reading scored against it. The fall was the only half considered when that
+  was built; the rise is drawn too and the rise is an artefact of a tiny
+  audience. Decided but not built: a reading before a stock's start day
+  should have no index at all, staying in the ledger as a raw value. The
+  work spans rankSeries and every caller. Not started.
+- **Nothing watches the doors.** `health` measures how old a door's newest
+  row is against its promise. It cannot tell whether anything is scheduled
+  to produce more. `com.wire.social` failed every run from 16 Sep 21:03 and
+  reported `ontime` throughout, because hand-runs kept the data fresh. This
+  is a design gap, not a bug. Nothing built.
+- **`sql/sell_public_readonly.sql` has never been run.** A draft at contract
+  4. Review deliberately. Never run it for a demo.
+- **`sell.*` and `the-door.html` are untracked**, so the CHANGES entry about
+  the public page was pulled back out (`7efba28`) until they exist on GitHub.
+  Whether they join the repo is undecided.
 - **Nothing tonight was verified in a running app.** The hold gesture, the
   per-stock panel, the refused duplicate call and the public page were
   checked by reading and by harness only.
+- **Debt from the sweep is unchanged** and listed below.
 
 ## Settled tonight, so it is not re-litigated
 
@@ -66,6 +79,24 @@ Version is 1.36.0 in the working tree, not yet committed.
   original diagnosis had been wrong. It was not wrong; it had been fixed an
   hour earlier. A source read says what a file holds now, never when it
   started holding it. Check `git log` before calling a prior finding stale.
+
+### The pullers, found 17 Sep late
+
+- `pull/whoop.mjs` runs from `~/Library/LaunchAgents/com.wire.whoop.plist`
+  at 07:45 Zurich, logging to `~/.wire/pull.log`, config `~/.wire/env`.
+  Documented in README. Exit status 0.
+- `pull/social.mjs` runs from `~/Library/LaunchAgents/com.wire.social.plist`
+  at 07:50 Zurich. Installed 16 Sep 21:03 and failed every run with exit 78:
+  the plist carried the literal text `$HOME` instead of the expanded path,
+  because it was written with a quoted heredoc. launchd is not a shell and
+  does not expand it, so the job could not be set up and node never started.
+  Fixed 17 Sep, kickstarted under launchd, spawned and exited 0. No days
+  were lost: the puller asks for the last 14 days each run, and one hand-run
+  covered the single missed morning. That 14-day window is the exposure if
+  it ever breaks again.
+- Neither puller is a GitHub workflow, so a buyer who clones the repo gets
+  both files and no way to run them. `.github/workflows/pull.yml` schedules
+  only `pull/github.mjs`, at 05:17 UTC.
 
 ## Debt, from a full sweep of every caller
 
@@ -91,14 +122,104 @@ exactly how `health` came to print the opposite of the truth:
 
 ## Raised, not decided
 
-- Whether YOU should average goals instead of stocks. The prior concern
-  was that a domain with more stocks contributes more. Current membership
-  and numerical influence have not been checked this session.
+- Whether `sell.*` joins the repo. Split it: the page (`sell.html`,
+  `sell.css`, `sell.js`) is work that would be lost to a stray `git clean`
+  and cannot be described in CHANGES.md while untracked. The SQL
+  (`sql/sell_public_readonly.sql`) is different in kind: it is the
+  mechanism that makes a private ledger public, and shipping it in the
+  template hands that to people who will not read it. Advice given:
+  commit the page, hold the SQL until the public page has a job.
 - Whether to track a video's retention at a fixed age rather than only
   channel readings per day.
-- Which builder session owns further landing work.
+- Whether a goal whose baseline has not formed belongs in YOU at full
+  weight. Under goal-averaging `lean` would hold a quarter of YOU on two
+  readings. Raised 17 Sep, not decided.
+
+## Decided 17 Sep: YOU keeps every stock, and goal membership is fixed first
+
+YOU averages stocks, so five Whoop stocks outvote two YouTube ones and the
+weighting is decided by whichever API is chattiest, not by the user.
+
+Averaging goals instead was proposed and rejected as it stands: four stocks
+are in no goal (`whoop_hrv`, `whoop_rhr`, `whoop_sleep_perf`, `ig_reach`),
+so switching today would take YOU from 93.4 to 99.0 by dropping them, and
+three of the four are below 100 — including `whoop_sleep_perf` at 81.9, the
+lowest stock there is. That is the law against quietly dropping a stock,
+broken structurally instead of by accident.
+
+The user chose the other order. Fix membership first, then compare:
+
+1. `body` gains `whoop_hrv`, `whoop_rhr`, `whoop_sleep_perf`, giving it all
+   five Whoop stocks. (`sleep_perf` is currently only a lever on `lean`,
+   which counts toward nothing.)
+2. `ig_reach` gets a goal of its own.
+
+Then YOU as goals would be body 89.2, instagram 89.0, youtube 99.2,
+lean 107.1 = **96.1**, against 93.4 today. Nothing dropped; the whole
+difference is reweighting, which was the actual complaint.
+
+Model confirmed against the live ledger before computing: `body` publishes
+90.6 and (85.2 + 96) / 2 = 90.6 exactly.
+
+No code until the two goal rows are written and both numbers have been
+looked at side by side.
 
 ## Where to check next
+
+### Artifact review still open
+
+The advisor reviewed the rendered "Inside The Wire" artifact at
+https://claude.ai/artifact/AZLPmJWkdccKNTieJ1wSze and targeted current source
+functions. This is a separate review from the evening work recorded above.
+No ledger tools, git commands or running Wire app were used for this review.
+The artifact's displayed personal values and its live-data connection were
+not verified. They must not be repeated as independently checked results.
+
+Findings to resolve with the builder, without changing gates or laws here:
+
+- The artifact and CLAUDE.md say missing values are never carried forward.
+  `etfSeries` in you-reader.js retains `last[m]` and uses it on later days
+  while within `staleBy(m)` (lines 769-782). This is an executable-code
+  mismatch, not merely wording. When a required member expires, the whole
+  aggregate day is omitted. Stocks without an index are separately excluded
+  before this calculation. `staleAfter` uses door promise plus slack, not
+  the promise alone. No remedy has been chosen or implemented here.
+- The artifact says the baseline freezes forever and append-only prevents
+  a finding from changing. `liveRows`, `readRules`, `baselineOf` and
+  `rankSeries` apply current rules, corrections, voids and explicit starts;
+  derived history can change while the original events remain. Baseline
+  inputs are eligible daily means, not individual raw events. The artifact's
+  description of start must say it changes the baseline for the whole
+  series, rather than implying earlier readings disappear.
+- `weakPoint` (you-reader.js:1381) picks the lowest latest eligible index.
+  It does not itself align dates, check freshness, assess a goal's target,
+  or establish which action helps. A weak point is not a demonstrated
+  intervention. Goals can include targets and levers, which the artifact's
+  "nothing more than a handful of stocks" account omits.
+- The table is not the only irreplaceable data. `api/photo.mjs:84` uploads
+  image files to private Storage, and the event stores their path. Supabase
+  documents that database backups exclude Storage objects:
+  https://supabase.com/docs/guides/platform/backups . Protecting only events
+  cannot reconstruct the original pictures. No backup state was inspected.
+- The artifact omits the measured-versus-estimated distinction. `estimate`
+  in mcp/server.mjs records source photo, model identity, and `_est` metric
+  names; uploading a photo alone supplies no measurement. Input sources
+  cannot be called freely interchangeable without preserving measurement
+  meaning, units and provenance. The schema's duplicate key includes source,
+  so its protection is not a universal cross-door duplicate guarantee.
+- Further source edge cases, not tested with data: `indexState` labels
+  firmness by total series length even after a new start supplies a shorter
+  baseline. `outgrownBy` returns no refusal for zero current spread. A fully
+  frozen baseline with no spread is not unlocked merely by later varied
+  readings. Keep these open rather than presenting the refusal list as an
+  exhaustive guarantee.
+
+No artifact, source code, SQL, settings or ledger rows changed in this
+review. Only this record changed. Priority is resolving the carry-forward
+contradiction before strengthening the public promise. Other sessions'
+handoff updates were preserved.
+
+### Source map
 
 - `CLAUDE.md`: the sole laws. `CHANGES.md`: recorded changes.
   `mcp/MCP.md`: connector documentation, not a second authority for laws.
