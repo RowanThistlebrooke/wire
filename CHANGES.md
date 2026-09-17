@@ -3,6 +3,15 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, the full view had taken a name the page was already using.**
+  The picture's full view was given the class `big`, which the page has used
+  since the beginning for the headline number, the weak point's number and one
+  more besides. Its rules are written for a panel that covers the screen, so
+  every one of those became a panel that covers the screen: the whole page went
+  black with one index number in the middle of it. Nothing was wrong with the
+  data and nothing was lost; a name was taken twice. The full view is `full`
+  now. A class is a name, and a name in one file has to be looked for before it
+  is used.
 - **17 Sep 2026, a picture and what it was read for, and two of them against
   each other.** The strip moves to the foot of the goal page, and under each
   picture stands what that day read: the goal's own measures and every estimate,
