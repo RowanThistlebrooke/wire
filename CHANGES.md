@@ -3,6 +3,88 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **17 Sep 2026, the public page could not read its own ledger.** The page a
+  buyer sees before they buy shares one maths file with every other page, and
+  when the readers there started taking a thousand rows at a time the small
+  fake reader this page hands them still spoke the older language. Every read
+  threw on the first call. The page drew nothing at all, and nobody saw it,
+  because it is not linked from anywhere yet. That is the whole argument for
+  not having a second copy of anything: the page did not change, the thing
+  underneath it did, and a page that never runs cannot tell you it is broken.
+  It pages properly now. Two things came with it. It did not know about a
+  start row, so a stock with one would have read differently in public than it
+  does in private, which is the worst kind of wrong: quietly, and only where
+  other people are looking. And it could not say whether a reading was out of
+  date, because the snapshot it reads never said which door wrote which stock,
+  and a day behind means nothing until you know whose day it is. The snapshot
+  publishes that map now, for allowlisted stocks only, and publishes whether
+  the map is complete, because a page working freshness out from a partial
+  list is worse than one saying it cannot tell. The snapshot contract moves
+  from 3 to 4 and an older one is refused rather than half read.
+- **17 Sep 2026, the health check said the opposite of what happened.**
+  `health` names every stock that has outgrown its baseline, and the gate it
+  reports catches both directions: a stock varying eight times as much as it
+  did across its first thirty readings, and one varying an eighth as much,
+  because either way the unit those thirty readings set has stopped measuring
+  anything. The sentence `health` printed only ever knew one of those. A stock
+  whose variation had collapsed was reported as varying eight times more.
+  The tool you run to ask whether your wire can still be trusted was telling
+  you the reverse of the truth, and it was telling you it confidently. The
+  cause is the same one every time: it wrote its own sentence instead of
+  reading the one the maths file already hands it, so when the gate learned
+  the second direction the sentence stayed where it was. It reads that
+  sentence now. The maths lives in one file is not a tidiness rule. This is
+  the thing it prevents.
+- **17 Sep 2026, two numbers for one day, and one of them disappeared.** Send
+  the same stock and the same day twice in one call with two different numbers
+  and the ledger kept the first, put the second in a list called skipped, and
+  answered as though nothing had happened. In a table that cannot be edited
+  the second number is then gone, with no row anywhere saying it was ever
+  offered, which is exactly the thing the design exists to make impossible. It
+  was not deciding anything. It was picking whichever arrived first. A call
+  carrying the same number twice still lands once, as it always did, because
+  that is a repeat and not a disagreement. A call carrying two different
+  numbers for one day now refuses before a single row is written, and names
+  the stock, the day and every number it was handed, so the person whose
+  ledger it is decides which one is true. Silence over a guess covers guessing
+  which of two things you meant.
+- **17 Sep 2026, a read that gave up at twenty thousand.** The puller that
+  fetches commits reads back what the ledger already holds so it never writes
+  the same day twice. It asked for twenty thousand rows and it dropped the
+  error. Two ways for that to end badly, and neither is loud. A read that
+  failed came back empty, so every day looked new, and the write was refused
+  whole by the database. And past twenty thousand rows the read is short
+  forever, which is not a bad day, it is a puller that has stopped working and
+  will never say so. The shared pager has existed since a silent cap made a
+  day of readings vanish off the page in September, and this file was written
+  before it. It uses it now, ordered by something that cannot repeat, and a
+  page that fails throws instead of handing back a shorter truth.
+- **17 Sep 2026, a stock is stale by its own door, everywhere.** Doors carry
+  promises: a video platform trimming a number for three days is on time, and
+  a wrist strap silent for three days is a dead cable, so a reading is only
+  out of date once it is past its own door's promise. That landed, and then
+  only one page actually asked. YOU was built from the flat seven days on
+  every page including the one it was built for, because the per-door limits
+  were worked out twelve lines after YOU was made: the first load used the
+  fallback and every load after it used the limits from the load before.
+  Always one step behind, quietly, and only on the one number the whole page
+  is about, while every goal underneath it was already correct. The scan, the
+  test and the target on a goal never asked at all. Every page asks the same
+  way now, and every page gets the same answer, which was the point of having
+  one file of maths.
+- **17 Sep 2026, every stock opens its whole record.** Hold the background of
+  the page for two seconds and it turns over: the screen fades the whole time
+  it is held, so it says what is coming before it happens, and holding again
+  brings you back. Letting go early, dragging or scrolling returns it with
+  nothing changed, and buttons, stocks, photos, the chart and anything with
+  words to select keep the clicks they already had. Underneath that, clicking
+  a stock used to jump to its line on the chart. It now opens that stock's
+  whole record in place: its latest reading and the day it was read, how many
+  days it holds and the first of them, its index or the reason it has none,
+  its rule, which doors write it and how far behind each one is, and every day
+  it has ever read, newest first. A voided day is struck through and a
+  corrected day shows what it read before beside what it reads now. The chart
+  is one press away on the button beside its name.
 - **17 Sep 2026, the setup ends with your history, not your first row.** Six
   steps built the thing and stopped at one reading, which is a ledger that says
   nothing, while everyone arrives with years of readings already sitting in an
@@ -52,10 +134,6 @@ GitHub, copy all of it, paste over yours.
   back, so nothing here goes one way only. Its friction is the size of the act:
   the phrase carries how many readings leave the count, and the answer shows
   what the index is now and what it would become, before anything is written.
-  **Known limit:** sell.html's public read-only view does not know about start
-  rows — they are not in its allow-list and it draws the whole series — so a
-  stock with a start would read differently in public than in private. That page
-  is not live; this is written down so it is fixed before it is.
 - **17 Sep 2026, the full view had taken a name the page was already using.**
   The picture's full view was given the class `big`, which the page has used
   since the beginning for the headline number, the weak point's number and one
