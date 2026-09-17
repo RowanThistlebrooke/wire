@@ -60,13 +60,13 @@ export function keys() {
 // far behind each one is are worked out in you-reader.js, beside the rest of
 // the maths; this reads that answer and only says whether anything is wrong.
 // A door with no promise cannot be late, so it is never the reason this fails.
-// Which stocks have outgrown their baseline: each one names itself, how many times its variation grew,
-// and why it has no index. ok only when none has. A stock whose baseline has no spread yet is young, not
-// broken, so it does not turn this red. The gate itself lives in you-reader.js; this only says it.
+// Which stocks no longer fit their baseline, and why they have no index. ok only when none has.
+// A stock whose baseline has no spread yet is young, not broken, so it does not turn this red.
+// The gate and its explanation live in you-reader.js; this only says the supplied noIndexWhy.
 export function index(outgrown) {
   const all = outgrown || [];
   return { ok: !all.length, outgrown: all,
-           ...(all.length ? { say: all.map(o => `${o.metric} varies ${Math.round(o.by)} times as much now as across its first thirty readings, so it has no index: track a rate, or start it clean under a new name`).join('; ') } : {}) };
+           ...(all.length ? { say: all.map(o => `${o.metric}: ${o.why}`).join('; ') } : {}) };
 }
 
 export function feed(doors) {
