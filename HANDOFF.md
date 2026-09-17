@@ -4,6 +4,44 @@ Read this file, then open CLAUDE.md. The laws live only in CLAUDE.md.
 AGENTS.md is a pointer, not another copy. Do not answer from remembered
 repo state. This is ~/wire, not the earlier Life project or its database.
 
+## Current Instagram work, 18 Sep
+
+The user explicitly requested adding the probed Instagram fields and a Git
+commit in this task, authorizing this scoped code change despite the earlier
+advisor-only role. No ledger writes, push, deployment or schedule changes
+are authorized by the implementation below.
+
+`pull/social.mjs --instagram-preview` now reads account views, saves and
+shares through Graph v26.0, using the importer's existing reach-matched
+query windows. It is a preview only: it exits before any ledger connection,
+never runs YouTube or TikTok, never refreshes a token, and does not change
+which fields the normal scheduled importer writes. Do not enable those new
+fields by default yet. A local schedule executes this working-tree file,
+so an ungated edit could start permanent writes without a manual run.
+
+Waiting: dated Instagram Insights or an export to independently corroborate
+the day attribution of the new fields. In the preceding read-only probe,
+the existing query window matched daily reach for all three sampled days,
+12-14 Sep 2026; exact Pacific-midnight bounds did not. The browser's account
+Insights offered preset ranges only. That is partial evidence, not a daily
+date verification. No new stocks, rules or Instagram goal membership have
+been written. Per-Reel lifetime snapshots remain separate and unimplemented.
+Old Reels cannot be declared finished merely because of their age.
+
+Verification: the live preview returned 36 extra-metric values across 12
+candidate days, 3-14 Sep 2026, with matching reach controls and no missing
+extra values. A fetch guard allowed only Graph GETs: 14 requests, no ledger
+requests, exit success. Syntax passed. Review then added an explicit finite
+numeric check on both reach controls, so two absent values cannot count as
+a match. The shared reader SHA-256 remains
+`b013e4b2ff1beec31b0b95b1011cc3345b8d37e20a265c7f2c3e92647fce48f9`.
+No data was imported, no rule was declared, no schedule or credential file
+changed, and nothing was pushed. The prepared commit is limited to the
+importer, README, CHANGES and this record; unrelated page work stays outside.
+
+The older session record below is retained for the other builders. Its
+Git state and live-data statements are historical, not a current status.
+
 ## Advisor role, agreed this session
 
 This assistant reads, checks, challenges and keeps the record. Code changes

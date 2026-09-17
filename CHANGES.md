@@ -3,6 +3,17 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **18 Sep 2026, Instagram's extra metrics wait for their date check.**
+  `pull/social.mjs --instagram-preview` reads account views, saves and
+  shares in the existing reach-matched query windows. It prints candidate
+  dates, exact query boundaries and missing fields without connecting to
+  the ledger, refreshing tokens or running another platform. The added
+  fields cannot enter normal or scheduled writes. A matching reach control
+  is evidence about the window, not independent confirmation of each new
+  metric's date; a dated Insights comparison is still required. Incomplete
+  account lists, repeated metric records and non-daily responses refuse
+  the read. The shared reader and comparison gates are unchanged.
+
 - **17 Sep 2026, a reading before a stock's start day has no index.** The
   start row shipped this morning moved only the baseline and left every
   earlier reading in the series, scored against a baseline taken years

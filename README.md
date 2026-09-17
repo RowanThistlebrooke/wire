@@ -42,6 +42,7 @@ and will stay that way.
 | `api/config.mjs` | hands the pages your Supabase address and publishable key, from Vercel's environment |
 | `pull/github.mjs` | pulls your commit count every morning |
 | `pull/whoop.mjs` | pulls your Whoop readings every morning, from your own Mac |
+| `pull/social.mjs` | local social puller; Instagram candidate metrics have a read-only preview |
 | `mcp/server.mjs` | the tools your AI uses; `mcp/wire.mjs` runs them for Claude Desktop, `api/mcp.mjs` over the web |
 | `api/at.mjs` | one reading from an iOS Shortcut, behind `WIRE_TOKEN` |
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
@@ -145,6 +146,29 @@ launchctl load ~/Library/LaunchAgents/com.wire.whoop.plist
 It writes what it did to `~/.wire/pull.log`. A morning the Mac is asleep is
 a morning it does not run; the next run asks for the last fourteen days, so
 a missed day lands late rather than never.
+
+## Instagram preview
+
+The current Instagram importer keeps daily reach and profile views, plus
+the follower total when read. Account views, saves and shares can be checked
+separately:
+
+```sh
+node pull/social.mjs --instagram-preview
+```
+
+This reads the existing Instagram token from
+`~/Documents/channel-analytics/.env.local`. It makes only Instagram Graph
+GET requests. It does not connect to the ledger, run another platform,
+refresh tokens or write anything. No `--dry` flag is needed.
+
+The printed dates are candidates: each query uses the existing Pacific-day
+window and must match the daily reach control. That control alone does not
+prove the date attribution of views, saves or shares. Match them against
+dated Instagram Insights before enabling imports. Missing values print
+`missing`; they are never replaced with zero. These metrics remain outside
+normal and scheduled writes. Reel lifetime totals are not daily readings
+and are not part of this preview.
 
 ## Rules this project does not break
 

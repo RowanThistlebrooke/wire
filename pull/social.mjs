@@ -10,6 +10,8 @@
 //
 //   node pull/social.mjs         pull and write
 //   node pull/social.mjs --dry   show what it would add, change nothing
+//   node pull/social.mjs --instagram-preview
+//     read account views, saves and shares only; no ledger connection or writes
 //
 // WIRE_URL, WIRE_KEY, WIRE_EMAIL and WIRE_PASSWORD come from the
 // environment, like pull/github.mjs, or from .env.local if you add them.
@@ -48,6 +50,15 @@ const DAYS = 14;
 // puller had stopped keeping.
 const SETTLE = new Function(fs.readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8') + '; return FED;')();
 const DRY = process.argv.includes('--dry');
+const INSTAGRAM_PREVIEW = process.argv.includes('--instagram-preview');
+// These account metrics answer total_value, not time_series. The reach
+// control checks the query window, but their own daily attribution still
+// needs a dated Insights comparison. Keep them out of scheduled writes.
+const IG_PREVIEW_METRICS = [
+  ['views', 'ig_views', 'views'],
+  ['saves', 'ig_saves', 'saves'],
+  ['shares', 'ig_shares', 'shares']
+];
 
 // Channel totals from the Analytics API. Not per-video numbers, so they do
 // not share a name with anything imported from a Studio CSV.
@@ -316,12 +327,13 @@ async function ytLive(at, db) {
 
 // ---- Instagram: the Graph API, two day series and one total ----
 
-async function instagram(today, at) {
+async function instagram(today, at, preview = false) {
   const token = need('IG_ACCESS_TOKEN');
   const get = (where, params) => call(`${GRAPH}/${where}?${new URLSearchParams(params)}`, { headers: bearer(token) });
 
   // The token belongs to a person, so the Instagram account is found through its page.
   const pages = await get('me/accounts', { fields: 'instagram_business_account{id}', limit: '100' });
+  if (pages.paging?.next) throw new Error('the linked account list is incomplete; no account was selected');
   const linked = (pages.data || []).map(p => p.instagram_business_account).filter(Boolean);
   if (linked.length !== 1) throw new Error(`the token reaches ${linked.length} instagram accounts, it needs exactly one`);
   const ig = linked[0].id;
@@ -337,22 +349,39 @@ async function instagram(today, at) {
   if (!Array.isArray(values)) throw new Error('no daily reach series came back');
 
   const rows = [];
+  const windows = [];
   let empty = 0;
   for (const v of values) {
     const end = Date.parse(v.end_time);
     if (!Number.isFinite(end) || pacificDay(end) === pacificDay(end - 60000)) throw new Error(`a day ended at ${v.end_time}, not at midnight Pacific`);
     const day = pacificDay(end - 12 * 3600e3);
     if (day < FIRST || day > newest('instagram')) continue;
-    const one = await get(`${ig}/insights`, { metric: 'reach,profile_views', period: 'day', metric_type: 'total_value',
-      since: Math.floor(end / 1000) - 43200, until: Math.floor(end / 1000) + 43200 });
-    if (!(one.data || []).length) throw new Error(`no insights came back for ${day}`);
-    const got = Object.fromEntries(one.data.map(m => [m.name, m.total_value?.value]));
+    const fields = preview ? [['reach', 'ig_reach', 'accounts'], ...IG_PREVIEW_METRICS]
+      : [['reach', 'ig_reach', 'accounts'], ['profile_views', 'ig_profile_views', 'views']];
+    const since = Math.floor(end / 1000) - 43200, until = Math.floor(end / 1000) + 43200;
+    const one = await get(`${ig}/insights`, { metric: fields.map(([name]) => name).join(','),
+      period: 'day', metric_type: 'total_value', since, until });
+    if (!Array.isArray(one.data) || !one.data.length) throw new Error(`no insights came back for ${day}`);
+    const got = {};
+    for (const m of one.data) {
+      if (Object.hasOwn(got, m.name)) throw new Error(`a metric repeated in the insights for ${day}`);
+      if (m.period !== 'day') throw new Error(`insights did not report a day on ${day}`);
+      got[m.name] = m.total_value?.value;
+    }
+    if (!Number.isFinite(v.value) || !Number.isFinite(got.reach)) throw new Error(`no numeric reach control came back for ${day}`);
     if (got.reach !== v.value) throw new Error(`the days did not line up on ${day}`);
-    for (const [metric, value, unit] of [['ig_reach', v.value, 'accounts'], ['ig_profile_views', got.profile_views, 'views']]) {
+    windows.push({ day, since, until, end_time: v.end_time, reach: got.reach });
+    for (const [name, metric, unit] of fields) {
+      const value = got[name];
       if (!Number.isFinite(value)) { empty++; continue; }
       rows.push({ occurred_at: day, metric, value, unit, source: 'instagram', source_id: day });
     }
   }
+
+  // A preview never reads a current follower total, connects to the ledger,
+  // rotates a token or runs another platform. These are candidate dates,
+  // not rows approved to land or a count of what the ledger already holds.
+  if (preview) return { rows, empty, windows };
 
   // Followers is a total right now, so it is today's reading and nothing else.
   const user = await get(ig, { fields: 'followers_count' });
@@ -460,6 +489,26 @@ async function tiktok(a, today, at) {
 }
 
 // ---- run ----
+
+if (INSTAGRAM_PREVIEW) {
+  try {
+    const { rows, empty, windows } = await instagram(null, null, true);
+    say('instagram preview: candidate Pacific dates; reach control only; Insights date check pending');
+    for (const w of windows) {
+      say(`  ${w.day}  query ${new Date(w.since * 1000).toISOString()} to ${new Date(w.until * 1000).toISOString()}  reach ${w.reach} matches`);
+      for (const [name, metric, unit] of IG_PREVIEW_METRICS) {
+        const row = rows.find(r => r.source_id === w.day && r.metric === metric);
+        say(`    ${metric.padEnd(24)} ${row ? `${row.value} ${unit}` : 'missing'}`);
+      }
+    }
+    const readings = rows.filter(r => IG_PREVIEW_METRICS.some(([, metric]) => metric === r.metric)).length;
+    say(`instagram preview: ${readings} returned values across ${windows.length} candidate days, ${empty} missing values; no ledger connection, no writes`);
+    process.exit(0);
+  } catch (e) {
+    say(`instagram preview FAILED: ${e.message}`);
+    process.exit(1);
+  }
+}
 
 let db, today;
 const at = new Date().toISOString();
