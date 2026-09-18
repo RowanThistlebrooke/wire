@@ -379,7 +379,7 @@ body.stock-dragging .goal-filters{border-color:var(--teal)}body.stock-dragging [
 .shot img,.shot i{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--panel);border:1px solid var(--edge)}
 .shot figcaption{margin-top:6px;font:400 10px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .shot img{cursor:zoom-in}
-/* holding the page: the screen fades the longer you hold, and at two seconds the other side is up */
+/* a short hold previews the selected stock or goal without loading the ledger */
 #fade{position:fixed;inset:0;z-index:60;background:var(--ground);opacity:0;pointer-events:none}
 body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .lbar{display:flex;align-items:center;margin-bottom:6px}
@@ -465,6 +465,16 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
   .gv-tr{grid-template-columns:max-content minmax(30px,1fr) max-content max-content max-content}
   .gv-tr > i{grid-column:1/-1}
 }
+/* the short hold: source → reading → scoring → where it is used */
+.flow-peek{width:min(940px,calc(100% - 32px));max-height:88vh;overflow:auto;background:var(--ground);color:var(--ink);border:1px solid var(--edge2);padding:24px}
+.flow-peek::backdrop{background:rgba(0,0,0,.75)}.peek-head{display:flex;justify-content:space-between;align-items:start;gap:20px}.peek-head h2{font:300 28px/1.2 var(--ui);margin:10px 0;overflow-wrap:anywhere}.peek-head p{font:12px/1.6 var(--ui);color:var(--dim);margin:0}
+.peek-stocks{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.peek-stocks .quiet-btn{text-align:left;overflow-wrap:anywhere}.peek-stocks small{display:block;color:var(--muted);margin-top:5px}
+.peek-path{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:24px}.peek-step{position:relative;min-width:0;border-top:1px solid var(--teal);padding:14px 0}
+.peek-step:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:13px;color:var(--muted)}.peek-step h3{font:10px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 18px}
+.peek-step b{display:block;font:400 15px/1.5 var(--ui);overflow-wrap:anywhere}.peek-step .peek-value{font-size:28px;font-weight:300}.peek-step p,.peek-step small{display:block;font:11px/1.6 var(--ui);color:var(--dim);overflow-wrap:anywhere;margin:7px 0 0}.peek-step ul{list-style:none;margin:0;padding:0}.peek-step li+li{margin-top:12px}
+.peek-reason{margin:12px 0 0;padding-top:14px;border-top:1px solid var(--edge2);font:12px/1.65 var(--ui);color:var(--dim)}
+@media(max-width:700px){.flow-peek{padding:20px}.peek-path{grid-template-columns:repeat(2,minmax(0,1fr))}.peek-step:nth-child(2)::after{display:none}}
+@media(max-width:430px){.peek-path{grid-template-columns:minmax(0,1fr);gap:6px}.peek-step:not(:last-child)::after{content:'↓';right:0;top:auto;bottom:3px}.peek-step:nth-child(2)::after{display:block}.peek-step h3{margin-bottom:8px}.peek-head h2{font-size:24px}}
 </style>
 
 <div class="app">
@@ -498,6 +508,10 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
   </main>
   <div id="fade"></div>
 </div>
+<dialog class="flow-peek" id="flow-peek" aria-labelledby="peek-title" aria-describedby="peek-caption">
+  <div class="peek-head"><div><span class="ledger-kicker">Data flow</span><h2 id="peek-title"></h2><p id="peek-caption"></p></div><button type="button" class="quiet-btn" id="peek-close" aria-label="Close data flow">Close ×</button></div>
+  <div id="peek-body"></div>
+</dialog>
 <dialog class="rule-dialog" id="rule-dialog" aria-labelledby="rule-title" aria-describedby="rule-impact">
   <span class="ledger-kicker">Review a direction</span><h2 id="rule-title">Change how this is scored?</h2>
   <p class="rule-name" id="rule-name"></p><div class="rule-change"><span id="rule-before"></span><span aria-hidden="true">→</span><span id="rule-after"></span></div>
@@ -550,7 +564,7 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
 let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = NAV.has('ledger') || NAV.get('view') === 'ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
 let LM = null, LSECTION = '', LG = NAV.get('group') || '', LMODE = NAV.get('mode') === 'sources' ? 'sources' : 'goals', LQUERY = '';   // opened stock, goal filter, and ledger navigation
-let RULEPENDING = null, ASSIGNPENDING = null, DRAGSTOCK = null;
+let RULEPENDING = null, ASSIGNPENDING = null, DRAGSTOCK = null, PEEKGOAL = null;
 
 async function load(){
   const [today, all, rules, goals, voids, cvoids, feeds, starts] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db)]);
@@ -616,7 +630,7 @@ function draw(anim = true){ const g = cur(), m = shown();
 function drawGoalGuide(g){
   $('goalguide').innerHTML = `<span class="ledger-kicker">${g.id === YOU_ID ? 'The whole picture' : 'Goal / ' + esc(g.name)}</span><h1 class="goal-title">${esc(g.name)}</h1>`
     + `<p>${g.id === YOU_ID ? 'Every scored stock meets here. Open the ledger to explore what each goal tracks.' : 'Outcomes define this goal’s score. Levers are the inputs tested against those outcomes; a lead is a possibility to investigate.'}</p>`
-    + `<div class="goal-guide-actions"><button type="button" class="quiet-btn" data-track-goal="${g.id === YOU_ID ? '' : esc(g.id)}">${g.id === YOU_ID ? 'Explore what’s tracked' : g.measures.length + ' outcomes · ' + g.levers.length + ' levers →'}</button><button type="button" class="quiet-btn" data-copy-view>Copy goal link</button><span class="part-copy">Sign-in required</span></div>`;
+    + `<div class="goal-guide-actions"><button type="button" class="quiet-btn" data-flow-open>Data flow</button><button type="button" class="quiet-btn" data-track-goal="${g.id === YOU_ID ? '' : esc(g.id)}">${g.id === YOU_ID ? 'Explore what’s tracked' : g.measures.length + ' outcomes · ' + g.levers.length + ' levers →'}</button><button type="button" class="quiet-btn" data-copy-view>Copy goal link</button><span class="part-copy">Sign-in required</span></div>`;
 }
 
 // ---- progress photos: under the chart of the goal a photo names, newest day first, the day under each ----
@@ -1450,7 +1464,7 @@ document.addEventListener('drop', e => {
   if (!carriesFile(e)) return;
   e.preventDefault();   // the browser would otherwise leave the page to open the file
   const f = e.dataTransfer.files[0], scope = READY ? dropScope(e.target) : null;
-  if (!f || !scope || (DROP && DROP.writing) || $('rule-dialog').open || $('assignment-dialog').open) return;
+  if (!f || !scope || (DROP && DROP.writing) || $('rule-dialog').open || $('assignment-dialog').open || $('flow-peek').open) return;
   f.text().then(text => {
     if (DROP && DROP.writing) return;
     const csv = readCSV(text);
@@ -1459,7 +1473,7 @@ document.addEventListener('drop', e => {
     applyView(); drawDrop(); dropDays(DROP);
   }, err => say(err.message || String(err)));
 });
-document.addEventListener('keydown', e => { if (!$('rule-dialog').open && !$('assignment-dialog').open && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
+document.addEventListener('keydown', e => { if (!$('rule-dialog').open && !$('assignment-dialog').open && !$('flow-peek').open && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
 document.addEventListener('input', e => {
   if (e.target.id === 'ledger-search'){ LQUERY = e.target.value; LM = null; LSECTION = ''; drawLedger(); return; }
   const el = e.target.closest && e.target.closest('#dropview input[data-col]');
@@ -1472,49 +1486,97 @@ document.addEventListener('input', e => {
   drawDrop();
 });
 
-// ---- holding the page turns it over ----
-// Two seconds held and the page is the other side: the ledger from a goal, the goal from the ledger. The
-// screen fades the whole time it is held, so it says what is about to happen before it happens, and letting
-// go early brings it straight back. Only the background holds. Buttons, stocks, photos, the rail, the chart
-// and anything with words to select keep the clicks they already had, and the ledger tab still just clicks.
-const HOLD_MS = 2000;
-let HELD = null, SKIPCLICK = false;
-const holdable = t => !t.closest('button, a, input, label, select, textarea, table, summary, dialog, .rail, .chart, .note, .goal-guide, .goal-sheet-head, .part-copy, #shots, #full, #dropview');
+// ---- a short hold opens the flow already loaded for this stock or goal ----
+function openFlowPeek(metric = null, goalId = SEL){
+  if (!READY || DROP || BIGA >= 0 || RULEPENDING || ASSIGNPENDING) return;
+  const g = goalId === YOU_ID ? youGoal() : GOALS.find(g => g.id === goalId);
+  if (!g || (metric && !ALL.includes(metric) && !GOALS.some(goal => goal.measures.includes(metric) || goal.levers.some(l => l.metric === metric) || goal.target?.metric === metric))) return;
+  PEEKGOAL = g.id;
+  $('peek-title').textContent = metric || g.name;
+  $('peek-caption').textContent = metric ? 'Where it comes from. How it is scored. Where it is used.' : 'Choose a stock to follow its data.';
+  if (!metric){
+    const names = [...new Set(g.id === YOU_ID ? ALL : [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])])];
+    $('peek-body').innerHTML = names.length ? `<div class="peek-stocks">${names.map(m => `<button type="button" class="quiet-btn" data-peek-stock="${esc(m)}">${esc(m)}<small>${esc(g.id === YOU_ID ? ruleLabel(RULES[m]) : goalMembership(g, m))}</small></button>`).join('')}</div>` : '<p class="part-copy">No stocks tracked here yet.</p>';
+  } else {
+    const lr = LAST[metric], pts = SERIES[metric], point = lr ? indexOn(pts, lr.day) : null, rule = RULES[metric];
+    const why = !lr ? 'No counted reading is available.' : !rule ? 'No scoring rule has been set.' : rule.kind === 'ignore' ? 'Ignored for scoring. Raw readings are still available for lever tests.' : (pts || []).find(p => p.day === lr.day)?.why || noIndexWhy(pts);
+    const uses = GOALS.flatMap(goal => {
+      const roles = [];
+      if (goal.measures.includes(metric)) roles.push('Outcome · uses its index');
+      const lever = goal.levers.find(l => l.metric === metric);
+      if (lever) roles.push(`Lever · tested ${lever.lag} day${lever.lag === 1 ? '' : 's'} later`);
+      if (goal.target?.metric === metric) roles.push('Target · uses its raw reading');
+      return roles.length ? [`<li><b>${esc(goal.name)}</b><small>${roles.map(esc).join('<br>')}</small></li>`] : [];
+    });
+    if (pts) uses.unshift('<li><b>YOU</b><small>A missing daily index leaves a gap.</small></li>');
+    const step = (name, body) => `<section class="peek-step"><h3>${name}</h3>${body}</section>`;
+    $('peek-body').innerHTML = `<div class="peek-path">`
+      + step('01 / Sources', (SOURCES[metric] || []).length ? (SOURCES[metric] || []).map(source => `<b>${esc(source)}</b>`).join('') + '<p>Sources that wrote this stock.</p>' : '<p>No source recorded.</p>')
+      + step('02 / Raw reading', `<b class="peek-value">${lr ? num(Number(lr.mean)) : '—'}</b>${lr && UNITS[metric] ? `<small>${esc(UNITS[metric])}</small>` : ''}<p>${lr ? 'Latest counted · ' + esc(lr.day) : 'No counted reading'}</p>`)
+      + step('03 / Scoring', `<b>${esc(ruleLabel(rule))}</b><p>${point ? 'Index for ' + esc(point.day) : 'No index for this reading'}</p>${point ? `<b class="peek-value">${point.rank}</b><small>${indexState(pts) === 'moving' ? 'Baseline still forming' : 'Frozen baseline'}</small>` : ''}`)
+      + step('04 / Used by', uses.length ? `<ul>${uses.join('')}</ul>` : '<p>Not assigned to a goal.</p>') + '</div>'
+      + (why ? `<p class="peek-reason">${esc(why)}</p>` : '')
+      + `<div class="peek-stocks"><button type="button" class="quiet-btn" data-peek-goal>Other stocks in ${esc(g.name)}</button></div>`;
+  }
+  if (!$('flow-peek').open) $('flow-peek').showModal();
+  $('peek-close').focus();
+}
+function closeFlowPeek(){ $('flow-peek').close(); PEEKGOAL = null; }
+$('peek-close').addEventListener('click', closeFlowPeek);
+$('flow-peek').addEventListener('cancel', e => { e.preventDefault(); closeFlowPeek(); });
+$('flow-peek').addEventListener('click', e => {
+  const stock = e.target.closest('[data-peek-stock]');
+  if (stock){ openFlowPeek(stock.dataset.peekStock, PEEKGOAL); return; }
+  if (e.target.closest('[data-peek-goal]')) openFlowPeek(null, PEEKGOAL);
+});
+const HOLD_MS = 800;
+let HELD = null, SKIPCLICK = null;
+function holdContext(t){
+  const stock = t.closest('.flow .node.m, .stock-card .lb');
+  if (stock) return { metric:stock.dataset.m || stock.dataset.lm, goal:t.closest('[data-goal-drop]')?.dataset.goalDrop || (SHOWLEDGER ? YOU_ID : SEL), target:stock };
+  const goal = t.closest('.rail [data-id], [data-goalnode], .goal-title');
+  if (goal) return { metric:null, goal:goal.dataset.id || SEL, target:goal };
+  if (t.closest('button, a, input, label, select, textarea, table, summary, dialog, .rail, .chart, .note, .goal-guide, .goal-sheet-head, .part-copy, #shots, #full, #dropview')) return null;
+  return { metric:SHOWLEDGER ? LM : FX?.o || FM, goal:SHOWLEDGER ? LG || YOU_ID : SEL, target:t };
+}
 function fadeTo(o, ms){ const f = $('fade'); f.style.transition = ms ? `opacity ${ms}ms` : ''; f.style.opacity = o; }
-function holdEnd(){ if (!HELD) return; cancelAnimationFrame(HELD.raf); HELD = null; document.body.classList.remove('holding'); fadeTo(0, 180); }
-// the turn itself, under the fade: the far side is drawn before the fade lifts, so it is never half up
+function holdEnd(){ if (!HELD) return; cancelAnimationFrame(HELD.raf); HELD = null; document.body.classList.remove('holding'); fadeTo(0, 100); }
+// The explicit Ledger tab still opens the full record.
 async function turnTo(toLedger){
   SHOWLEDGER = toLedger; applyView(); say('');
   try { if (SHOWLEDGER) await showLedger(); else draw(); }
   catch (err) { say(err.message || String(err)); }
-  finally { scrollTo(0, 0); fadeTo(0, 280); }
+  finally { scrollTo(0, 0); fadeTo(0, 160); }
 }
 document.addEventListener('pointerdown', e => {
-  if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || DROP || BIGA >= 0 || !holdable(e.target)) return;
+  if (!READY || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || DROP || BIGA >= 0 || RULEPENDING || ASSIGNPENDING || $('flow-peek').open) return;
+  SKIPCLICK = null;
+  const context = holdContext(e.target); if (!context) return;
   const at = Date.now();
-  HELD = { x: e.clientX, y: e.clientY, raf: 0 };
+  HELD = { x:e.clientX, y:e.clientY, raf:0 };
   document.body.classList.add('holding');
   const tick = () => {
     if (!HELD) return;
     const p = Math.min(1, (Date.now() - at) / HOLD_MS);
-    fadeTo((p * p).toFixed(3), 0);   // slow at first, so a click, a drag or a scroll never dims the page
+    fadeTo((p * p * .18).toFixed(3), 0);
     if (p < 1){ HELD.raf = requestAnimationFrame(tick); return; }
-    HELD = null; document.body.classList.remove('holding'); SKIPCLICK = true;   // letting go after a turn is not a click on the side it landed on
-    turnTo(!SHOWLEDGER);
+    HELD = null; document.body.classList.remove('holding'); SKIPCLICK = context.target;
+    openFlowPeek(context.metric, context.goal); fadeTo(0, 100);
   };
   HELD.raf = requestAnimationFrame(tick);
 });
-for (const ev of ['pointerup', 'pointercancel', 'wheel', 'scroll', 'blur']) addEventListener(ev, holdEnd, { passive: true });
-addEventListener('pointermove', e => { if (HELD && Math.abs(e.clientX - HELD.x) + Math.abs(e.clientY - HELD.y) > 12) holdEnd(); }, { passive: true });
-addEventListener('contextmenu', e => { if (HELD) e.preventDefault(); });   // a phone's own long press would take the hold away
+for (const ev of ['pointerup', 'pointercancel', 'wheel', 'scroll', 'blur']) addEventListener(ev, holdEnd, { passive:true });
+addEventListener('pointermove', e => { if (HELD && Math.abs(e.clientX - HELD.x) + Math.abs(e.clientY - HELD.y) > 12) holdEnd(); }, { passive:true });
+addEventListener('contextmenu', e => { if (HELD || SKIPCLICK?.contains(e.target)) e.preventDefault(); });
 
 // ---- clicks: a goal switches the page, a stock or a commit focuses the chart, anywhere else returns ----
 // a focus is drawn on the chart: when the row clicked sits far below it, the chart comes back into view
 const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
-  if (SKIPCLICK){ SKIPCLICK = false; return; }
-  if (e.target.closest('#rule-dialog, #assignment-dialog')) return;
+  if (SKIPCLICK){ const held = SKIPCLICK; SKIPCLICK = null; if (held.contains(e.target)) return; }
+  if (e.target.closest('#rule-dialog, #assignment-dialog, #flow-peek') || $('flow-peek').open) return;
+  if (e.target.closest('[data-flow-open]')){ openFlowPeek(FX?.o || FM); return; }
   const assign = e.target.closest('[data-assign-m]');
   if (assign){ reviewAssignment(assign.dataset.assignM, '', '', assign.dataset.assignFrom); return; }
   const direction = e.target.closest('[data-rule-m]');
@@ -1562,7 +1624,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; draw(); }
 });
-document.addEventListener('keydown', e => { if ($('rule-dialog').open || $('assignment-dialog').open) return; if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
+document.addEventListener('keydown', e => { if ($('rule-dialog').open || $('assignment-dialog').open || $('flow-peek').open) return; if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
 // a wider or narrower page redraws the chart at its new width, without drawing the line in again
 let lastW = 0;
 new ResizeObserver(() => { const w = Math.round($('chart').clientWidth); if (!READY || w === lastW) return; lastW = w; drawChart(false); drawHead(null); wire(); }).observe($('chart'));
