@@ -10,8 +10,10 @@
 //
 //   node pull/social.mjs         pull and write
 //   node pull/social.mjs --dry   show what it would add, change nothing
+//   node pull/social.mjs --instagram --dry   preview just Instagram's new rows
+//   node pull/social.mjs --instagram         import just Instagram
 //   node pull/social.mjs --instagram-preview
-//     read account views, saves and shares only; no ledger connection or writes
+//     read daily account metrics only; no ledger connection or writes
 //
 // WIRE_URL, WIRE_KEY, WIRE_EMAIL and WIRE_PASSWORD come from the
 // environment, like pull/github.mjs, or from .env.local if you add them.
@@ -51,10 +53,13 @@ const DAYS = 14;
 const SETTLE = new Function(fs.readFileSync(new URL('../you-reader.js', import.meta.url), 'utf8') + '; return FED;')();
 const DRY = process.argv.includes('--dry');
 const INSTAGRAM_PREVIEW = process.argv.includes('--instagram-preview');
-// These account metrics answer total_value, not time_series. The reach
-// control checks the query window, but their own daily attribution still
-// needs a dated Insights comparison. Keep them out of scheduled writes.
-const IG_PREVIEW_METRICS = [
+const INSTAGRAM_ONLY = process.argv.includes('--instagram');
+// Account totals for one completed day, never per-Reel lifetime totals.
+// Each field must agree in both the usual query window and a narrow window
+// straddling the reach series' dated midnight boundary before it can land.
+const IG_DAILY_METRICS = [
+  ['reach', 'ig_reach', 'accounts'],
+  ['profile_views', 'ig_profile_views', 'views'],
   ['views', 'ig_views', 'views'],
   ['saves', 'ig_saves', 'saves'],
   ['shares', 'ig_shares', 'shares']
@@ -325,7 +330,7 @@ async function ytLive(at, db) {
   return { rows, empty: 0 };
 }
 
-// ---- Instagram: the Graph API, two day series and one total ----
+// ---- Instagram: the Graph API, daily account metrics and one total ----
 
 async function instagram(today, at, preview = false) {
   const token = need('IG_ACCESS_TOKEN');
@@ -350,37 +355,50 @@ async function instagram(today, at, preview = false) {
 
   const rows = [];
   const windows = [];
+  const readValues = (response, day) => {
+    if (!Array.isArray(response.data) || !response.data.length) throw new Error(`no insights came back for ${day}`);
+    const got = {};
+    for (const m of response.data) {
+      if (Object.hasOwn(got, m.name)) throw new Error(`a metric repeated in the insights for ${day}`);
+      if (m.period !== 'day') throw new Error(`insights did not report a day on ${day}`);
+      got[m.name] = m.total_value?.value;
+    }
+    return got;
+  };
   let empty = 0;
+  const seenDays = new Set();
   for (const v of values) {
     const end = Date.parse(v.end_time);
     if (!Number.isFinite(end) || pacificDay(end) === pacificDay(end - 60000)) throw new Error(`a day ended at ${v.end_time}, not at midnight Pacific`);
     const day = pacificDay(end - 12 * 3600e3);
     if (day < FIRST || day > newest('instagram')) continue;
-    const fields = preview ? [['reach', 'ig_reach', 'accounts'], ...IG_PREVIEW_METRICS]
-      : [['reach', 'ig_reach', 'accounts'], ['profile_views', 'ig_profile_views', 'views']];
+    if (seenDays.has(day)) throw new Error(`the daily reach series repeated ${day}`);
+    seenDays.add(day);
+    const fields = IG_DAILY_METRICS;
     const since = Math.floor(end / 1000) - 43200, until = Math.floor(end / 1000) + 43200;
-    const one = await get(`${ig}/insights`, { metric: fields.map(([name]) => name).join(','),
-      period: 'day', metric_type: 'total_value', since, until });
-    if (!Array.isArray(one.data) || !one.data.length) throw new Error(`no insights came back for ${day}`);
-    const got = {};
-    for (const m of one.data) {
-      if (Object.hasOwn(got, m.name)) throw new Error(`a metric repeated in the insights for ${day}`);
-      if (m.period !== 'day') throw new Error(`insights did not report a day on ${day}`);
-      got[m.name] = m.total_value?.value;
-    }
+    const query = { metric: fields.map(([name]) => name).join(','), period: 'day', metric_type: 'total_value' };
+    const got = readValues(await get(`${ig}/insights`, { ...query, since, until }), day);
     if (!Number.isFinite(v.value) || !Number.isFinite(got.reach)) throw new Error(`no numeric reach control came back for ${day}`);
     if (got.reach !== v.value) throw new Error(`the days did not line up on ${day}`);
+    const boundarySince = Math.floor(end / 1000) - 60, boundaryUntil = Math.floor(end / 1000) + 60;
+    const boundary = readValues(await get(`${ig}/insights`, { ...query, since: boundarySince, until: boundaryUntil }), day);
+    if (boundary.reach !== v.value) throw new Error(`the midnight reach control did not match on ${day}`);
     windows.push({ day, since, until, end_time: v.end_time, reach: got.reach });
     for (const [name, metric, unit] of fields) {
       const value = got[name];
-      if (!Number.isFinite(value)) { empty++; continue; }
-      rows.push({ occurred_at: day, metric, value, unit, source: 'instagram', source_id: day });
+      if (!Number.isFinite(value) || !Number.isFinite(boundary[name])) { empty++; continue; }
+      if (value !== boundary[name]) throw new Error(`${metric} did not match its dated midnight bucket on ${day}`);
+      rows.push({ occurred_at: day, metric, value, unit, source: 'instagram', source_id: day,
+        context: { api_version: 'v26.0', scope: 'account', period: 'day', metric_type: 'total_value',
+          timezone: 'America/Los_Angeles', end_time: v.end_time,
+          query_since: new Date(since * 1000).toISOString(), query_until: new Date(until * 1000).toISOString(),
+          boundary_since: new Date(boundarySince * 1000).toISOString(), boundary_until: new Date(boundaryUntil * 1000).toISOString() } });
     }
   }
 
   // A preview never reads a current follower total, connects to the ledger,
-  // rotates a token or runs another platform. These are candidate dates,
-  // not rows approved to land or a count of what the ledger already holds.
+  // rotates a token or runs another platform. It is not a count of what
+  // the ledger already holds; --instagram --dry checks that too.
   if (preview) return { rows, empty, windows };
 
   // Followers is a total right now, so it is today's reading and nothing else.
@@ -493,16 +511,15 @@ async function tiktok(a, today, at) {
 if (INSTAGRAM_PREVIEW) {
   try {
     const { rows, empty, windows } = await instagram(null, null, true);
-    say('instagram preview: candidate Pacific dates; reach control only; Insights date check pending');
+    say('instagram preview: Pacific day buckets checked against reach and the midnight boundary; no app comparison claimed');
     for (const w of windows) {
       say(`  ${w.day}  query ${new Date(w.since * 1000).toISOString()} to ${new Date(w.until * 1000).toISOString()}  reach ${w.reach} matches`);
-      for (const [name, metric, unit] of IG_PREVIEW_METRICS) {
+      for (const [, metric, unit] of IG_DAILY_METRICS) {
         const row = rows.find(r => r.source_id === w.day && r.metric === metric);
         say(`    ${metric.padEnd(24)} ${row ? `${row.value} ${unit}` : 'missing'}`);
       }
     }
-    const readings = rows.filter(r => IG_PREVIEW_METRICS.some(([, metric]) => metric === r.metric)).length;
-    say(`instagram preview: ${readings} returned values across ${windows.length} candidate days, ${empty} missing values; no ledger connection, no writes`);
+    say(`instagram preview: ${rows.length} returned values across ${windows.length} days, ${empty} missing values; no ledger connection, no writes`);
     process.exit(0);
   } catch (e) {
     say(`instagram preview FAILED: ${e.message}`);
@@ -525,7 +542,7 @@ const jobs = [
   ['youtube live', 'youtube_live', () => ytLive(at, db)],
   ['instagram', 'instagram', () => instagram(today, at)],
   ...TIKTOK_ACCOUNTS.map(a => [`tiktok ${a.name}`, 'tiktok', () => tiktok(a, today, at)])
-];
+].filter(([, source]) => !INSTAGRAM_ONLY || source === 'instagram');
 
 const failed = [];
 for (const [label, source, pull] of jobs) {

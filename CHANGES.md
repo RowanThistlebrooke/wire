@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **18 Sep 2026, Instagram account metrics can land with their date evidence.**
+  `pull/social.mjs` adds daily account views, saves and shares beside reach
+  and profile views. Every field must agree between the normal query and
+  a narrow window across the dated reach boundary; mismatches abort the
+  batch, missing values are skipped, and both windows are stored with new
+  daily rows. `--instagram` isolates the importer; add `--dry` to see only
+  new rows without writing. The API-only preview remains available. Normal
+  scheduled pulls include the new fields. These checks establish API-bucket
+  consistency, not an independent comparison to the Instagram app. Reel
+  lifetime metrics stay separate. The dashboard adds **Best between** with
+  explicit lower and upper bounds, validation, and the existing confirmation
+  flow. Imports do not choose a direction or change comparison thresholds.
+
 - **18 Sep 2026, Instagram's extra metrics wait for their date check.**
   `pull/social.mjs --instagram-preview` reads account views, saves and
   shares in the existing reach-matched query windows. It prints candidate

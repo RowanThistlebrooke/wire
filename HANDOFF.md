@@ -6,38 +6,75 @@ repo state. This is ~/wire, not the earlier Life project or its database.
 
 ## Current Instagram work, 18 Sep
 
-The user explicitly requested adding the probed Instagram fields and a Git
-commit in this task, authorizing this scoped code change despite the earlier
-advisor-only role. No ledger writes, push, deployment or schedule changes
-are authorized by the implementation below.
+The user subsequently asked to push the real Instagram metrics into their
+dashboard and expose Up, Down and Best between. That explicitly authorized
+this scoped import and dashboard change. The earlier preview-only hold below
+is historical. The user also requested a Git commit in the preceding turn.
+No SQL, deployment, schedule edits, credential edits or test readings here.
 
-`pull/social.mjs --instagram-preview` now reads account views, saves and
-shares through Graph v26.0, using the importer's existing reach-matched
-query windows. It is a preview only: it exits before any ledger connection,
-never runs YouTube or TikTok, never refreshes a token, and does not change
-which fields the normal scheduled importer writes. Do not enable those new
-fields by default yet. A local schedule executes this working-tree file,
-so an ungated edit could start permanent writes without a manual run.
+Implemented in `pull/social.mjs`: daily account reach, profile views, views,
+saves and shares. Current followers remains a separately timed reading.
+`--instagram` runs only Instagram; `--dry` shows new rows without inserting.
+`--instagram-preview` still exits before a ledger connection. The normal
+scheduled job now includes the extra daily account fields. Every field must
+match between the existing query window and a narrow window crossing the
+reach series' dated Pacific-midnight boundary, with daily reach as a control.
+A mismatch aborts the batch. Missing stays missing. New daily rows retain
+both windows, timezone and end_time in context. Settling delays and the
+existing duplicate and cross-source checks were left alone.
 
-Waiting: dated Instagram Insights or an export to independently corroborate
-the day attribution of the new fields. In the preceding read-only probe,
-the existing query window matched daily reach for all three sampled days,
-12-14 Sep 2026; exact Pacific-midnight bounds did not. The browser's account
-Insights offered preset ranges only. That is partial evidence, not a daily
-date verification. No new stocks, rules or Instagram goal membership have
-been written. Per-Reel lifetime snapshots remain separate and unimplemented.
-Old Reels cannot be declared finished merely because of their age.
+Evidence boundary: a targeted probe of one midnight returned matching reach,
+views, saves and shares across the usual window and the narrow boundary
+window; a window entirely after that midnight returned no rows. The importer
+then checked every field over 12 returned daily buckets, 4-15 Sep 2026, on
+both its dry run and its actual run. This verifies consistency of the API
+buckets. It is not an independent Instagram-app or export date comparison;
+that comparison remains unperformed. Do not relabel it Insights-verified.
 
-Verification: the live preview returned 36 extra-metric values across 12
-candidate days, 3-14 Sep 2026, with matching reach controls and no missing
-extra values. A fetch guard allowed only Graph GETs: 14 requests, no ledger
-requests, exit success. Syntax passed. Review then added an explicit finite
-numeric check on both reach controls, so two absent values cannot count as
-a match. The shared reader SHA-256 remains
-`b013e4b2ff1beec31b0b95b1011cc3345b8d37e20a265c7f2c3e92647fce48f9`.
-No data was imported, no rule was declared, no schedule or credential file
-changed, and nothing was pushed. The prepared commit is limited to the
-importer, README, CHANGES and this record; unrelated page work stays outside.
+Actual write: the Instagram-only importer appended 38 real measurements
+across those 12 days, after the read-only preview. The run made 27 Graph GETs
+and skipped 23 readings already present. A fetch guard allowed only Graph
+GETs, Wire authentication/day reads, ledger reads and the scoped Instagram
+measurement insert. No other platform ran. Readback found 12 daily readings
+each for views, saves and shares; 14 each for reach and profile views; and
+3 current follower snapshots. Each stock has one reading on each of its
+reported days. A final guarded dry run returned zero new rows and 61
+already present, covering the same 12 daily buckets plus the current
+follower reading. No repeated import was written.
+
+The existing Instagram goal now includes all six account stocks, with its
+old membership retained, no target and no levers. This was appended through
+the shared goal writer with source `claude`, then read back. No rule was
+changed: reach remains Up, profile views and followers remain Ignore, and
+views, saves and shares are deliberately unscored until the user chooses.
+Per-Reel lifetime views, shares, saved and watch time remain separate and
+unimplemented; neither old media age nor a daily account result proves a
+Reel's lifetime total is finished.
+
+The dashboard adds Best between using the existing shared rule writer:
+explicit lower and upper bounds, finite-number checks, upper above lower,
+review before saving, and the existing latest-rule concurrency check. An
+unscored stock's detail now asks for a direction instead of claiming its
+baseline never moved. No index formula or comparison gate was changed by
+this task. In Chrome at localhost:8794, all six Instagram cards and the new
+views history were verified; the range dialog disables confirmation for
+empty bounds and Cancel returns without writing. No test rule was saved.
+The sales preview on 8792 does not serve you.html; use the existing dashboard
+server on 8794. It serves the working file and the same Wire database.
+
+Shared tree: another builder changed you-reader.js and additional areas of
+you.html while this work was running. Those changes are not this task's
+Instagram work and must not be staged into its commit. The reader started
+at SHA-256 `b013e4b2ff1beec31b0b95b1011cc3345b8d37e20a265c7f2c3e92647fce48f9`.
+A later working-tree checksum changed to
+`6f8b32019a131253b6669f82a99e07b7c5ca3952bd526634ef86d2bcca30f44d` during
+that builder's goal-assignment work. Do not claim the current whole reader
+is byte-identical; this task made no reader edit. Untracked sell files,
+public-read SQL and the-door.html remain outside this task.
+
+Waiting: the user's scoring choices for the newly imported account stocks.
+No numeric Best between bounds have been inferred. Separate per-Reel
+tracking and an independent Insights date comparison remain open.
 
 The older session record below is retained for the other builders. Its
 Git state and live-data statements are historical, not a current status.

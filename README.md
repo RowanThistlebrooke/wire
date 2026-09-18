@@ -147,28 +147,43 @@ It writes what it did to `~/.wire/pull.log`. A morning the Mac is asleep is
 a morning it does not run; the next run asks for the last fourteen days, so
 a missed day lands late rather than never.
 
-## Instagram preview
+## Instagram
 
-The current Instagram importer keeps daily reach and profile views, plus
-the follower total when read. Account views, saves and shares can be checked
-separately:
+The importer reads daily account reach, profile views, views, saves and
+shares, plus the current follower total. Reel lifetime totals and watch
+time are different measurements and are not imported as account days.
+
+Preview only Instagram's new rows, then import them:
+
+```sh
+node --env-file="$HOME/.wire/env" pull/social.mjs --instagram --dry
+node --env-file="$HOME/.wire/env" pull/social.mjs --instagram
+```
+
+Both commands use the existing Instagram token from
+`~/Documents/channel-analytics/.env.local` and the existing Wire sign-in.
+They do not run YouTube or TikTok. The normal scheduled social pull also
+includes these Instagram fields; the existing delay and duplicate checks
+stay in place.
+
+Each daily reach value has a Pacific-midnight `end_time`. The importer
+checks a window around that boundary against dated reach, then checks every
+metric against a narrow window straddling the same boundary. Disagreement
+stops the Instagram batch before insertion. Missing values stay missing;
+zero remains zero. New daily rows retain both query windows and the API's
+end time in their context. These are API bucket checks, not a claim that
+Instagram's app display has been independently compared.
+
+For an API-only preview without even connecting to the ledger:
 
 ```sh
 node pull/social.mjs --instagram-preview
 ```
 
-This reads the existing Instagram token from
-`~/Documents/channel-analytics/.env.local`. It makes only Instagram Graph
-GET requests. It does not connect to the ledger, run another platform,
-refresh tokens or write anything. No `--dry` flag is needed.
-
-The printed dates are candidates: each query uses the existing Pacific-day
-window and must match the daily reach control. That control alone does not
-prove the date attribution of views, saves or shares. Match them against
-dated Instagram Insights before enabling imports. Missing values print
-`missing`; they are never replaced with zero. These metrics remain outside
-normal and scheduled writes. Reel lifetime totals are not daily readings
-and are not part of this preview.
+It never refreshes tokens or writes. It prints the API values, not a count
+of new rows. On the dashboard, open **Ledger**, then **Instagram**, to set
+**Up**, **Down**, **Best between**, or **Ignore**. Best between requires
+both bounds and a confirmation. Imports do not assign scoring rules.
 
 ## Rules this project does not break
 

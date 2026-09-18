@@ -207,6 +207,10 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .rule-dialog .rule-name{font:12px/1.5 var(--mono);overflow-wrap:anywhere;color:var(--ink)}
 .rule-change{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;padding:22px 0;border-block:1px solid var(--edge2);margin:18px 0;font:14px/1.4 var(--mono)}
 .rule-change span:last-child{color:var(--teal)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.rule-band{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}.rule-band[hidden]{display:none}
+.rule-band label{display:grid;gap:7px;font:11px/1.4 var(--mono);color:var(--dim)}
+.rule-band input{width:100%;min-width:0;padding:10px;border:1px solid var(--edge2);border-radius:0;background:var(--ground);color:var(--ink);font:16px/1.4 var(--mono)}
+.rule-band input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}.rule-band input:disabled{opacity:.5}
 .dialog-actions .confirm{background:var(--ink);color:var(--ground);border-color:var(--ink)}.dialog-actions button:disabled{opacity:.45;cursor:wait}
 .rule-dialog .err{color:var(--leak)}
 @media(max-width:650px){.goal-parts{grid-template-columns:minmax(0,1fr)}.goal-part.lever-part{border-left:0;border-top:1px solid var(--edge2);padding:20px 0 0}.goal-sheet{padding:16px}.goal-sheet-head{flex-wrap:wrap}.ledger-tools{align-items:stretch}.ledger-search{width:100%}.ledger-search input{flex:1;width:auto}.rule-dialog{padding:22px}.det .dh{flex-wrap:wrap}}
@@ -479,6 +483,7 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
 <dialog class="rule-dialog" id="rule-dialog" aria-labelledby="rule-title" aria-describedby="rule-impact">
   <span class="ledger-kicker">Review a direction</span><h2 id="rule-title">Change how this is scored?</h2>
   <p class="rule-name" id="rule-name"></p><div class="rule-change"><span id="rule-before"></span><span aria-hidden="true">→</span><span id="rule-after"></span></div>
+  <div class="rule-band" id="rule-band" hidden><label>Lower bound<input id="rule-lo" type="number" step="any" inputmode="decimal" required aria-describedby="rule-error"></label><label>Upper bound<input id="rule-hi" type="number" step="any" inputmode="decimal" required aria-describedby="rule-error"></label></div>
   <p id="rule-impact"></p><p id="rule-goals"></p><p class="err" id="rule-error" role="alert"></p>
   <div class="dialog-actions"><button type="button" class="quiet-btn" id="rule-cancel">Cancel</button><button type="button" class="quiet-btn confirm" id="rule-confirm">Confirm change</button></div>
 </dialog>
@@ -784,28 +789,49 @@ function drawRules(g){
   const m = shown();
   $('rules').innerHTML = m ? ruleControl(m) : '';
 }
-const ruleLabel = r => !r ? 'Not scored' : r.kind === 'band' ? `Band ${r.lo}–${r.hi}` : r.kind === 'up' ? 'Up · higher is better' : r.kind === 'down' ? 'Down · lower is better' : r.kind === 'ignore' ? 'Ignore · raw readings only' : r.kind;
+const ruleLabel = r => !r ? 'Not scored' : r.kind === 'band' ? `Best between ${r.lo}–${r.hi}` : r.kind === 'up' ? 'Up · higher is better' : r.kind === 'down' ? 'Down · lower is better' : r.kind === 'ignore' ? 'Ignore · raw readings only' : r.kind;
 function ruleControl(m){
   const r = RULES[m];
-  return `<div class="rule-control"><span>${esc(ruleLabel(r))}</span><div class="rule-options" role="group" aria-label="Scoring direction for ${esc(m)}">${['up','down','ignore'].map(kind => `<button type="button" data-rule-m="${esc(m)}" data-rule-kind="${kind}" aria-pressed="${r?.kind === kind}"${r?.kind === kind || !ALL.includes(m) ? ' disabled' : ''}>${kind === 'up' ? '↑ Up' : kind === 'down' ? '↓ Down' : '— Ignore'}</button>`).join('')}</div></div>`;
+  return `<div class="rule-control"><span>${esc(ruleLabel(r))}</span><div class="rule-options" role="group" aria-label="Scoring direction for ${esc(m)}">${['up','down','band','ignore'].map(kind => `<button type="button" data-rule-m="${esc(m)}" data-rule-kind="${kind}" aria-pressed="${r?.kind === kind}"${(r?.kind === kind && kind !== 'band') || !ALL.includes(m) ? ' disabled' : ''}>${kind === 'up' ? '↑ Up' : kind === 'down' ? '↓ Down' : kind === 'band' ? 'Best between' : '— Ignore'}</button>`).join('')}</div></div>`;
+}
+function proposedRule(p){
+  if (p.kind !== 'band') return { rule: { kind: p.kind } };
+  const lo = $('rule-lo').valueAsNumber, hi = $('rule-hi').valueAsNumber;
+  if (!$('rule-lo').value.trim() || !$('rule-hi').value.trim() || !Number.isFinite(lo) || !Number.isFinite(hi)) return { error: 'Enter both bounds as numbers.' };
+  if (hi <= lo) return { error: 'The upper bound must be above the lower bound.' };
+  return { rule: { kind: 'band', lo, hi } };
+}
+function refreshRuleReview(){
+  const p = RULEPENDING; if (!p || p.saving) return;
+  const { rule, error } = proposedRule(p), current = RULES[p.metric];
+  const unchanged = rule && current?.kind === rule.kind && (rule.kind !== 'band' || (current.lo === rule.lo && current.hi === rule.hi));
+  $('rule-after').textContent = rule ? ruleLabel(rule) : 'Best between…';
+  $('rule-error').textContent = error || (unchanged ? 'These bounds are already set.' : '');
+  $('rule-confirm').disabled = !!error || unchanged;
 }
 function reviewRule(metric, kind){
-  if (!READY || !ALL.includes(metric) || !['up','down','ignore'].includes(kind) || RULES[metric]?.kind === kind) return;
+  if (!READY || !ALL.includes(metric) || !['up','down','band','ignore'].includes(kind) || (RULES[metric]?.kind === kind && kind !== 'band')) return;
   RULEPENDING = { metric, kind, before: JSON.stringify(RULES[metric] || null), saving: false };
-  $('rule-name').textContent = metric;
-  $('rule-before').textContent = ruleLabel(RULES[metric]); $('rule-after').textContent = ruleLabel({ kind });
-  $('rule-impact').textContent = (kind === 'ignore' ? 'This stock will stop contributing to index scores. Its raw readings stay available, including in lever tests.' : kind === 'up' ? 'Higher readings will improve this stock’s index; lower readings will reduce it.' : 'Lower readings will improve this stock’s index; higher readings will reduce it.') + ' This changes the rule for its whole history. The index gates still apply.';
+  $('rule-name').textContent = metric + (UNITS[metric] ? ' · ' + UNITS[metric] : '');
+  $('rule-before').textContent = ruleLabel(RULES[metric]);
+  $('rule-band').hidden = kind !== 'band';
+  for (const bound of ['lo','hi']){ $('rule-' + bound).value = kind === 'band' && RULES[metric]?.kind === 'band' ? RULES[metric][bound] : ''; $('rule-' + bound).disabled = false; }
+  $('rule-impact').textContent = (kind === 'ignore' ? 'This stock will stop contributing to index scores. Its raw readings stay available, including in lever tests.' : kind === 'up' ? 'Higher readings will improve this stock’s index; lower readings will reduce it.' : kind === 'band' ? 'Readings inside these bounds are best. Further outside is worse.' : 'Lower readings will improve this stock’s index; higher readings will reduce it.') + ' This changes the rule for its whole history. The index gates still apply.';
   const names = GOALS.filter(g => g.measures.includes(metric)).map(g => g.name);
   $('rule-goals').textContent = 'Applies everywhere: YOU' + (names.length ? ', ' + names.join(', ') : '') + '. The previous rule stays in the ledger.';
-  $('rule-error').textContent = ''; $('rule-confirm').textContent = 'Confirm ' + kind;
+  $('rule-error').textContent = ''; $('rule-confirm').textContent = kind === 'band' ? 'Confirm bounds' : 'Confirm ' + kind;
   $('rule-confirm').disabled = false; $('rule-cancel').disabled = false;
+  refreshRuleReview();
   if (!$('rule-dialog').open) $('rule-dialog').showModal();
-  $('rule-cancel').focus();
+  $(kind === 'band' ? 'rule-lo' : 'rule-cancel').focus();
 }
 function cancelRule(){ if (RULEPENDING?.saving) return; RULEPENDING = null; $('rule-dialog').close(); }
 async function confirmRule(){
   const p = RULEPENDING; if (!p || p.saving) return;
+  refreshRuleReview(); if ($('rule-confirm').disabled) return;
+  const { rule } = proposedRule(p);
   p.saving = true; $('rule-confirm').disabled = true; $('rule-cancel').disabled = true; $('rule-error').textContent = '';
+  $('rule-lo').disabled = true; $('rule-hi').disabled = true;
   let written = false;
   try {
     const latest = await readRules(db);
@@ -816,7 +842,7 @@ async function confirmRule(){
       else say('This direction is already set.');
       return;
     }
-    const { error } = await writeRule(db, p.metric, { kind: p.kind });
+    const { error } = await writeRule(db, p.metric, rule);
     if (error) throw error;
     written = true; RULEPENDING = null; $('rule-dialog').close();
     await load(); render(); say('Direction saved for ' + p.metric + '.');
@@ -824,12 +850,14 @@ async function confirmRule(){
     if (written) say('Direction saved. Reload to refresh the page: ' + (e.message || String(e)));
     else $('rule-error').textContent = e.message || String(e);
   } finally {
-    if (RULEPENDING === p){ p.saving = false; $('rule-confirm').disabled = false; $('rule-cancel').disabled = false; }
+    if (RULEPENDING === p){ p.saving = false; $('rule-confirm').disabled = false; $('rule-cancel').disabled = false; $('rule-lo').disabled = false; $('rule-hi').disabled = false; }
   }
 }
 $('rule-confirm').addEventListener('click', confirmRule);
 $('rule-cancel').addEventListener('click', cancelRule);
 $('rule-dialog').addEventListener('cancel', e => { e.preventDefault(); cancelRule(); });
+$('rule-lo').addEventListener('input', refreshRuleReview);
+$('rule-hi').addEventListener('input', refreshRuleReview);
 
 // ---- the chart: the goal, or the picked stock, on the index scale ----
 const vcls = t => t.verdict === 'finding' ? (t.effect > 0 ? 'pos' : 'neg') : t.verdict === 'tangled' ? 'tan' : t.verdict === 'no finding' ? 'mid' : t.verdict === 'early' ? 'early' : '';
@@ -1050,7 +1078,7 @@ function detail(m){
   DETDRAWN = m;
   const pts = SERIES[m] || [], rule = RULES[m], lr = LAST[m], mine = DAYS.filter(d => d.metric === m);
   const at = {}; for (const p of pts) at[p.day] = p;
-  const gt = indexState(pts), last = pts[pts.length-1], why = gt === 'none' ? noIndexWhy(pts) : '';
+  const gt = indexState(pts), last = pts[pts.length-1], why = !rule ? 'Choose Up, Down or Best between to score this stock.' : rule.kind === 'ignore' ? 'Raw readings only. This stock is ignored by index scores.' : gt === 'none' ? noIndexWhy(pts) : '';
   const gone = mine.filter(d => voidedOn(VOIDS, d.metric, d.day)).length;
   const fixed = mine.filter(d => correctedOn(VOIDS, d.metric, d.day) !== undefined).length;
   const unit = UNITS[m] ? ' ' + esc(UNITS[m]) : '';
