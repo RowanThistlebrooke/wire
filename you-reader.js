@@ -1409,17 +1409,71 @@ async function readGoals(db) {
 // target is optional: { metric, value } or { metric, lo, hi }.
 // levers is optional: [{ metric, lag }], stocks you move, read lag days later.
 async function writeGoal(db, name, measures, target, levers) {
-  const context = { name, measures };
-  if (target) context.target = target;
-  if (levers && levers.length) context.levers = levers.map(l => ({ metric: l.metric, lag: l.lag }));
-  return db.from('events').insert({
-    occurred_at: new Date().toISOString(),
-    metric: slugCommit(name),
+  return db.from('events').insert(goalRow({ id: slugCommit(name), name, measures, target, levers }));
+}
+
+function goalRow(goal, occurredAt = new Date().toISOString()) {
+  const context = { name: goal.name, measures: goal.measures.slice() };
+  if (goal.target) context.target = { ...goal.target };
+  if (goal.levers && goal.levers.length)
+    context.levers = goal.levers.map(l => ({ metric: l.metric, lag: l.lag }));
+  return {
+    occurred_at: occurredAt,
+    metric: goal.id,
     event_type: 'goal',
     value: null,
     source: 'you',
     context
-  });
+  };
+}
+
+// Preview a membership change without writing. A move names one source;
+// memberships in every other goal and every target stay as they were.
+// The page validates the stock against the ledger and confirms this plan.
+function planGoalAssignment(goals, { metric, to, role, lag, from = null }) {
+  if (typeof metric !== 'string' || !metric.trim()) throw new Error('Choose a stock.');
+  const destination = goals.find(g => g.id === to);
+  if (!destination) throw new Error('Choose an existing destination goal.');
+  if (role !== 'outcome' && role !== 'lever') throw new Error('Choose outcome or lever.');
+  if (role === 'lever' && !LAGS.includes(lag)) throw new Error('Choose a supported lever lag.');
+  if (from === to) throw new Error('To change its role in this goal, choose add / change instead of move.');
+  const source = from === null ? null : goals.find(g => g.id === from);
+  if (from !== null && !source) throw new Error('Choose an existing source goal.');
+  if (source && !source.measures.includes(metric) && !source.levers.some(l => l.metric === metric))
+    throw new Error('This stock is no longer an outcome or lever in the source goal.');
+
+  const copy = g => ({ ...g, target: g.target ? { ...g.target } : null,
+    measures: g.measures.slice(), levers: g.levers.map(l => ({ ...l })) });
+  const changes = [];
+  if (source) {
+    const after = copy(source);
+    after.measures = after.measures.filter(m => m !== metric);
+    after.levers = after.levers.filter(l => l.metric !== metric);
+    changes.push({ before: copy(source), after });
+  }
+  const after = copy(destination);
+  if (role === 'outcome') {
+    if (!after.measures.includes(metric)) after.measures.push(metric);
+    after.levers = after.levers.filter(l => l.metric !== metric);
+  } else {
+    after.measures = after.measures.filter(m => m !== metric);
+    const lever = after.levers.find(l => l.metric === metric);
+    if (lever) lever.lag = lag;
+    else after.levers.push({ metric, lag });
+  }
+  if (JSON.stringify(after.measures) !== JSON.stringify(destination.measures) ||
+      JSON.stringify(after.levers) !== JSON.stringify(destination.levers))
+    changes.push({ before: copy(destination), after });
+  if (!changes.length) throw new Error('This stock already has that role in this goal.');
+  return { metric, to, from, role, lag: role === 'lever' ? lag : null, changes };
+}
+
+// One insert makes a move one transaction: either both goal declarations
+// append, or neither does. Existing ids are never regenerated from names.
+async function writeGoalAssignment(db, goals, assignment) {
+  const plan = planGoalAssignment(goals, assignment);
+  const occurredAt = new Date().toISOString();
+  return db.from('events').insert(plan.changes.map(c => goalRow(c.after, occurredAt)));
 }
 
 // A goal's line is YOU over only its measures. The same silence rule holds:

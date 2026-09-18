@@ -170,28 +170,28 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .ledger-tabs button,.goal-filters button,.quiet-btn,.rule-options button{border:1px solid var(--edge2);background:none;color:var(--dim);font:10px/1.3 var(--mono);padding:9px 12px;cursor:pointer;border-radius:0}
 .ledger-tabs button[aria-pressed="true"],.goal-filters button[aria-pressed="true"]{color:var(--ink);border-color:var(--dim);background:var(--panel)}
 .quiet-btn:hover,.rule-options button:hover{color:var(--ink);border-color:var(--dim)}
-.goal-filters{margin:18px 0 26px}
+.goal-filters{position:sticky;top:0;z-index:4;margin:0;padding:12px 0;background:var(--ground);border-bottom:1px solid var(--edge2)}
 .ledger-search{display:flex;align-items:center;gap:10px;font:10px/1.3 var(--mono);color:var(--dim)}
 .ledger-search input{width:190px;max-width:100%;background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:12px/1.5 var(--mono);padding:6px 0;border-radius:0}
-.goal-sheet{margin:24px 0 40px;border:1px solid var(--edge2);border-top:2px solid var(--teal);padding:22px;background:linear-gradient(135deg,#101719,var(--ground) 55%)}
-.goal-sheet-head{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:24px}
-.goal-sheet-head h2{font:300 36px/1.1 var(--ui);letter-spacing:-.025em;margin:8px 0;overflow-wrap:anywhere}
+.goal-sheet{margin:18px 0 24px;border:1px solid var(--edge2);border-top:2px solid var(--teal);padding:18px;background:linear-gradient(135deg,#101719,var(--ground) 55%)}
+.goal-sheet-head{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:18px}
+.goal-sheet-head h2{font:300 28px/1.1 var(--ui);letter-spacing:-.025em;margin:8px 0;overflow-wrap:anywhere}
 .goal-sheet-head p{font:11px/1.5 var(--mono);color:var(--dim);margin:0}
 .goal-sheet-head .quiet-btn{flex-shrink:0}
-.goal-parts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.goal-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .goal-part{min-width:0}
 .part-title{font:11px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:0;color:var(--ink)}
 .part-title span{color:var(--teal);margin-right:10px}
 .part-copy{font:12px/1.6 var(--ui);color:var(--dim);margin:8px 0 16px}
-.goal-part.lever-part{border-left:1px solid var(--edge2);padding-left:24px}
+.goal-part.lever-part{border-left:0;padding-left:0}
 .goal-part.lever-part .part-title span{color:var(--amber)}
 .goal-part .grid{grid-template-columns:minmax(0,1fr);gap:10px}
 .stock-card{min-width:0;display:flex;flex-direction:column;border:1px solid var(--edge2);background:var(--panel)}
-.stock-card .lb{width:100%;border:0;border-top:2px solid var(--edge2);flex:1;padding:14px;gap:10px}
+.stock-card .lb{width:100%;border:0;border-top:2px solid var(--edge2);padding:12px;gap:8px}
 .stock-card .lb.up{border-top-color:var(--teal)}.stock-card .lb.down{border-top-color:var(--leak)}.stock-card .lb.flat{border-top-color:var(--dim)}
 .stock-card .lb .ln1{align-items:start}.stock-card .lb .nm{white-space:normal;overflow:visible;overflow-wrap:anywhere;line-height:1.5;font-size:11px;letter-spacing:.02em;text-transform:none}
 .stock-card .lb .meta{line-height:1.6;white-space:normal;overflow-wrap:anywhere}
-.stock-card .lb > b{font-size:30px}.stock-card .lb .tiny{height:34px}
+.stock-reading{display:flex;align-items:center;justify-content:space-between;gap:14px}.stock-reading b{min-width:0;overflow-wrap:anywhere;font:300 27px/1.1 var(--ui)}.stock-reading small{font:10px/1.4 var(--mono);color:var(--dim);margin-left:4px}.stock-card .lb .tiny{width:36%;height:27px;flex-shrink:0}
 .stock-index{display:flex;justify-content:space-between;gap:12px;font:10px/1.4 var(--mono);color:var(--dim)}
 .stock-index strong{font-weight:400;color:var(--ink)}
 .rule-control{padding:10px 14px 12px;border-top:1px solid var(--edge);font:10px/1.5 var(--mono);color:var(--dim)}
@@ -213,7 +213,25 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .rule-band input:focus-visible{outline:1px solid var(--teal);outline-offset:2px}.rule-band input:disabled{opacity:.5}
 .dialog-actions .confirm{background:var(--ink);color:var(--ground);border-color:var(--ink)}.dialog-actions button:disabled{opacity:.45;cursor:wait}
 .rule-dialog .err{color:var(--leak)}
-@media(max-width:650px){.goal-parts{grid-template-columns:minmax(0,1fr)}.goal-part.lever-part{border-left:0;border-top:1px solid var(--edge2);padding:20px 0 0}.goal-sheet{padding:16px}.goal-sheet-head{flex-wrap:wrap}.ledger-tools{align-items:stretch}.ledger-search{width:100%}.ledger-search input{flex:1;width:auto}.rule-dialog{padding:22px}.det .dh{flex-wrap:wrap}}
+@media(max-width:650px){.goal-parts{grid-template-columns:minmax(0,1fr)}.goal-part.lever-part{border:0;padding:0}.goal-sheet{padding:16px}.goal-sheet-head{flex-wrap:wrap}.ledger-tools{align-items:stretch}.ledger-search{width:100%}.ledger-search input{flex:1;width:auto}.rule-dialog{padding:22px}.det .dh{flex-wrap:wrap}}
+/* compact stocks: history and direction controls open on demand */
+#ledgerview .grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));align-items:start;gap:10px}
+#ledgerview .goal-part .grid{grid-template-columns:minmax(0,1fr)}
+.stock-card .lb .nm{color:var(--ink)}.stock-card .lb .ln1 i{flex-shrink:0;letter-spacing:0}
+.stock-card .stock-date span{min-width:0}.stock-card .stock-date{display:flex;justify-content:space-between;gap:8px}
+.stock-actions{display:flex;align-items:start;gap:6px;padding:8px 10px;border-top:1px solid var(--edge2);position:relative}
+.stock-settings{min-width:0;flex:1}.stock-settings summary{font:10px/1.5 var(--mono);color:var(--dim);cursor:pointer;padding:5px 0;overflow-wrap:anywhere}
+.stock-settings .rule-control{padding:10px 0 2px;border:0}.stock-settings .rule-control > span{display:none}
+.stock-actions .quiet-btn{padding:5px 7px;white-space:nowrap}.drag-stock{cursor:grab!important;color:var(--muted)!important;border-color:transparent!important}
+.drag-stock:active{cursor:grabbing!important}.stock-card.dragging{opacity:.4}
+[data-goal-drop].drop-over,.rail .drop-over{outline:1px solid var(--teal);outline-offset:3px;background:#142722}
+body.stock-dragging .goal-filters{border-color:var(--teal)}body.stock-dragging [data-goal-drop]{border-color:#36564f}
+.drop-hint{display:none;font:10px/1.5 var(--mono);color:var(--teal);align-self:center;margin-left:8px}body.stock-dragging .drop-hint{display:inline}
+.assignment-fields{display:grid;gap:14px;margin:20px 0}.assignment-fields label{display:grid;gap:7px;font:11px/1.5 var(--mono);color:var(--dim)}
+.assignment-fields select{width:100%;padding:10px;background:var(--ground);border:1px solid var(--edge2);color:var(--ink);font:13px/1.5 var(--ui);border-radius:0}
+.assignment-fields [hidden]{display:none}.assignment-review{border-block:1px solid var(--edge2);padding:12px 0;white-space:pre-line}.assignment-review:empty{display:none}
+@media(min-width:761px) and (max-width:1050px){.goal-parts{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.goal-filters{flex-wrap:nowrap;overflow-x:auto}.goal-filters button{flex-shrink:0}.drop-hint{display:none!important}.ledger-intro{margin:22px 0 18px}}
 .vd td{color:var(--dim);text-decoration:line-through}
 .vd td:first-child{text-decoration:none}
 .cd s{color:var(--dim);margin-right:10px}
@@ -488,6 +506,21 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
   <div class="dialog-actions"><button type="button" class="quiet-btn" id="rule-cancel">Cancel</button><button type="button" class="quiet-btn confirm" id="rule-confirm">Confirm change</button></div>
 </dialog>
 
+
+<dialog class="rule-dialog" id="assignment-dialog" aria-labelledby="assignment-title" aria-describedby="assignment-impact">
+  <span class="ledger-kicker">Organize a stock</span><h2 id="assignment-title">Put it in a goal.</h2>
+  <p class="rule-name" id="assignment-name"></p>
+  <div class="assignment-fields">
+    <label>Goal<select id="assignment-goal"></select></label>
+    <label>Use it as<select id="assignment-role"><option value="">Choose a role</option><option value="outcome">Outcome · what you want to change</option><option value="lever">Lever · an input to test</option></select></label>
+    <label id="assignment-lag-field" hidden>Compare with outcomes<select id="assignment-lag"></select></label>
+    <label id="assignment-from-field">Placement<select id="assignment-from"></select></label>
+  </div>
+  <p id="assignment-impact">Outcomes contribute to this goal’s index when scored. Levers are tested against later outcomes. Changing outcomes recalculates this goal’s history. Scoring rules, targets and YOU stay as they are. Earlier goal declarations stay in the ledger.</p>
+  <p class="assignment-review" id="assignment-review" aria-live="polite"></p><p class="err" id="assignment-error" role="alert"></p>
+  <div class="dialog-actions"><button type="button" class="quiet-btn" id="assignment-cancel">Cancel</button><button type="button" class="quiet-btn confirm" id="assignment-confirm" disabled>Confirm placement</button></div>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/api/config.js"></script>
 <script src="you-reader.js"></script>
@@ -517,7 +550,7 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
 let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = NAV.has('ledger') || NAV.get('view') === 'ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
 let LM = null, LSECTION = '', LG = NAV.get('group') || '', LMODE = NAV.get('mode') === 'sources' ? 'sources' : 'goals', LQUERY = '';   // opened stock, goal filter, and ledger navigation
-let RULEPENDING = null;
+let RULEPENDING = null, ASSIGNPENDING = null, DRAGSTOCK = null;
 
 async function load(){
   const [today, all, rules, goals, voids, cvoids, feeds, starts] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db)]);
@@ -859,6 +892,106 @@ $('rule-dialog').addEventListener('cancel', e => { e.preventDefault(); cancelRul
 $('rule-lo').addEventListener('input', refreshRuleReview);
 $('rule-hi').addEventListener('input', refreshRuleReview);
 
+// ---- goal placement: drag and buttons share one review, one append-only writer ----
+const goalMembership = (g, m) => g.measures.includes(m) ? 'Outcome' : g.levers.some(l => l.metric === m) ? 'Lever · ' + g.levers.find(l => l.metric === m).lag + ' day lag' : g.target?.metric === m ? 'Target reading only' : 'Not assigned';
+const goalStamp = g => JSON.stringify(g && { id:g.id, name:g.name, target:g.target, measures:g.measures, levers:g.levers, declared:g.declared });
+function assignmentChoice(){
+  return { metric:ASSIGNPENDING.metric, to:$('assignment-goal').value, role:$('assignment-role').value, lag:$('assignment-lag').value ? Number($('assignment-lag').value) : undefined, from:$('assignment-from').value || null };
+}
+function refreshAssignment(){
+  const p = ASSIGNPENDING; if (!p || p.saving) return;
+  const choice = assignmentChoice();
+  $('assignment-lag-field').hidden = choice.role !== 'lever';
+  for (const option of $('assignment-from').options) option.disabled = !!option.value && option.value === choice.to;
+  if (choice.from === choice.to){ $('assignment-from').value = ''; choice.from = null; }
+  $('assignment-review').textContent = ''; $('assignment-error').textContent = ''; $('assignment-confirm').disabled = true; p.plan = null;
+  if (!choice.to || !choice.role || (choice.role === 'lever' && !Number.isFinite(choice.lag))) return;
+  try {
+    p.plan = planGoalAssignment(GOALS, choice);
+    p.choice = choice;
+    p.before = [choice.to, choice.from].filter(Boolean).map(id => [id, goalStamp(GOALS.find(g => g.id === id))]);
+    $('assignment-review').textContent = p.plan.changes.map(({before, after}) => `${before.name}: ${goalMembership(before, p.metric)} → ${goalMembership(after, p.metric)}`).join('\n') + '\nCurrent scoring: ' + ruleLabel(RULES[p.metric]) + '.';
+    $('assignment-confirm').disabled = false;
+  } catch (e){ $('assignment-error').textContent = e.message || String(e); }
+}
+function reviewAssignment(metric, to = '', role = '', from = ''){
+  if (!READY || !ALL.includes(metric) || RULEPENDING || DROP || ASSIGNPENDING?.saving) return;
+  if (!GOALS.length){ say('Declare a goal first, then add its outcomes and levers here.'); return; }
+  ASSIGNPENDING = { metric, saving:false, plan:null };
+  const membership = GOALS.filter(g => g.measures.includes(metric) || g.levers.some(l => l.metric === metric));
+  $('assignment-name').textContent = metric;
+  $('assignment-goal').innerHTML = '<option value="">Choose a goal</option>' + GOALS.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
+  $('assignment-goal').value = GOALS.some(g => g.id === to) ? to : '';
+  $('assignment-role').value = role;
+  $('assignment-lag').innerHTML = '<option value="">Choose a delay</option>' + LAGS.map(lag => `<option value="${lag}">${lag} day${lag === 1 ? '' : 's'} later</option>`).join('');
+  $('assignment-from').innerHTML = '<option value="">Add here · keep other goals</option>' + membership.map(g => `<option value="${esc(g.id)}">Move from ${esc(g.name)}</option>`).join('');
+  $('assignment-from').value = membership.some(g => g.id === from) && from !== to ? from : '';
+  $('assignment-from-field').hidden = !membership.length;
+  for (const id of ['goal','role','lag','from','cancel']) $('assignment-' + id).disabled = false;
+  $('assignment-confirm').textContent = 'Confirm placement';
+  refreshAssignment();
+  if (!$('assignment-dialog').open) $('assignment-dialog').showModal();
+  $(to ? role === 'lever' ? 'assignment-lag' : role ? 'assignment-cancel' : 'assignment-role' : 'assignment-goal').focus();
+}
+function cancelAssignment(){ if (ASSIGNPENDING?.saving) return; ASSIGNPENDING = null; $('assignment-dialog').close(); }
+async function confirmAssignment(){
+  const p = ASSIGNPENDING; if (!p || p.saving || !p.plan) return;
+  if (JSON.stringify(assignmentChoice()) !== JSON.stringify(p.choice)){ refreshAssignment(); return; }
+  p.saving = true; $('assignment-error').textContent = '';
+  for (const id of ['goal','role','lag','from','cancel','confirm']) $('assignment-' + id).disabled = true;
+  let written = false;
+  try {
+    const latest = await readGoals(db);
+    if (p.before.some(([id, stamp]) => goalStamp(latest.find(g => g.id === id)) !== stamp)){
+      await load(); render();
+      p.saving = false; const choice = p.choice; ASSIGNPENDING = null;
+      reviewAssignment(p.metric, choice.to, choice.role, choice.from || '');
+      if (choice.lag !== undefined) $('assignment-lag').value = String(choice.lag);
+      refreshAssignment(); $('assignment-error').textContent = 'This goal changed elsewhere. Review its current placement and confirm again.';
+      return;
+    }
+    const { error } = await writeGoalAssignment(db, latest, p.choice);
+    if (error) throw error;
+    written = true; ASSIGNPENDING = null; $('assignment-dialog').close();
+    await load(); render(); say('Placement saved for ' + p.metric + '.');
+  } catch (e){
+    if (written) say('Placement saved. Reload to refresh the page: ' + (e.message || String(e)));
+    else $('assignment-error').textContent = e.message || String(e);
+  } finally {
+    if (ASSIGNPENDING === p){ p.saving = false; for (const id of ['goal','role','lag','from','cancel','confirm']) $('assignment-' + id).disabled = false; }
+  }
+}
+for (const id of ['goal','role','lag','from']) $('assignment-' + id).addEventListener('change', refreshAssignment);
+$('assignment-confirm').addEventListener('click', confirmAssignment);
+$('assignment-cancel').addEventListener('click', cancelAssignment);
+$('assignment-dialog').addEventListener('cancel', e => { e.preventDefault(); cancelAssignment(); });
+function endStockDrag(){
+  DRAGSTOCK = null; document.body.classList.remove('stock-dragging');
+  document.querySelectorAll('.drop-over,.dragging').forEach(el => el.classList.remove('drop-over','dragging'));
+}
+const stockDropTarget = target => target.closest('[data-goal-drop], .rail [data-id]:not([data-id="YOU"])');
+document.addEventListener('dragstart', e => {
+  const grip = e.target.closest('[draggable="true"][data-assign-m]');
+  if (!grip || !READY || RULEPENDING || ASSIGNPENDING || DROP) return;
+  if (!ALL.includes(grip.dataset.assignM) || !GOALS.length){ e.preventDefault(); return; }
+  holdEnd(); DRAGSTOCK = { metric:grip.dataset.assignM, from:grip.dataset.assignFrom };
+  e.dataTransfer.setData('application/x-wire-stock', DRAGSTOCK.metric); e.dataTransfer.effectAllowed = 'copyMove';
+  grip.closest('.stock-card').classList.add('dragging'); document.body.classList.add('stock-dragging');
+});
+document.addEventListener('dragover', e => {
+  if (!DRAGSTOCK || !e.dataTransfer || ![...e.dataTransfer.types].includes('application/x-wire-stock')) return;
+  const target = stockDropTarget(e.target);
+  document.querySelectorAll('.drop-over').forEach(el => { if (el !== target) el.classList.remove('drop-over'); });
+  if (!target) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = DRAGSTOCK.from ? 'move' : 'copy'; target.classList.add('drop-over');
+});
+document.addEventListener('drop', e => {
+  if (!DRAGSTOCK || !e.dataTransfer || ![...e.dataTransfer.types].includes('application/x-wire-stock')) return;
+  e.preventDefault(); const stock = DRAGSTOCK, target = stockDropTarget(e.target); endStockDrag();
+  if (target) reviewAssignment(stock.metric, target.dataset.goalDrop || target.dataset.id, target.dataset.dropRole || '', stock.from);
+});
+document.addEventListener('dragend', endStockDrag);
+
 // ---- the chart: the goal, or the picked stock, on the index scale ----
 const vcls = t => t.verdict === 'finding' ? (t.effect > 0 ? 'pos' : 'neg') : t.verdict === 'tangled' ? 'tan' : t.verdict === 'no finding' ? 'mid' : t.verdict === 'early' ? 'early' : '';
 const vhex = t => t.verdict === 'finding' ? (t.effect > 0 ? '#5fc4b4' : '#c9695c') : t.verdict === 'tangled' ? '#c9a25a' : '#e6e3dc';
@@ -1144,24 +1277,26 @@ function drawLedger(){
     const index = !st && Number.isFinite(last?.rank) ? last.rank : '—';
     const why = gt === 'none' && pts ? noIndexWhy(pts) : last?.why || '';
     const sources = s === undefined ? (SOURCES[m] || []).join(' · ') : s;
-    return `<article class="stock-card"><button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}" data-lscope="${esc(scope)}" aria-expanded="${LM === m && LSECTION === scope}" title="Open ${esc(m)} history"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : '<i>no index</i>'}</span>
-      <b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${tiny(vals, tone)}
-      <span class="stock-index"><span>${scored ? 'Index history' : 'Raw history'}</span><strong>Index ${index}</strong></span>
-      <span class="meta">${esc(sources || 'No source yet')}${lr ? ` · ${esc(lr.day)}` : ' · no readings'}${lag !== undefined ? `<br>Tested against outcomes ${lag} day${lag === 1 ? '' : 's'} later` : ''}</span>
-      ${why ? `<span class="meta">${esc(why)}</span>` : ''}<span class="meta">${LM === m && LSECTION === scope ? 'Close history ↑' : 'Open history ↗'}</span></button>${ruleControl(m)}</article>`;
+    const owner = GOALS.find(g => ['outcomes','levers','target'].some(kind => scope === g.id + ':' + kind));
+    const placement = `data-assign-m="${esc(m)}" data-assign-from="${esc(owner?.id || '')}"`;
+    return `<article class="stock-card"><button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}" data-lscope="${esc(scope)}" aria-expanded="${LM === m && LSECTION === scope}" title="${esc(why || 'Open history and scoring details')}"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : '<i>no index</i>'}</span>
+      <span class="stock-reading"><b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${tiny(vals, tone)}</span>
+      <span class="stock-index"><span>${lag !== undefined ? `Test · ${lag} day${lag === 1 ? '' : 's'} later` : scored ? 'Index history' : 'Raw history'}</span><strong>Index ${index}</strong></span>
+      <span class="meta stock-date"><span>${esc(sources || 'No source yet')}</span><span>${lr ? esc(lr.day) : 'No readings'}</span></span>
+      </button><div class="stock-actions"><button type="button" class="quiet-btn drag-stock" draggable="true" ${placement} aria-label="Drag ${esc(m)} to a goal, or click to choose" title="Drag to a goal or click to choose">⠿</button><details class="stock-settings"><summary>${esc(ruleLabel(RULES[m]))}</summary>${ruleControl(m)}</details><button type="button" class="quiet-btn" ${placement}${GOALS.length ? '' : ' disabled'}>Move / add ↗</button></div></article>`;
   };
   const part = (g, kind) => {
     const isLever = kind === 'levers', all = isLever ? g.levers.map(l => l.metric) : g.measures, ms = all.filter(matches), scope = g.id + ':' + kind;
-    return `<div class="goal-part${isLever ? ' lever-part' : ''}"><h3 class="part-title"><span>${isLever ? '↗' : '◎'}</span>${isLever ? 'Levers' : 'Outcomes'} · ${all.length}</h3><p class="part-copy">${isLever ? 'Inputs tested against later outcomes. Leads are relationships to investigate.' : 'What this goal tracks. Their scoring rules define what better means.'}</p><div class="grid">${ms.map(m => box(m, undefined, scope, isLever ? g.levers.find(l => l.metric === m).lag : undefined)).join('')}${ms.includes(LM) && LSECTION === scope ? detail(LM) : ''}</div>${!ms.length ? `<p class="part-copy">${all.length ? 'No matching stocks.' : isLever ? 'No levers declared for this goal.' : 'No outcomes declared for this goal.'}</p>` : ''}</div>`;
+    return `<div class="goal-part${isLever ? ' lever-part' : ''}" data-goal-drop="${esc(g.id)}" data-drop-role="${isLever ? 'lever' : 'outcome'}"><h3 class="part-title"><span>${isLever ? '↗' : '◎'}</span>${isLever ? 'Levers' : 'Outcomes'} · ${all.length}</h3><p class="part-copy">${isLever ? 'Inputs to test against later outcomes.' : 'What you want to change. Rules define better.'}</p><div class="grid">${ms.map(m => box(m, undefined, scope, isLever ? g.levers.find(l => l.metric === m).lag : undefined)).join('')}${ms.includes(LM) && LSECTION === scope ? detail(LM) : ''}</div>${!ms.length ? `<p class="part-copy">${all.length ? 'No matching stocks.' : isLever ? 'No levers declared for this goal.' : 'No outcomes declared for this goal.'}</p>` : ''}</div>`;
   };
   const sheets = GOALS.filter(g => (!LG || g.id === LG) && (!LQUERY || [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])].some(matches))).map(g => {
     const index = GOALS.indexOf(g) + 1;
     const target = g.target && !g.measures.includes(g.target.metric) && !g.levers.some(l => l.metric === g.target.metric) && matches(g.target.metric) ? `<div class="goal-part"><h3 class="part-title">Target reading</h3><p class="part-copy">${esc(g.target.metric)} is this goal’s target, separate from its scored outcomes.</p><div class="grid">${box(g.target.metric, undefined, g.id + ':target')}${LM === g.target.metric && LSECTION === g.id + ':target' ? detail(LM) : ''}</div></div>` : '';
-    return `<section class="goal-sheet" aria-label="${esc(g.name)} tracked items"><div class="goal-sheet-head"><div><span class="ledger-kicker">Goal ${String(index).padStart(2, '0')}</span><h2>${esc(g.name)}</h2><p>${g.measures.length} outcomes · ${g.levers.length} levers</p></div><button type="button" class="quiet-btn" data-open-goal="${esc(g.id)}">View goal ↗</button></div><div class="goal-parts">${part(g, 'outcomes')}${part(g, 'levers')}${target}</div></section>`;
+    return `<section class="goal-sheet" data-goal-drop="${esc(g.id)}" aria-label="${esc(g.name)} tracked items"><div class="goal-sheet-head"><div><span class="ledger-kicker">Goal ${String(index).padStart(2, '0')}</span><h2>${esc(g.name)}</h2><p>${g.measures.length} outcomes · ${g.levers.length} levers</p></div><button type="button" class="quiet-btn" data-open-goal="${esc(g.id)}">View goal ↗</button></div><div class="goal-parts">${part(g, 'outcomes')}${part(g, 'levers')}${target}</div></section>`;
   }).join('');
   const assigned = new Set(GOALS.flatMap(g => [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]));
   const rest = ALL.filter(m => !assigned.has(m) && matches(m));
-  const other = LG || !rest.length ? '' : `<section class="lane"><div class="lh"><div class="lt">Other tracked stocks</div></div><p class="part-copy">These readings are not assigned to a goal. Their global rules still determine whether they enter YOU.</p><div class="grid">${rest.map(m => box(m, undefined, 'other')).join('')}${rest.includes(LM) && LSECTION === 'other' ? detail(LM) : ''}</div></section>`;
+  const other = LG || !rest.length ? '' : `<section class="lane"><div class="lh"><div class="lt">Other tracked stocks</div></div><p class="part-copy">Drag the grip to a goal above, or choose Move / add. Scoring still applies to YOU.</p><div class="grid">${rest.map(m => box(m, undefined, 'other')).join('')}${rest.includes(LM) && LSECTION === 'other' ? detail(LM) : ''}</div></section>`;
   const lane = l => {
     const srcs = inLane(l), last = srcs.map(s => lastSrc[s]).sort().pop();
     const mcpRows = l !== 'mcp' ? '' : `<div class="lrow"><span class="k">reads</span>${MCP_READS.map(n => `<span class="chip">${n}</span>`).join('')}</div>
@@ -1196,9 +1331,9 @@ function drawLedger(){
     `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
   // the way back, for a hand that would rather press a button than hold the page
   const bar = `<div class="lbar"><button type="button" class="back" id="lback">back to ${esc(cur().name)}</button></div>`;
-  const intro = `<header class="ledger-intro"><span class="ledger-kicker">The Wire / your ledger</span><h1>What you’re working on.</h1><p>Outcomes show what changed. Levers are the inputs you test. Each goal brings its readings together, with the record always one click away.</p></header>`;
+  const intro = `<header class="ledger-intro"><span class="ledger-kicker">The Wire / your ledger</span><h1>What you’re working on.</h1><p>Outcomes show what changed. Levers are the inputs you test. Drag a stock into a goal, or use Move / add. Open any card for its history; open its direction to change scoring.</p></header>`;
   const tools = `<div class="ledger-tools"><div class="ledger-tabs" role="group" aria-label="Organize ledger"><button type="button" data-ledger-mode="goals" aria-pressed="${LMODE === 'goals'}">By goal</button><button type="button" data-ledger-mode="sources" aria-pressed="${LMODE === 'sources'}">By source</button></div><label class="ledger-search">Find a stock<input id="ledger-search" type="search" value="${esc(LQUERY)}" placeholder="Name or source" autocomplete="off"></label></div>`;
-  const filters = LMODE !== 'goals' ? '' : `<nav class="goal-filters" aria-label="Filter by goal"><button type="button" data-ledger-goal="" aria-pressed="${!LG}">All goals</button>${GOALS.map(g => `<button type="button" data-ledger-goal="${esc(g.id)}" aria-pressed="${LG === g.id}">${esc(g.name)}</button>`).join('')}</nav>`;
+  const filters = `<nav class="goal-filters" aria-label="Filter by goal"><button type="button" data-ledger-goal="" aria-pressed="${LMODE === 'goals' && !LG}">All goals</button>${GOALS.map(g => `<button type="button" data-ledger-goal="${esc(g.id)}" data-goal-drop="${esc(g.id)}" aria-pressed="${LMODE === 'goals' && LG === g.id}">${esc(g.name)}</button>`).join('')}<span class="drop-hint">Drop to choose a role · confirm to save</span></nav>`;
   const body = LMODE === 'sources' ? key + lanes.map(lane).join('') : sheets + other || `<p class="part-copy">${LQUERY ? 'No tracked items match this search.' : 'No goals or readings yet. New goals appear here with their declared outcomes and levers.'}</p>`;
   $('ledgerview').innerHTML = bar + intro + tools + filters + body + notesPanel() + `<details class="record-fold"><summary>Sources, counts & recent rows</summary>${how + doors + types + voided + corrected + tape}</details>`;
   if (search){ $('ledger-search').focus(); if (caret != null) $('ledger-search').setSelectionRange(caret, caret); }
@@ -1315,7 +1450,7 @@ document.addEventListener('drop', e => {
   if (!carriesFile(e)) return;
   e.preventDefault();   // the browser would otherwise leave the page to open the file
   const f = e.dataTransfer.files[0], scope = READY ? dropScope(e.target) : null;
-  if (!f || !scope || (DROP && DROP.writing) || $('rule-dialog').open) return;
+  if (!f || !scope || (DROP && DROP.writing) || $('rule-dialog').open || $('assignment-dialog').open) return;
   f.text().then(text => {
     if (DROP && DROP.writing) return;
     const csv = readCSV(text);
@@ -1324,7 +1459,7 @@ document.addEventListener('drop', e => {
     applyView(); drawDrop(); dropDays(DROP);
   }, err => say(err.message || String(err)));
 });
-document.addEventListener('keydown', e => { if (!$('rule-dialog').open && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
+document.addEventListener('keydown', e => { if (!$('rule-dialog').open && !$('assignment-dialog').open && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
 document.addEventListener('input', e => {
   if (e.target.id === 'ledger-search'){ LQUERY = e.target.value; LM = null; LSECTION = ''; drawLedger(); return; }
   const el = e.target.closest && e.target.closest('#dropview input[data-col]');
@@ -1379,13 +1514,15 @@ const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Ma
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
   if (SKIPCLICK){ SKIPCLICK = false; return; }
-  if (e.target.closest('#rule-dialog')) return;
+  if (e.target.closest('#rule-dialog, #assignment-dialog')) return;
+  const assign = e.target.closest('[data-assign-m]');
+  if (assign){ reviewAssignment(assign.dataset.assignM, '', '', assign.dataset.assignFrom); return; }
   const direction = e.target.closest('[data-rule-m]');
   if (direction){ reviewRule(direction.dataset.ruleM, direction.dataset.ruleKind); return; }
   const mode = e.target.closest('[data-ledger-mode]');
   if (mode){ LMODE = mode.dataset.ledgerMode; LM = null; LSECTION = ''; applyView(); drawLedger(); return; }
   const group = e.target.closest('[data-ledger-goal]');
-  if (group){ LG = group.dataset.ledgerGoal; LM = null; LSECTION = ''; applyView(); drawLedger(); return; }
+  if (group){ LMODE = 'goals'; LG = group.dataset.ledgerGoal; LM = null; LSECTION = ''; applyView(); drawLedger(); return; }
   const tracked = e.target.closest('[data-track-goal]');
   if (tracked){ LG = tracked.dataset.trackGoal; LMODE = 'goals'; LQUERY = ''; LM = null; turnTo(true); return; }
   const goal = e.target.closest('[data-open-goal]');
@@ -1425,7 +1562,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; draw(); }
 });
-document.addEventListener('keydown', e => { if ($('rule-dialog').open) return; if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
+document.addEventListener('keydown', e => { if ($('rule-dialog').open || $('assignment-dialog').open) return; if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
 // a wider or narrower page redraws the chart at its new width, without drawing the line in again
 let lastW = 0;
 new ResizeObserver(() => { const w = Math.round($('chart').clientWidth); if (!READY || w === lastW) return; lastW = w; drawChart(false); drawHead(null); wire(); }).observe($('chart'));
