@@ -200,6 +200,18 @@ const READINGS = {
       ['whoop_sleep_debt', 'minutes', s => {
         const ms = s.sleep_needed?.need_from_sleep_debt_milli;
         return ms == null ? null : Math.round(ms / 60000);
+      }],
+      ['whoop_asleep', 'minutes', s => {
+        // Derived: the live score has no single time-asleep field. Sum
+        // stage_summary.total_light_sleep_time_milli,
+        // stage_summary.total_slow_wave_sleep_time_milli and
+        // stage_summary.total_rem_sleep_time_milli, excluding awake/no-data time.
+        const stages = [s.stage_summary?.total_light_sleep_time_milli,
+          s.stage_summary?.total_slow_wave_sleep_time_milli,
+          s.stage_summary?.total_rem_sleep_time_milli];
+        if (stages.some(ms => ms == null)) return null;
+        const ms = stages.reduce((sum, value) => sum + value, 0);
+        return Math.round(ms / 60000);
       }]
     ]
   },

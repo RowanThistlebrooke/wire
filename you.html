@@ -422,7 +422,14 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
 .gv-cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:34px 40px;margin-top:22px;border-top:1px solid var(--edge);padding-top:22px}
 .gv-cols:not(:has(.node,.cr,.gv-h)){display:none}
 .gv-col{min-width:0}
-.gv-col .flow{margin-top:0;padding:0;column-gap:28px;grid-template-columns:minmax(0,1fr) auto}
+.gv-map{grid-column:1/-1}.gv-col:has(> #gvw:empty){display:none}.gv-col:has(> #gvw:empty) + .gv-col{grid-column:1/-1}
+.gv-col .flow{margin-top:0;padding:0;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);grid-template-areas:"heading heading heading" "north north north" "west hub east" "south south south";gap:22px 24px;isolation:isolate}
+.gv-col .flow .flow-heading{grid-area:heading;margin:0}.flow-bank{min-width:0;display:grid;gap:18px;align-content:center;position:relative;z-index:1}
+.flow-bank.north{grid-area:north}.flow-bank.south{grid-area:south}.flow-bank.west{grid-area:west}.flow-bank.east{grid-area:east}
+.flow-bank.north,.flow-bank.south{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px}
+.flow-bank:empty{display:none}.flow-bank .gv-ms{align-self:start}.flow-bank .gv-h{margin:0 0 6px;font-size:9px;letter-spacing:.1em}
+.gv-col .flow .wires{z-index:0}.gv-col .flow .gv-gl{grid-area:hub;justify-self:center;z-index:2}
+.gv-col .flow .node.g{align-items:center;text-align:center;min-width:76px;overflow-wrap:anywhere}
 .gv-ms{display:grid;grid-template-columns:minmax(0,max-content) max-content minmax(28px,1fr) max-content;column-gap:10px;align-items:center;min-width:0;position:relative}
 .gv-ms > .gv-h,.gv-ms > .node.s{grid-column:1/-1;justify-self:start}
 .gv-ms > .node.s{padding:6px 8px 5px 0}
@@ -465,6 +472,17 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
   .gv-tr{grid-template-columns:max-content minmax(30px,1fr) max-content max-content max-content}
   .gv-tr > i{grid-column:1/-1}
 }
+/* The same map folds into two banks above and below the central goal on smaller screens. */
+@container (max-width:620px){
+  .gv-col .flow{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"heading heading" "north north" "west east" "hub hub" "south south";gap:22px 24px}
+  .flow-bank.north,.flow-bank.south{column-gap:24px}
+  .flow-bank .gv-ms{grid-template-columns:minmax(0,1fr) max-content;column-gap:8px}
+  .flow-bank .gv-ms > .node.m{row-gap:5px;margin-left:7px;padding:6px 4px}
+  .flow-bank .node.m .nm{grid-column:1/-1;grid-row:1}
+  .flow-bank .node.m b{grid-column:1;grid-row:2;text-align:left;white-space:normal;overflow-wrap:anywhere}
+  .flow-bank .node.m .gv-i{grid-column:2;grid-row:2}
+  .flow-bank .node.m .gv-b{grid-column:1/-1;grid-row:3;min-height:9px}
+}
 /* the short hold: source → reading → scoring → where it is used */
 .flow-peek{width:min(940px,calc(100% - 32px));max-height:88vh;overflow:auto;background:var(--ground);color:var(--ink);border:1px solid var(--edge2);padding:24px}
 .flow-peek::backdrop{background:rgba(0,0,0,.75)}.peek-head{display:flex;justify-content:space-between;align-items:start;gap:20px}.peek-head h2{font:300 28px/1.2 var(--ui);margin:10px 0;overflow-wrap:anywhere}.peek-head p{font:12px/1.6 var(--ui);color:var(--dim);margin:0}
@@ -496,8 +514,9 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
     <div class="cross" id="cross"></div>
 
     <div class="gv-cols">
-      <div class="gv-col"><div class="flow" id="flow"></div></div>
-      <div class="gv-col"><div id="gvw"></div><div class="cm" id="cm"></div><div id="gvl"></div></div>
+      <div class="gv-col gv-map"><div class="flow" id="flow"></div></div>
+      <div class="gv-col"><div id="gvw"></div></div>
+      <div class="gv-col"><div id="gv-intro"></div><div class="cm" id="cm"></div><div id="gvl"></div></div>
     </div>
     <div class="shots" id="shots"></div>
     </div>
@@ -771,7 +790,7 @@ function drawTarget(g){
 }
 
 // ---- what is counted: sources, the stocks they write, the goal those stocks make ----
-const FLOW_ROWS = 6;   // up to this many stocks, full names; past it, a source's shared prefix is left off
+const FLOW_ROWS = 6;   // full names for small maps; larger maps shorten shared prefixes and cap each source section at this many rows
 function drawFlow(g){
   const ms = listOf(g), weak = weakPoint(g, SERIES, TODAY), f = $('flow');
   if (!ms.length){ f.innerHTML = ''; f.classList.remove('grouped'); return; }
@@ -800,13 +819,25 @@ function drawFlow(g){
   // the source names its stocks, so past six a prefix every stock under it shares is left off; the full name is on hover
   const cut = list => { const p = list[0].split('_')[0] + '_'; return grouped && list.length > 1 && list.every(m => m.startsWith(p) && m.length > p.length) ? m => m.slice(p.length) : m => m; };
   let k = 0;
-  const block = (list, order) => bySource(list, order).map(([s, list]) => { const c = cut(list), i = k++;
-    return `<div class="node s" data-s="${esc(s)}" data-k="${i}">${esc(s || '·')}</div>` + list.map(m => chip(m, c(m), i)).join(''); }).join('');
-  const scored = ms.filter(m => SERIES[m]), none = ms.filter(m => !SERIES[m]);
-  // up to six stocks every source is drawn, as before; past six, the source a stock names first
-  const named = new Set(ms.map(m => (SOURCES[m] || [])[0] || ''));
-  const also = list => { if (grouped) return ''; let h = ''; for (const m of list) for (const s of (SOURCES[m] || []).slice(1)) if (!named.has(s)){ named.add(s); h += `<div class="node s" data-s="${esc(s)}" data-k="${k++}" data-o>${esc(s)}</div>`; } return h; };
-  f.innerHTML = `<svg class="wires" id="wires"></svg><div class="gv-ms">${scored.length ? '<p class="gv-h">OUTCOMES</p>' + block(scored, byIndex) + also(scored) : ''}${none.length ? '<p class="gv-h">TRACKED WITHOUT AN INDEX</p>' + block(none) + also(none) : ''}</div>`
+  const banks = ['west','east','north','south'].map(side => ({ side, columns:side === 'north' || side === 'south' ? 2 : 1, rows:0, groups:[] }));
+  const groups = [
+    ...bySource(ms.filter(m => SERIES[m]), byIndex).map(([source, list]) => ({ source, list, indexed:true })),
+    ...bySource(ms.filter(m => !SERIES[m])).map(([source, list]) => ({ source, list, indexed:false }))
+  ];
+  // A large source continues under its own heading, rather than growing one unbounded column.
+  const sections = groups.flatMap(group => Array.from({ length:Math.ceil(group.list.length / FLOW_ROWS) }, (_, i) => ({ ...group, list:group.list.slice(i * FLOW_ROWS, (i + 1) * FLOW_ROWS) })));
+  for (const group of sections.sort((a,b) => b.list.length - a.list.length || a.source.localeCompare(b.source))){
+    const bank = banks.reduce((best, next) => next.rows / next.columns < best.rows / best.columns ? next : best);
+    bank.groups.push(group); bank.rows += group.list.length + (group.indexed ? 1 : 2);
+  }
+  const block = group => {
+    const { source, list, indexed } = group, c = cut(list), i = k++;
+    const sources = [source];
+    for (const m of list) for (const extra of SOURCES[m] || []) if (!sources.includes(extra)) sources.push(extra);
+    return `<div class="gv-ms">${indexed ? '' : '<p class="gv-h">Tracked without an index</p>'}${sources.map((source, j) => `<div class="node s" data-s="${esc(source)}" data-k="${i}"${j ? ' data-o' : ''}>${esc(source || '·')}</div>`).join('')}${list.map(m => chip(m, c(m), i)).join('')}</div>`;
+  };
+  f.innerHTML = `<svg class="wires" id="wires" aria-hidden="true"></svg><p class="gv-h flow-heading">OUTCOMES</p>`
+    + banks.map(bank => `<div class="flow-bank ${bank.side}" data-side="${bank.side}">${bank.groups.map(block).join('')}</div>`).join('')
     + `<div class="gv-gl"><button type="button" class="node g" data-goalnode>${esc(g.name)}<b class="${word(gl ? gl.rank : null).cls}">${gl ? gl.rank : '&#183;'}</b></button></div>`;
   wire();
 }
@@ -814,19 +845,33 @@ function wire(){
   const f = $('flow'), svg = $('wires'); if (!svg) return;
   const b = f.getBoundingClientRect(); svg.setAttribute('viewBox', `0 0 ${b.width} ${b.height}`);
   const at = (el, right) => { const r = el.getBoundingClientRect(); return [(right ? r.right : r.left) - b.left, r.top + r.height / 2 - b.top]; };
-  const curve = ([x1, y1], [x2, y2]) => { const mx = (x1 + x2) / 2; return `M${x1.toFixed(1)} ${y1.toFixed(1)}C${mx.toFixed(1)} ${y1.toFixed(1)} ${mx.toFixed(1)} ${y2.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`; };
+
   // a source's wire runs down under its name and turns into each stock it writes
   const elbow = (sn, n) => { const r = sn.getBoundingClientRect(), [x1, y1] = at(n, false), x = r.left - b.left + (sn.hasAttribute('data-o') ? 8 : 3), below = y1 > r.top - b.top, y0 = (below ? r.bottom : r.top) - b.top + (below ? -3 : 3), d = below ? 1 : -1, q = Math.max(0, Math.min(5, x1 - x, Math.abs(y1 - y0)));
     return `M${x.toFixed(1)} ${y0.toFixed(1)}L${x.toFixed(1)} ${(y1 - d * q).toFixed(1)}Q${x.toFixed(1)} ${y1.toFixed(1)} ${(x + q).toFixed(1)} ${y1.toFixed(1)}L${x1.toFixed(1)} ${y1.toFixed(1)}`; };
-  const goal = f.querySelector('[data-goalnode]'), srcs = [...f.querySelectorAll('.node.s')];
-  // a wire out to the goal: dots move on what is counted, dashes on what is not
-  const out = (from, off, cls) => { const d = curve(from, at(goal, false)); return off ? `<path class="off" d="${d}"/>` : `<path class="${cls}" d="${d}"/><path class="live ${cls}" d="${d}"/>`; };
-  const tone = els => els.some(n => n.classList.contains('on')) ? 'on' : els.some(n => n.classList.contains('weak')) ? 'weak' : '';
+  const goal = f.querySelector('[data-goalnode]'), srcs = [...f.querySelectorAll('.node.s')]; if (!goal) return;
+  const g = goal.getBoundingClientRect(), gx = (g.left + g.right) / 2 - b.left;
+  // Banks above or below enter the top or bottom through their shared central gutter.
+  // On a narrow screen the side banks sit above the goal, so their bounds choose the port too.
+  const pathToGoal = n => {
+    const r = n.getBoundingClientRect(), bank = n.closest('.flow-bank').getBoundingClientRect();
+    const vertical = bank.bottom <= g.top || bank.top >= g.bottom;
+    if (vertical){
+      const x = ((r.left + r.right) / 2 < (g.left + g.right) / 2 ? r.right : r.left) - b.left;
+      const y = (r.top + r.bottom) / 2 - b.top, ty = (bank.bottom <= g.top ? g.top : g.bottom) - b.top;
+      const dx = Math.sign(gx - x), dy = Math.sign(ty - y), q = Math.min(8, Math.abs(gx - x) / 2, Math.abs(ty - y) / 2);
+      return `M${x} ${y}L${gx - dx*q} ${y}Q${gx} ${y} ${gx} ${y + dy*q}L${gx} ${ty}`;
+    }
+    const left = bank.right <= g.left, [x,y] = at(n, left), tx = (left ? g.left : g.right) - b.left, ty = (g.top + g.bottom) / 2 - b.top, mx = (x + tx) / 2;
+    return `M${x} ${y}C${mx} ${y} ${mx} ${ty} ${tx} ${ty}`;
+  };
+  const out = (n, off, cls) => { const d = pathToGoal(n); return off ? `<path class="off" d="${d}"/>` : `<path class="${cls}" d="${d}"/><path class="live ${cls}" d="${d}"/>`; };
+  const tone = n => n.classList.contains('on') ? 'on' : n.classList.contains('weak') ? 'weak' : '';
   let s = '';
   f.querySelectorAll('.node.m').forEach(n => {
     const off = n.classList.contains('off');
-    for (const src of SOURCES[n.dataset.m] || []){ const sn = srcs.find(x => x.dataset.s === src && x.dataset.k === n.dataset.k) || srcs.find(x => x.dataset.s === src); if (sn) s += `<path class="${off ? 'off' : ''}" d="${elbow(sn, n)}"/>`; }
-    s += out(at(n, true), off, tone([n]));
+    for (const src of SOURCES[n.dataset.m] || []){ const sn = srcs.find(x => x.dataset.s === src && x.dataset.k === n.dataset.k); if (sn) s += `<path class="${off ? 'off' : ''}" d="${elbow(sn, n)}"/>`; }
+    s += out(n, off, tone(n));
   });
   svg.innerHTML = s;
 }
@@ -1174,7 +1219,8 @@ function drawCommits(){
 // the goal's weak point, weakPoint's measure and its index, over the rows that move it
 function drawWeak(g){
   const w = weakPoint(g, SERIES, TODAY);
-  $('gvw').innerHTML = (w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '') + '<p class="gv-h">LEVERS & COMMITMENTS</p><p class="part-copy">Inputs tested against outcomes, and changes you tried. Open a result to see the comparison.</p>' + (!$('cm').children.length && !$('gvl').children.length ? '<p class="part-copy">No comparisons to show yet.</p>' : '');
+  $('gvw').innerHTML = w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '';
+  $('gv-intro').innerHTML = '<p class="gv-h">LEVERS & COMMITMENTS</p><p class="part-copy">Inputs tested against outcomes, and changes you tried. Open a result to see the comparison.</p>' + (!$('cm').children.length && !$('gvl').children.length ? '<p class="part-copy">No comparisons to show yet.</p>' : '');
 }
 
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
