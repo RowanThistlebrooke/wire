@@ -160,6 +160,56 @@ button:focus-visible{outline:1px solid var(--teal);outline-offset:2px}
 .note-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;font:400 10px/1.5 var(--mono);color:var(--dim)}
 .note-head b{font:400 13px/1.5 var(--mono);color:var(--ink)}
 .note-text{margin:8px 0 0;white-space:pre-wrap}
+/* goals first; the doors and the full record remain one tab away */
+.ledger-intro{margin:34px 0 26px}
+.ledger-kicker{font:10px/1.4 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.ledger-intro h1,.goal-title{font:300 clamp(32px,5vw,54px)/1.05 var(--ui);letter-spacing:-.035em;margin:12px 0}
+.ledger-intro p,.goal-guide p{max-width:60ch;color:var(--dim);font-size:13px;line-height:1.7}
+.ledger-tools{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-block:1px solid var(--edge2);padding:14px 0}
+.ledger-tabs,.goal-filters,.rule-options{display:flex;flex-wrap:wrap;gap:6px}
+.ledger-tabs button,.goal-filters button,.quiet-btn,.rule-options button{border:1px solid var(--edge2);background:none;color:var(--dim);font:10px/1.3 var(--mono);padding:9px 12px;cursor:pointer;border-radius:0}
+.ledger-tabs button[aria-pressed="true"],.goal-filters button[aria-pressed="true"]{color:var(--ink);border-color:var(--dim);background:var(--panel)}
+.quiet-btn:hover,.rule-options button:hover{color:var(--ink);border-color:var(--dim)}
+.goal-filters{margin:18px 0 26px}
+.ledger-search{display:flex;align-items:center;gap:10px;font:10px/1.3 var(--mono);color:var(--dim)}
+.ledger-search input{width:190px;max-width:100%;background:none;border:0;border-bottom:1px solid var(--edge2);color:var(--ink);font:12px/1.5 var(--mono);padding:6px 0;border-radius:0}
+.goal-sheet{margin:24px 0 40px;border:1px solid var(--edge2);border-top:2px solid var(--teal);padding:22px;background:linear-gradient(135deg,#101719,var(--ground) 55%)}
+.goal-sheet-head{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:24px}
+.goal-sheet-head h2{font:300 36px/1.1 var(--ui);letter-spacing:-.025em;margin:8px 0;overflow-wrap:anywhere}
+.goal-sheet-head p{font:11px/1.5 var(--mono);color:var(--dim);margin:0}
+.goal-sheet-head .quiet-btn{flex-shrink:0}
+.goal-parts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.goal-part{min-width:0}
+.part-title{font:11px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:0;color:var(--ink)}
+.part-title span{color:var(--teal);margin-right:10px}
+.part-copy{font:12px/1.6 var(--ui);color:var(--dim);margin:8px 0 16px}
+.goal-part.lever-part{border-left:1px solid var(--edge2);padding-left:24px}
+.goal-part.lever-part .part-title span{color:var(--amber)}
+.goal-part .grid{grid-template-columns:minmax(0,1fr);gap:10px}
+.stock-card{min-width:0;display:flex;flex-direction:column;border:1px solid var(--edge2);background:var(--panel)}
+.stock-card .lb{width:100%;border:0;border-top:2px solid var(--edge2);flex:1;padding:14px;gap:10px}
+.stock-card .lb.up{border-top-color:var(--teal)}.stock-card .lb.down{border-top-color:var(--leak)}.stock-card .lb.flat{border-top-color:var(--dim)}
+.stock-card .lb .ln1{align-items:start}.stock-card .lb .nm{white-space:normal;overflow:visible;overflow-wrap:anywhere;line-height:1.5;font-size:11px;letter-spacing:.02em;text-transform:none}
+.stock-card .lb .meta{line-height:1.6;white-space:normal;overflow-wrap:anywhere}
+.stock-card .lb > b{font-size:30px}.stock-card .lb .tiny{height:34px}
+.stock-index{display:flex;justify-content:space-between;gap:12px;font:10px/1.4 var(--mono);color:var(--dim)}
+.stock-index strong{font-weight:400;color:var(--ink)}
+.rule-control{padding:10px 14px 12px;border-top:1px solid var(--edge);font:10px/1.5 var(--mono);color:var(--dim)}
+.rule-control > span{display:block;margin-bottom:7px}.rule-options button{font-size:10px;padding:6px 10px}
+.rule-options button[aria-pressed="true"]{color:var(--teal);border-color:#36564f}
+.rule-options button:disabled{cursor:default}.rule-options button:disabled:not([aria-pressed="true"]){opacity:.4}
+.record-fold{border-top:1px solid var(--edge2);margin-top:28px;padding-top:18px}.record-fold > summary{font:11px/1.5 var(--mono);color:var(--dim);cursor:pointer;letter-spacing:.08em}
+.goal-guide{margin-top:30px}.goal-guide .quiet-btn{margin-top:8px}.goal-guide .part-copy{max-width:65ch}
+.goal-guide-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rule-dialog{width:min(520px,calc(100% - 32px));max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--edge2);color:var(--ink);padding:28px}
+.rule-dialog::backdrop{background:rgba(0,0,0,.8)}
+.rule-dialog h2{font:300 32px/1.1 var(--ui);margin:14px 0 18px}.rule-dialog p{color:var(--dim);line-height:1.65;font-size:13px}
+.rule-dialog .rule-name{font:12px/1.5 var(--mono);overflow-wrap:anywhere;color:var(--ink)}
+.rule-change{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;padding:22px 0;border-block:1px solid var(--edge2);margin:18px 0;font:14px/1.4 var(--mono)}
+.rule-change span:last-child{color:var(--teal)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.dialog-actions .confirm{background:var(--ink);color:var(--ground);border-color:var(--ink)}.dialog-actions button:disabled{opacity:.45;cursor:wait}
+.rule-dialog .err{color:var(--leak)}
+@media(max-width:650px){.goal-parts{grid-template-columns:minmax(0,1fr)}.goal-part.lever-part{border-left:0;border-top:1px solid var(--edge2);padding:20px 0 0}.goal-sheet{padding:16px}.goal-sheet-head{flex-wrap:wrap}.ledger-tools{align-items:stretch}.ledger-search{width:100%}.ledger-search input{flex:1;width:auto}.rule-dialog{padding:22px}.det .dh{flex-wrap:wrap}}
 .vd td{color:var(--dim);text-decoration:line-through}
 .vd td:first-child{text-decoration:none}
 .cd s{color:var(--dim);margin-right:10px}
@@ -405,6 +455,7 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
     </div>
 
     <div id="goalview">
+    <div class="goal-guide" id="goalguide"></div>
     <div class="gv-top"><div class="tg" id="gaim"></div><div class="head"><div class="big" id="bn">&#183;</div><div class="hs"><b id="bc"></b><span id="bd"></span></div></div></div>
     <div class="tg gv-tgt" id="tg"></div>
 
@@ -425,6 +476,12 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
   </main>
   <div id="fade"></div>
 </div>
+<dialog class="rule-dialog" id="rule-dialog" aria-labelledby="rule-title" aria-describedby="rule-impact">
+  <span class="ledger-kicker">Review a direction</span><h2 id="rule-title">Change how this is scored?</h2>
+  <p class="rule-name" id="rule-name"></p><div class="rule-change"><span id="rule-before"></span><span aria-hidden="true">→</span><span id="rule-after"></span></div>
+  <p id="rule-impact"></p><p id="rule-goals"></p><p class="err" id="rule-error" role="alert"></p>
+  <div class="dialog-actions"><button type="button" class="quiet-btn" id="rule-cancel">Cancel</button><button type="button" class="quiet-btn confirm" id="rule-confirm">Confirm change</button></div>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/api/config.js"></script>
@@ -446,14 +503,16 @@ const num = v => Number.isInteger(v) ? String(v) : Math.abs(v) >= 100 ? String(M
 
 // ---- what the ledger says. every number below comes from you-reader.js ----
 const YOU_ID = 'YOU';   // slugs are lower case, so no goal can take this id
+const NAV = new URLSearchParams(location.hash.slice(1));
 const RANGES = { '1M': 30, '3M': 90, '6M': 182, '1Y': 365, 'ALL': 0 };
 let ALL = [], RULES = {}, COMMITS = [], ALLCOMMITS = [], GOALS = [], SERIES = {}, OWNED = [], YOU = [], LAST = {}, UNITS = {}, SOURCES = {}, STARTS = {}, STALEBY = () => STALE_DAYS, VOIDS = {}, CVOIDS = {}, FEEDS = [];   // VOIDS: which readings are not counted, by stock and day. CVOIDS: which commits are not counted. COMMITS is the ones that count, ALLCOMMITS the record. FEEDS: each door, how far behind it is, and whether that is its promise or a dead cable
-let SEL = YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
+let SEL = NAV.get('goal') || YOU_ID, FM = null, FC = null, FX = null, RANGE = '3M';   // FM a picked stock, FC a picked commit, FX a picked lever and outcome
 let D0 = 0, N = 0, VIEW = null, READY = false;   // the first day the chart can reach, as a day number, and how many days it holds
 let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
-let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = location.hash === '#ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
-let LM = null;   // the stock opened in the ledger, showing everything it holds and every day it has read
+let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = NAV.has('ledger') || NAV.get('view') === 'ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
+let LM = null, LSECTION = '', LG = NAV.get('group') || '', LMODE = NAV.get('mode') === 'sources' ? 'sources' : 'goals', LQUERY = '';   // opened stock, goal filter, and ledger navigation
+let RULEPENDING = null;
 
 async function load(){
   const [today, all, rules, goals, voids, cvoids, feeds, starts] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db)]);
@@ -492,6 +551,7 @@ async function load(){
   for (const c of COMMITS){ const s = dayNum(c.from), e = Math.min(dayNum(c.to || TODAY), t); lo = Math.min(lo, s - Math.max(2, e - s + 1) - 3); }
   D0 = lo; N = t - lo + 1;
   if (!(SEL === YOU_ID || GOALS.some(g => g.id === SEL))) SEL = YOU_ID;
+  if (LG && !GOALS.some(g => g.id === LG)) LG = '';
   if (FC && !COMMITS.some(c => c.id === FC)) FC = null;
   if (FX && !cellOf(FX)) FX = null;
 }
@@ -513,7 +573,13 @@ function render(){ drawRail(); if (SHOWLEDGER) showLedger(); else draw(); }
 function draw(anim = true){ const g = cur(), m = shown();
   const fx = FX && cellOf(FX);
   if (!SHOWLEDGER) $('eyebrow').textContent = g.name + (fx ? ` · ${FX.o} · ${FX.l} +${fx.l.lag} d` : m ? ' · ' + m : '');
-  drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); drawWeak(g); drawShots(g); }
+  drawGoalGuide(g); drawFlow(g); drawRules(g); drawChart(anim); drawHead(null); drawTarget(g); drawRanges(); drawCross(g); drawCommits(); drawWeak(g); drawShots(g); }
+
+function drawGoalGuide(g){
+  $('goalguide').innerHTML = `<span class="ledger-kicker">${g.id === YOU_ID ? 'The whole picture' : 'Goal / ' + esc(g.name)}</span><h1 class="goal-title">${esc(g.name)}</h1>`
+    + `<p>${g.id === YOU_ID ? 'Every scored stock meets here. Open the ledger to explore what each goal tracks.' : 'Outcomes define this goal’s score. Levers are the inputs tested against those outcomes; a lead is a possibility to investigate.'}</p>`
+    + `<div class="goal-guide-actions"><button type="button" class="quiet-btn" data-track-goal="${g.id === YOU_ID ? '' : esc(g.id)}">${g.id === YOU_ID ? 'Explore what’s tracked' : g.measures.length + ' outcomes · ' + g.levers.length + ' levers →'}</button><button type="button" class="quiet-btn" data-copy-view>Copy goal link</button><span class="part-copy">Sign-in required</span></div>`;
+}
 
 // ---- progress photos: under the chart of the goal a photo names, newest day first, the day under each ----
 // the bucket is private, so every photo's address is signed in one call, and asked for again before the hour runs out
@@ -614,7 +680,7 @@ function drawRail(){
   // a goal under the gate has no index and no line to show: its name, and nothing more
   const row = (g, pts) => { const drawn = indexState(pts) !== 'none';
     const p = indexOn(pts, TODAY), mv = p ? moveOf(pts) : null, cls = mv == null ? '' : mv > 0 ? 'pos' : mv < 0 ? 'neg' : '';
-    return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
+    return `<button type="button" class="gr${g.id === SEL ? ' on' : ''}" data-id="${esc(g.id)}" aria-pressed="${g.id === SEL}"><span class="nm">${esc(g.name)}</span>${drawn ? spark(pts, cls) : ''}<span class="v">${p ? p.rank : '&#183;'}<em class="${cls}">${mv == null ? '' : sgn(mv)}</em></span></button>`; };
   $('rail').innerHTML = row(youGoal(), YOU) + GOALS.map(g => row(g, goalSeries(g, SERIES, STALEBY))).join('');
 }
 function pickGoal(id){ SEL = id; FM = null; FC = null; FX = null; SHOWLEDGER = false; applyView(); say(''); render(); }
@@ -688,7 +754,7 @@ function drawFlow(g){
   // up to six stocks every source is drawn, as before; past six, the source a stock names first
   const named = new Set(ms.map(m => (SOURCES[m] || [])[0] || ''));
   const also = list => { if (grouped) return ''; let h = ''; for (const m of list) for (const s of (SOURCES[m] || []).slice(1)) if (!named.has(s)){ named.add(s); h += `<div class="node s" data-s="${esc(s)}" data-k="${k++}" data-o>${esc(s)}</div>`; } return h; };
-  f.innerHTML = `<svg class="wires" id="wires"></svg><div class="gv-ms">${scored.length ? '<p class="gv-h">MEASURES</p>' + block(scored, byIndex) + also(scored) : ''}${none.length ? '<p class="gv-h">NO DOOR</p>' + block(none) + also(none) : ''}</div>`
+  f.innerHTML = `<svg class="wires" id="wires"></svg><div class="gv-ms">${scored.length ? '<p class="gv-h">OUTCOMES</p>' + block(scored, byIndex) + also(scored) : ''}${none.length ? '<p class="gv-h">TRACKED WITHOUT AN INDEX</p>' + block(none) + also(none) : ''}</div>`
     + `<div class="gv-gl"><button type="button" class="node g" data-goalnode>${esc(g.name)}<b class="${word(gl ? gl.rank : null).cls}">${gl ? gl.rank : '&#183;'}</b></button></div>`;
   wire();
 }
@@ -713,11 +779,57 @@ function wire(){
   svg.innerHTML = s;
 }
 
-// the rule of the picked stock as it stands, in plain text. Rules are written through the MCP
+// Changing a direction opens a review first; the shared writer appends the confirmed rule.
 function drawRules(g){
-  const m = FM && listOf(g).includes(FM) ? FM : null, r = m && RULES[m];
-  $('rules').textContent = !r || !r.kind ? '' : r.kind === 'band' ? `band ${r.lo ?? '·'}–${r.hi ?? '·'}` : r.kind;
+  const m = shown();
+  $('rules').innerHTML = m ? ruleControl(m) : '';
 }
+const ruleLabel = r => !r ? 'Not scored' : r.kind === 'band' ? `Band ${r.lo}–${r.hi}` : r.kind === 'up' ? 'Up · higher is better' : r.kind === 'down' ? 'Down · lower is better' : r.kind === 'ignore' ? 'Ignore · raw readings only' : r.kind;
+function ruleControl(m){
+  const r = RULES[m];
+  return `<div class="rule-control"><span>${esc(ruleLabel(r))}</span><div class="rule-options" role="group" aria-label="Scoring direction for ${esc(m)}">${['up','down','ignore'].map(kind => `<button type="button" data-rule-m="${esc(m)}" data-rule-kind="${kind}" aria-pressed="${r?.kind === kind}"${r?.kind === kind || !ALL.includes(m) ? ' disabled' : ''}>${kind === 'up' ? '↑ Up' : kind === 'down' ? '↓ Down' : '— Ignore'}</button>`).join('')}</div></div>`;
+}
+function reviewRule(metric, kind){
+  if (!READY || !ALL.includes(metric) || !['up','down','ignore'].includes(kind) || RULES[metric]?.kind === kind) return;
+  RULEPENDING = { metric, kind, before: JSON.stringify(RULES[metric] || null), saving: false };
+  $('rule-name').textContent = metric;
+  $('rule-before').textContent = ruleLabel(RULES[metric]); $('rule-after').textContent = ruleLabel({ kind });
+  $('rule-impact').textContent = (kind === 'ignore' ? 'This stock will stop contributing to index scores. Its raw readings stay available, including in lever tests.' : kind === 'up' ? 'Higher readings will improve this stock’s index; lower readings will reduce it.' : 'Lower readings will improve this stock’s index; higher readings will reduce it.') + ' This changes the rule for its whole history. The index gates still apply.';
+  const names = GOALS.filter(g => g.measures.includes(metric)).map(g => g.name);
+  $('rule-goals').textContent = 'Applies everywhere: YOU' + (names.length ? ', ' + names.join(', ') : '') + '. The previous rule stays in the ledger.';
+  $('rule-error').textContent = ''; $('rule-confirm').textContent = 'Confirm ' + kind;
+  $('rule-confirm').disabled = false; $('rule-cancel').disabled = false;
+  if (!$('rule-dialog').open) $('rule-dialog').showModal();
+  $('rule-cancel').focus();
+}
+function cancelRule(){ if (RULEPENDING?.saving) return; RULEPENDING = null; $('rule-dialog').close(); }
+async function confirmRule(){
+  const p = RULEPENDING; if (!p || p.saving) return;
+  p.saving = true; $('rule-confirm').disabled = true; $('rule-cancel').disabled = true; $('rule-error').textContent = '';
+  let written = false;
+  try {
+    const latest = await readRules(db);
+    if (JSON.stringify(latest[p.metric] || null) !== p.before){
+      await load(); render(); p.saving = false; RULEPENDING = null; $('rule-dialog').close();
+      reviewRule(p.metric, p.kind);
+      if (RULEPENDING) $('rule-error').textContent = 'The rule changed elsewhere. Review the current direction and confirm again.';
+      else say('This direction is already set.');
+      return;
+    }
+    const { error } = await writeRule(db, p.metric, { kind: p.kind });
+    if (error) throw error;
+    written = true; RULEPENDING = null; $('rule-dialog').close();
+    await load(); render(); say('Direction saved for ' + p.metric + '.');
+  } catch (e) {
+    if (written) say('Direction saved. Reload to refresh the page: ' + (e.message || String(e)));
+    else $('rule-error').textContent = e.message || String(e);
+  } finally {
+    if (RULEPENDING === p){ p.saving = false; $('rule-confirm').disabled = false; $('rule-cancel').disabled = false; }
+  }
+}
+$('rule-confirm').addEventListener('click', confirmRule);
+$('rule-cancel').addEventListener('click', cancelRule);
+$('rule-dialog').addEventListener('cancel', e => { e.preventDefault(); cancelRule(); });
 
 // ---- the chart: the goal, or the picked stock, on the index scale ----
 const vcls = t => t.verdict === 'finding' ? (t.effect > 0 ? 'pos' : 'neg') : t.verdict === 'tangled' ? 'tan' : t.verdict === 'no finding' ? 'mid' : t.verdict === 'early' ? 'early' : '';
@@ -887,7 +999,7 @@ function drawCommits(){
 // the goal's weak point, weakPoint's measure and its index, over the rows that move it
 function drawWeak(g){
   const w = weakPoint(g, SERIES, TODAY);
-  $('gvw').innerHTML = (w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '') + ($('cm').children.length || $('gvl').children.length ? '<p class="gv-h">WHAT MOVES IT</p>' : '');
+  $('gvw').innerHTML = (w ? `<p class="gv-h">WEAK POINT</p><div class="gv-wn">${esc(w.metric)}</div><div class="big gv-wv">${w.rank}</div>` : '') + '<p class="gv-h">LEVERS & COMMITMENTS</p><p class="part-copy">Inputs tested against outcomes, and changes you tried. Open a result to see the comparison.</p>' + (!$('cm').children.length && !$('gvl').children.length ? '<p class="part-copy">No comparisons to show yet.</p>' : '');
 }
 
 // ---- the ledger tab: every row the pages read, where it came in, and how it becomes a number ----
@@ -900,7 +1012,10 @@ const TONE = { up: '#5fc4b4', down: '#c9695c', flat: '#e6e3dc', mute: '#5c656b' 
 const fmt = n => Number(n).toLocaleString('en-US');
 function applyView(){
   $('dropview').hidden = !DROP; $('goalview').hidden = !!DROP || SHOWLEDGER; $('ledgerview').hidden = !!DROP || !SHOWLEDGER; $('ltab').setAttribute('aria-pressed', SHOWLEDGER);
-  const want = SHOWLEDGER ? '#ledger' : ''; if (location.hash !== want) history.replaceState(null, '', location.pathname + location.search + want);
+  const nav = new URLSearchParams();
+  if (SEL !== YOU_ID) nav.set('goal', SEL);
+  if (SHOWLEDGER){ nav.set('view', 'ledger'); if (LG) nav.set('group', LG); if (LMODE === 'sources') nav.set('mode', 'sources'); }
+  const want = nav.size ? '#' + nav.toString() : ''; if (location.hash !== want) history.replaceState(null, '', location.pathname + location.search + want);
 }
 async function showLedger(){
   $('eyebrow').textContent = 'ledger';
@@ -957,11 +1072,12 @@ function detail(m){
       `<td class="r">${fix === undefined ? was : `<s>${was}</s>${waits ? '' : num(fix)}`}${unit}</td><td class="r"${p && p.why ? ` title="${esc(p.why)}"` : ''}>${Number.isFinite(r) ? r : '&#183;'}</td></tr>`;
   }).join('');
   return `<div class="det"><div class="dh"><span class="nm">${esc(m)}</span><b>${lr ? num(Number(lr.mean)) : '&#183;'}${UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>`
-    + `<button type="button" class="go" data-dchart="${esc(m)}">chart</button><button type="button" class="x" data-dx aria-label="close">&#215;</button></div>`
-    + `<div class="facts">${facts}</div>${why ? `<div class="why">${esc(why)}</div>` : ''}`
-    + (log ? `<div class="log"><table>${log}</table></div>` : '');
+    + `${SERIES[m] ? `<button type="button" class="go" data-dchart="${esc(m)}">index chart</button>` : ''}<button type="button" class="x" data-dx aria-label="close">&#215;</button></div>`
+    + `<div class="facts">${facts}</div>${ruleControl(m)}${why ? `<div class="why">${esc(why)}</div>` : ''}`
+    + (log ? `<div class="log"><table><thead><tr><th scope="col">Day</th><th scope="col">Readings</th><th scope="col">Raw value</th><th scope="col">Index</th></tr></thead><tbody>${log}</tbody></table></div>` : '<p class="part-copy">No readings yet.</p>') + '</div>';
 }
 function drawLedger(){
+  const search = document.activeElement?.id === 'ledger-search', caret = search ? document.activeElement.selectionStart : null;
   DETDRAWN = '';
   const rows = LEDGER, bySrc = {}, lastSrc = {}, byType = {}, stocks = {}, live = liveRows(DAYS, VOIDS);
   for (const r of rows){
@@ -984,10 +1100,11 @@ function drawLedger(){
     <div class="hb"><i>goals</i><b class="hn">${GOALS.length + 1}</b><span>${['YOU', ...GOALS.map(g => g.name)].map(esc).join(' &#183; ')}</span></div>
   </div>`;
   const types = `<div class="types">${[...TYPES, ...Object.keys(byType).filter(k => !TYPES.includes(k))].filter(k => byType[k]).map(k => `<span>${esc(k)}<b>${fmt(byType[k])}</b></span>`).join('')}</div>`;
-  const key = '<div class="key"><span class="up">up</span><span class="down">down</span><span class="flat">flat</span><span class="mute">unscored</span></div>';
+  const key = '<div class="key"><span class="up">above usual</span><span class="down">below usual</span><span class="flat">around usual</span><span class="mute">no index</span></div>';
+  const matches = m => !LQUERY || (m + ' ' + (SOURCES[m] || []).join(' ')).toLowerCase().includes(LQUERY.toLowerCase());
 
   // one box per stock: its latest reading, its last thirty days, green up, red down, white flat
-  const box = (m, s) => {
+  const box = (m, s, scope, lag) => {
     const pts = SERIES[m], lr = LAST[m], st = !pts ? (RULES[m] && RULES[m].kind === 'ignore' ? 'ignored' : 'unscored') : stale(m) ? 'stale' : '';
     // the raw reading is the record and always shows. Everything drawn from the index, the word and
     // the tone and the line, follows the gate: under it the line falls back to the readings
@@ -996,19 +1113,36 @@ function drawLedger(){
     const last = scored ? pts[pts.length-1] : null, w = word(!st && last ? last.rank : null);
     const tone = st || !scored ? 'mute' : w.cls === 'pos' ? 'up' : w.cls === 'neg' ? 'down' : 'flat';
     const vals = scored ? pts.slice(-30).map(p => p.rank) : live.filter(d => d.metric === m).slice(-30).map(d => Number(d.mean));   // the readings that count, at the value each day reads
-    return `<button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : ''}</span>
+    const index = !st && Number.isFinite(last?.rank) ? last.rank : '—';
+    const why = gt === 'none' && pts ? noIndexWhy(pts) : last?.why || '';
+    const sources = s === undefined ? (SOURCES[m] || []).join(' · ') : s;
+    return `<article class="stock-card"><button type="button" class="lb ${tone}${gt === 'moving' ? ' mv' : ''}" data-lm="${esc(m)}" data-lscope="${esc(scope)}" aria-expanded="${LM === m && LSECTION === scope}" title="Open ${esc(m)} history"><span class="ln1"><span class="nm">${esc(m)}</span>${st ? `<i>${st}</i>` : scored ? `<span class="gl">${w.w}</span>` : '<i>no index</i>'}</span>
       <b>${lr ? num(Number(lr.mean)) : '&#183;'}${lr && UNITS[m] ? `<small>${esc(UNITS[m])}</small>` : ''}</b>${tiny(vals, tone)}
-      <span class="meta">${fmt(stocks[m][s])} rows${lr ? ` &#183; ${lr.day.slice(5)}` : ''}</span></button>`;
+      <span class="stock-index"><span>${scored ? 'Index history' : 'Raw history'}</span><strong>Index ${index}</strong></span>
+      <span class="meta">${esc(sources || 'No source yet')}${lr ? ` · ${esc(lr.day)}` : ' · no readings'}${lag !== undefined ? `<br>Tested against outcomes ${lag} day${lag === 1 ? '' : 's'} later` : ''}</span>
+      ${why ? `<span class="meta">${esc(why)}</span>` : ''}<span class="meta">${LM === m && LSECTION === scope ? 'Close history ↑' : 'Open history ↗'}</span></button>${ruleControl(m)}</article>`;
   };
+  const part = (g, kind) => {
+    const isLever = kind === 'levers', all = isLever ? g.levers.map(l => l.metric) : g.measures, ms = all.filter(matches), scope = g.id + ':' + kind;
+    return `<div class="goal-part${isLever ? ' lever-part' : ''}"><h3 class="part-title"><span>${isLever ? '↗' : '◎'}</span>${isLever ? 'Levers' : 'Outcomes'} · ${all.length}</h3><p class="part-copy">${isLever ? 'Inputs tested against later outcomes. Leads are relationships to investigate.' : 'What this goal tracks. Their scoring rules define what better means.'}</p><div class="grid">${ms.map(m => box(m, undefined, scope, isLever ? g.levers.find(l => l.metric === m).lag : undefined)).join('')}${ms.includes(LM) && LSECTION === scope ? detail(LM) : ''}</div>${!ms.length ? `<p class="part-copy">${all.length ? 'No matching stocks.' : isLever ? 'No levers declared for this goal.' : 'No outcomes declared for this goal.'}</p>` : ''}</div>`;
+  };
+  const sheets = GOALS.filter(g => (!LG || g.id === LG) && (!LQUERY || [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])].some(matches))).map(g => {
+    const index = GOALS.indexOf(g) + 1;
+    const target = g.target && !g.measures.includes(g.target.metric) && !g.levers.some(l => l.metric === g.target.metric) && matches(g.target.metric) ? `<div class="goal-part"><h3 class="part-title">Target reading</h3><p class="part-copy">${esc(g.target.metric)} is this goal’s target, separate from its scored outcomes.</p><div class="grid">${box(g.target.metric, undefined, g.id + ':target')}${LM === g.target.metric && LSECTION === g.id + ':target' ? detail(LM) : ''}</div></div>` : '';
+    return `<section class="goal-sheet" aria-label="${esc(g.name)} tracked items"><div class="goal-sheet-head"><div><span class="ledger-kicker">Goal ${String(index).padStart(2, '0')}</span><h2>${esc(g.name)}</h2><p>${g.measures.length} outcomes · ${g.levers.length} levers</p></div><button type="button" class="quiet-btn" data-open-goal="${esc(g.id)}">View goal ↗</button></div><div class="goal-parts">${part(g, 'outcomes')}${part(g, 'levers')}${target}</div></section>`;
+  }).join('');
+  const assigned = new Set(GOALS.flatMap(g => [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]));
+  const rest = ALL.filter(m => !assigned.has(m) && matches(m));
+  const other = LG || !rest.length ? '' : `<section class="lane"><div class="lh"><div class="lt">Other tracked stocks</div></div><p class="part-copy">These readings are not assigned to a goal. Their global rules still determine whether they enter YOU.</p><div class="grid">${rest.map(m => box(m, undefined, 'other')).join('')}${rest.includes(LM) && LSECTION === 'other' ? detail(LM) : ''}</div></section>`;
   const lane = l => {
     const srcs = inLane(l), last = srcs.map(s => lastSrc[s]).sort().pop();
     const mcpRows = l !== 'mcp' ? '' : `<div class="lrow"><span class="k">reads</span>${MCP_READS.map(n => `<span class="chip">${n}</span>`).join('')}</div>
       <div class="lrow"><span class="k">writes</span>${MCP_WRITES.map(n => `<span class="chip on">${n}</span>`).join('')}<b class="cnt">${fmt((bySrc.claude || 0) + (bySrc.photo || 0))}</b></div>`;
     let body = srcs.map(s => {
-      const ms = Object.keys(stocks).filter(m => stocks[m][s]).sort(), kinds = {};
+      const ms = Object.keys(stocks).filter(m => stocks[m][s] && matches(m)).sort(), kinds = {}, scope = 'source:' + s;
       for (const r of rows) if (r.source === s && r.event_type && r.event_type !== 'measurement') kinds[r.event_type] = (kinds[r.event_type] || 0) + 1;
       return `<div class="src"><div class="sh"><span>${esc(s)}</span><b>${fmt(bySrc[s])}</b><em>${String(lastSrc[s]).slice(5, 10)}</em></div>
-        <div class="grid">${ms.map(m => box(m, s)).join('')}${ms.includes(LM) ? detail(LM) : ''}${TYPES.filter(k => k !== 'measurement' && kinds[k]).map(k => `<div class="lb count"><span class="ln1"><span class="nm">${k}</span></span><b>${fmt(kinds[k])}</b><span class="meta">rows</span></div>`).join('')}</div></div>`;
+        <div class="grid">${ms.map(m => box(m, s, scope)).join('')}${ms.includes(LM) && LSECTION === scope ? detail(LM) : ''}</div></div>`;
     }).join('');
     body = mcpRows + (body || (mcpRows ? '' : '<div class="empty">0</div>'));
     return `<section class="lane"><div class="lh"><div class="lt">${l}</div><b>${fmt(total(l))}</b><span>rows</span>${last ? `<em>${String(last).slice(5, 10)}</em>` : ''}</div>${body}</section>`;
@@ -1033,8 +1167,13 @@ function drawLedger(){
   const doors = `<section class="lane"><div class="lh"><div class="lt">fed</div><b>${fmt(FEEDS.filter(d => d.state !== 'none').length)}</b><span>promised</span></div><div class="fd">${FEEDS.map(d =>
     `<div class="fr ${d.state}"><span class="fn">${esc(d.source)}</span><u></u><span class="fv">${d.days == null ? '&#183;' : d.days + ' d'}</span></div>`).join('')}</div></section>`;
   // the way back, for a hand that would rather press a button than hold the page
-  const bar = `<div class="lbar"><button type="button" class="back" id="lback">back</button></div>`;
-  $('ledgerview').innerHTML = bar + how + doors + types + notesPanel() + key + lanes.map(lane).join('') + voided + corrected + tape;
+  const bar = `<div class="lbar"><button type="button" class="back" id="lback">back to ${esc(cur().name)}</button></div>`;
+  const intro = `<header class="ledger-intro"><span class="ledger-kicker">The Wire / your ledger</span><h1>What you’re working on.</h1><p>Outcomes show what changed. Levers are the inputs you test. Each goal brings its readings together, with the record always one click away.</p></header>`;
+  const tools = `<div class="ledger-tools"><div class="ledger-tabs" role="group" aria-label="Organize ledger"><button type="button" data-ledger-mode="goals" aria-pressed="${LMODE === 'goals'}">By goal</button><button type="button" data-ledger-mode="sources" aria-pressed="${LMODE === 'sources'}">By source</button></div><label class="ledger-search">Find a stock<input id="ledger-search" type="search" value="${esc(LQUERY)}" placeholder="Name or source" autocomplete="off"></label></div>`;
+  const filters = LMODE !== 'goals' ? '' : `<nav class="goal-filters" aria-label="Filter by goal"><button type="button" data-ledger-goal="" aria-pressed="${!LG}">All goals</button>${GOALS.map(g => `<button type="button" data-ledger-goal="${esc(g.id)}" aria-pressed="${LG === g.id}">${esc(g.name)}</button>`).join('')}</nav>`;
+  const body = LMODE === 'sources' ? key + lanes.map(lane).join('') : sheets + other || `<p class="part-copy">${LQUERY ? 'No tracked items match this search.' : 'No goals or readings yet. New goals appear here with their declared outcomes and levers.'}</p>`;
+  $('ledgerview').innerHTML = bar + intro + tools + filters + body + notesPanel() + `<details class="record-fold"><summary>Sources, counts & recent rows</summary>${how + doors + types + voided + corrected + tape}</details>`;
+  if (search){ $('ledger-search').focus(); if (caret != null) $('ledger-search').setSelectionRange(caret, caret); }
 }
 
 // ---- a csv dropped on the page: read by csv-reader.js, shown, written only after a go ----
@@ -1148,7 +1287,7 @@ document.addEventListener('drop', e => {
   if (!carriesFile(e)) return;
   e.preventDefault();   // the browser would otherwise leave the page to open the file
   const f = e.dataTransfer.files[0], scope = READY ? dropScope(e.target) : null;
-  if (!f || !scope || (DROP && DROP.writing)) return;
+  if (!f || !scope || (DROP && DROP.writing) || $('rule-dialog').open) return;
   f.text().then(text => {
     if (DROP && DROP.writing) return;
     const csv = readCSV(text);
@@ -1157,8 +1296,9 @@ document.addEventListener('drop', e => {
     applyView(); drawDrop(); dropDays(DROP);
   }, err => say(err.message || String(err)));
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
+document.addEventListener('keydown', e => { if (!$('rule-dialog').open && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
 document.addEventListener('input', e => {
+  if (e.target.id === 'ledger-search'){ LQUERY = e.target.value; LM = null; LSECTION = ''; drawLedger(); return; }
   const el = e.target.closest && e.target.closest('#dropview input[data-col]');
   if (!el || !DROP || DROP.writing || DROP.done) return;
   const col = Number(el.dataset.col), name = slugMetric(el.value);
@@ -1176,7 +1316,7 @@ document.addEventListener('input', e => {
 // and anything with words to select keep the clicks they already had, and the ledger tab still just clicks.
 const HOLD_MS = 2000;
 let HELD = null, SKIPCLICK = false;
-const holdable = t => !t.closest('button, a, input, label, select, textarea, table, .rail, .chart, .note, #shots, #full, #dropview');
+const holdable = t => !t.closest('button, a, input, label, select, textarea, table, summary, dialog, .rail, .chart, .note, .goal-guide, .goal-sheet-head, .part-copy, #shots, #full, #dropview');
 function fadeTo(o, ms){ const f = $('fade'); f.style.transition = ms ? `opacity ${ms}ms` : ''; f.style.opacity = o; }
 function holdEnd(){ if (!HELD) return; cancelAnimationFrame(HELD.raf); HELD = null; document.body.classList.remove('holding'); fadeTo(0, 180); }
 // the turn itself, under the fade: the far side is drawn before the fade lifts, so it is never half up
@@ -1211,6 +1351,19 @@ const seeChart = () => { const r = $('chart').getBoundingClientRect(), seen = Ma
   if (seen < r.height / 2) $('chart').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
 document.addEventListener('click', e => {
   if (SKIPCLICK){ SKIPCLICK = false; return; }
+  if (e.target.closest('#rule-dialog')) return;
+  const direction = e.target.closest('[data-rule-m]');
+  if (direction){ reviewRule(direction.dataset.ruleM, direction.dataset.ruleKind); return; }
+  const mode = e.target.closest('[data-ledger-mode]');
+  if (mode){ LMODE = mode.dataset.ledgerMode; LM = null; LSECTION = ''; applyView(); drawLedger(); return; }
+  const group = e.target.closest('[data-ledger-goal]');
+  if (group){ LG = group.dataset.ledgerGoal; LM = null; LSECTION = ''; applyView(); drawLedger(); return; }
+  const tracked = e.target.closest('[data-track-goal]');
+  if (tracked){ LG = tracked.dataset.trackGoal; LMODE = 'goals'; LQUERY = ''; LM = null; turnTo(true); return; }
+  const goal = e.target.closest('[data-open-goal]');
+  if (goal){ pickGoal(goal.dataset.openGoal); scrollTo(0, 0); return; }
+  const copy = e.target.closest('[data-copy-view]');
+  if (copy){ applyView(); if (!navigator.clipboard){ say('Copy this view’s address from your browser. Sign-in is required.'); return; } navigator.clipboard.writeText(location.href).then(() => { copy.textContent = 'Link copied'; }, () => say('Copy this view’s address from your browser. Sign-in is required.')); return; }
   // the full view holds the page: a day picks the second picture, anywhere else leaves
   if (BIGA >= 0){
     const cmp = e.target.closest('#full [data-cmp]');
@@ -1227,11 +1380,11 @@ document.addEventListener('click', e => {
   if (e.target.closest('#ltab')){ SHOWLEDGER = !SHOWLEDGER; applyView(); if (SHOWLEDGER) showLedger(); else draw(); return; }
   if (e.target.closest('#lback')){ turnTo(false); return; }
   const dc = e.target.closest('#ledgerview [data-dchart]');
-  if (dc){ SHOWLEDGER = false; applyView(); SEL = YOU_ID; FC = null; FX = null; FM = dc.dataset.dchart; say(''); render(); scrollTo(0, 0); return; }   // from a stock's record to its line
+  if (dc){ SHOWLEDGER = false; SEL = YOU_ID; FC = null; FX = null; FM = dc.dataset.dchart; applyView(); say(''); render(); scrollTo(0, 0); return; }   // from a stock's record to its line
   if (e.target.closest('#ledgerview [data-dx]')){ LM = null; drawLedger(); return; }
   const lm = e.target.closest('#ledgerview [data-lm]');
-  if (lm){ LM = LM === lm.dataset.lm ? null : lm.dataset.lm; drawLedger(); return; }   // a stock's box opens its whole record, and closes it again
-  if (e.target.closest('#rules, #out, #ledgerview')) return;
+  if (lm){ const same = LM === lm.dataset.lm && LSECTION === lm.dataset.lscope; LM = same ? null : lm.dataset.lm; LSECTION = same ? '' : lm.dataset.lscope; drawLedger(); return; }   // open the record in the goal or source where it was picked
+  if (e.target.closest('#rules, #out, #ledgerview, #goalguide')) return;
   const gr = e.target.closest('.rail [data-id]');
   if (gr){ pickGoal(gr.dataset.id); return; }
   const xr = e.target.closest('[data-x]');   // a cell on YOU, or a lead row on a goal's page
@@ -1244,7 +1397,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('.chart')) return;
   if (FC || FM || FX){ FC = null; FM = null; FX = null; draw(); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
+document.addEventListener('keydown', e => { if ($('rule-dialog').open) return; if (e.key === 'Escape' && DROP){ if (!DROP.writing) closeDrop(); return; } if (e.key === 'Escape' && (FC || FM || FX)){ FC = null; FM = null; FX = null; draw(); } });
 // a wider or narrower page redraws the chart at its new width, without drawing the line in again
 let lastW = 0;
 new ResizeObserver(() => { const w = Math.round($('chart').clientWidth); if (!READY || w === lastW) return; lastW = w; drawChart(false); drawHead(null); wire(); }).observe($('chart'));
