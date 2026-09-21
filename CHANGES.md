@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, the sidebar is the overview, and the goal page reads top
+  to bottom.** Opening a goal used to collapse the sidebar to that one
+  goal, and only the open area showed what was in it, so you could never
+  see everything you own at once. Every area, account and goal that holds
+  something now stays listed whatever is open, each with the index it
+  reads now and, only when today is not all in, how much of it is: `5 of 6
+  in`. Doors arrive late by their own promise, so today is rarely whole,
+  and the row says so where the page used to just look empty. A red dot
+  marks a goal whose source has actually stopped. What holds nothing is
+  left out: empty areas fold into one `Empty areas` row, an account with
+  no goal behind it is not listed, and stocks no goal names yet are
+  counted in an `Unplaced` row from their first reading. The goal page now
+  runs graph, what you are testing folded to one line that opens against
+  the chart, progress photos, then outcomes; photos had been switched off
+  on the overview. Accounts are no longer written into the page: each
+  section you name under Social media is an account, saved in your browser
+  with the rest of your organization, so the template ships with none.
 - **18 Sep 2026, Instagram account metrics can land with their date evidence.**
   `pull/social.mjs` adds daily account views, saves and shares beside reach
   and profile views. Every field must agree between the normal query and

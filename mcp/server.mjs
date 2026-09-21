@@ -304,6 +304,13 @@ export function wireServer() {
       'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
       'Notes are what the ledger knows that is not a number; read them before advising, as you read the ledger before asking for a number. ' +
       'Write a note only through remember, only what the user said in this conversation, never a conclusion, and only on a yes. ' +
+      'Profile-link onboarding is display metadata, not scoring: collect exact public URLs the user gives or confirms, never guess handles. ' +
+      'Read notes first and preserve approved url/picture fields. After approval, use remember with JSON text containing url and picture, ' +
+      'under profile_<account> or profile_<account>_<platform>, using the page\'s exact IDs in lowercase; ask if unknown. ' +
+      'The dashboard reads these notes automatically; browser profile overrides still win. Never include credentials in a profile URL. ' +
+      'Daily logging reminders are display metadata too: only when the user explicitly chooses a daily promise or turns it off, ' +
+      'read notes, preview the exact note and get a yes, then remember logging_<metric-slug> with JSON text {"cadence":"daily"} or {"cadence":"off"}. ' +
+      'Use the existing metric\'s lowercase slug. Never infer a promise from reading patterns or source delays; this creates no reading, rule or scheduled job. ' +
       'When the user asks to track something new, read the ledger first and say whether a stock ' +
       'already carries that fact, naming it and why in one line: a new metric is a cost, not a free ' +
       'addition. ' +

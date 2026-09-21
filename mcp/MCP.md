@@ -78,6 +78,60 @@ one and change the other.
     is not named in feed is not connected, whatever the last reply
     said.
 
+## Profile links during onboarding
+
+When connecting an account, collect its exact public profile URL and the
+platform it belongs to. Use links the user supplied or explicitly confirmed;
+ask only for a missing destination. Never turn a guessed handle into an
+address, and never collect a token-bearing URL as a profile destination.
+
+Read `notes` first. The signed-in dashboard recognizes display metadata in
+note subjects `profile_<account>` and `profile_<account>_<platform>`, using
+the page's exact account and platform IDs in lowercase. For example,
+`profile_myname` identifies that account and
+`profile_myname_instagram` its Instagram destination. Ask when the
+destination ID is unknown; a name guessed from conversation may not match
+the page. These are subject examples, not records to create automatically.
+
+The note text is a JSON object with `url` and `picture` fields. `picture`
+is an optional public image URL. Preserve the existing approved fields
+when changing one; an explicit empty string clears that field. Show the
+exact subject and text and, only after the user's yes, call `remember`.
+This follows the existing note rule, not a new law. Do not record inferred
+identity, private asset links or a conclusion from browsing.
+
+The page reads approved profile notes automatically on its next refresh.
+The existing `readNotes` precedence still applies: a note sourced `you`
+beats one sourced `claude`. An invalid winning note is not replaced with
+an older note. Profile metadata changes no metric, rule or goal membership.
+
+**Ledger → Profiles** remains the local override. Fields explicitly saved
+there take precedence, including an empty field. Those overrides belong
+to the signed-in user, project and browser; MCP cannot inspect or change
+them. Report the note write separately from whether a browser override
+may still hide it. The same concise onboarding guidance ships in the
+MCP's connection instructions.
+
+## Daily logging promises
+
+A daily reminder is an explicit user preference, not an inferred pattern
+or a source's expected delay. When the user chooses an existing manual
+measurement to log daily, read `notes` first. Use the subject
+`logging_<metric-slug>`, where the metric slug is the existing name
+lowercased, with runs of non-alphanumeric characters replaced by an
+underscore and leading/trailing underscores removed.
+
+The note text is exactly `{"cadence":"daily"}` to opt in, or
+`{"cadence":"off"}` to stop the reminder. Show the exact subject and
+text and wait for the user's yes before calling `remember`. Never add
+measurement context to `record` for this: that tool does not accept it.
+
+The page reads the winning note through `readNotes`, so the user's own
+note still beats one sourced `claude`. A reminder changes only the
+display; it supplies no reading, scoring rule, import schedule or push
+notification. This follows the existing note approval rule. No daily
+promise is created by repeated readings, missing data or a door's delay.
+
 ## Every reply ends with
 
     ADD      what still needs a door, with its door, row shape and

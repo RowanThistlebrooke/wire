@@ -28,6 +28,15 @@ async function readAll(make) {
   }
 }
 
+// An append-only ledger changes whenever its exact row count changes, even
+// when a new row belongs to an older day. A HEAD count returns no event rows.
+async function readLedgerRevision(db) {
+  const { count, error } = await db.from('events').select('id', { count:'exact', head:true });
+  if (error) throw error;
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error('The ledger revision could not be read.');
+  return count;
+}
+
 // ---- the doors: is the ledger being fed? ----
 //
 // Every row carries the source that wrote it, so the ledger already knows who
@@ -64,6 +73,16 @@ const FED = {
   csv: null,
   shortcut: null
 };
+
+// Provenance labels describe the recorded source, not its connection status.
+// An unfamiliar source must not acquire an API claim just by being unfamiliar.
+function sourceLane(source) {
+  if (source === 'claude' || source === 'photo') return 'mcp';
+  if (source === 'pad' || source === 'you' || source === 'shortcut') return 'pad';
+  if (source === 'csv') return 'import';
+  if (['whoop', 'youtube', 'youtube_live', 'instagram', 'github', 'tiktok'].includes(source)) return 'api';
+  return 'other';
+}
 
 // A reading is stale when it is older than its own door can explain.
 //
@@ -103,6 +122,47 @@ async function readSources(db) {
     if (!list.includes(r.source)) list.push(r.source);
   }
   return out;
+}
+
+// Measurement labels and provenance, read together for the dashboard.
+// occurred_at is when a reading belongs; recorded_at is when its row landed.
+// Neither timestamp proves that an entire import succeeded or was attempted.
+async function readMeasurementInfo(db) {
+  const data = await readAll(() => db
+    .from('events')
+    .select('metric, unit, source, occurred_at, recorded_at')
+    .eq('event_type', 'measurement')
+    .order('occurred_at', { ascending:false })
+    .order('id', { ascending:false }));
+  const units = {}, sources = {}, bySource = {}, latestSavedByMetric = {};
+  for (const r of data) {
+    if (r.unit && !(r.metric in units)) units[r.metric] = r.unit;
+    const list = sources[r.metric] || (sources[r.metric] = []);
+    const saved = Date.parse(r.recorded_at), latest = latestSavedByMetric[r.metric];
+    if (r.recorded_at && Number.isFinite(saved) && (!latest || saved > Date.parse(latest.recorded_at)))
+      latestSavedByMetric[r.metric] = { metric:r.metric, source:r.source, occurred_at:r.occurred_at, recorded_at:r.recorded_at };
+    if (!r.source) continue;
+    if (!list.includes(r.source)) list.push(r.source);
+    const source = bySource[r.source] || (bySource[r.source] = { latestReadingAt:r.occurred_at, lastSavedAt:null });
+    if (r.recorded_at && (!source.lastSavedAt || Date.parse(r.recorded_at) > Date.parse(source.lastSavedAt)))
+      source.lastSavedAt = r.recorded_at;
+  }
+  return { units, sources, bySource, latestSavedByMetric };
+}
+
+// Age of an actual save timestamp only. This never describes a successful
+// import, a freshness promise, or when the next reading will arrive.
+function recordedAgo(timestamp, now = Date.now()) {
+  const at = typeof timestamp === 'number' ? timestamp : Date.parse(timestamp);
+  if (timestamp == null || timestamp === '' || !Number.isFinite(at) || !Number.isFinite(now)) return 'Save time unavailable';
+  if (at > now) return 'Save time is in the future';
+  const minutes = Math.floor((now - at) / 60000);
+  if (minutes < 1) return 'Less than a minute ago';
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
 // metric -> how many days old a reading of it may be. Built once from the
@@ -682,6 +742,11 @@ function indexOn(pts, day) {
   return pts.find(p => p.day === day && Number.isFinite(p.rank)) || null;
 }
 
+// Presentation relative to the index's baseline, not a trend or test verdict.
+function indexTone(rank) {
+  return !Number.isFinite(rank) ? '' : rank > 100 ? 'pos' : rank < 100 ? 'neg' : '';
+}
+
 // Why there is no index, in the stock's own terms, for every door that says
 // so. The gate lives in one place and so does its reason.
 function noIndexWhy(pts) {
@@ -785,12 +850,16 @@ const dayNum = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 864e5);
 // YOU is not a row. It is the average of every index you own, per day.
 //
 // A stock joins at indexFrom: its start day, or its first reading if later.
-// Every active stock must have an index on the day being drawn. A missing or
-// rankless reading leaves a gap in YOU; it never carries an earlier number or
-// drops a stock to make a day drawable. Freshness allowances still describe
-// doors, but cannot supply a missing day's index.
+// By default every active stock must have an index on the day being drawn.
+// A missing or rankless reading leaves a gap; it never carries an earlier
+// number or drops a stock to make a day drawable. The optional available
+// view averages that day's usable indices and names every included and
+// missing member. It is for display, not for commit tests or scans.
+// Freshness allowances describe doors but cannot supply a missing day's index.
 // staleBy stays in the shared calling contract; it cannot fill a missing day.
-function etfSeries(series, members, staleBy = () => STALE_DAYS) {
+function etfSeries(series, members, staleBy = () => STALE_DAYS, options = { available:false }) {
+  const available = options.available === true, requested = [...new Set(members)];
+  if (available) members = requested;
   members = members.filter(m => series[m] && series[m].length);
   const days = [...new Set(members.flatMap(m => (series[m] || []).map(p => p.day)))].sort();
   const byMetric = {}, born = {};
@@ -804,16 +873,124 @@ function etfSeries(series, members, staleBy = () => STALE_DAYS) {
   for (const day of days) {
     const t = dayNum(day);
     const live = members.filter(m => born[m] <= t);
-    const fresh = live.map(m => byMetric[m][day]).filter(Number.isFinite);
-    if (!live.length || fresh.length !== live.length) continue;   // silence, not a guess
-    out.push({
+    const included = live.filter(m => Number.isFinite(byMetric[m][day]));
+    const fresh = included.map(m => byMetric[m][day]);
+    if (available ? !fresh.length : !live.length || fresh.length !== live.length) continue;
+    const point = {
       day,
       rank: Math.round(fresh.reduce((a, rank) => a + rank, 0) / fresh.length * 10) / 10
-    });
+    };
+    if (available) {
+      const missing = requested.filter(m => !included.includes(m));
+      Object.assign(point, { included, missing, partial:missing.length > 0, total:requested.length });
+    }
+    out.push(point);
   }
   // A line is an index too and is gated the same way: with one day or none, or
   // a line that has never moved, there is no spread to read a day against.
   out.spread = spreadOf(out.map(p => p.rank));
+  if (available) out.available = true;
+  return out;
+}
+
+// The dashboard's available-outcomes view uses the same arithmetic, with
+// coverage against all currently requested outcomes, including unscored or
+// not-yet-started ones. No usable index on a day means no point that day.
+function availableSeries(series, members, staleBy = () => STALE_DAYS) {
+  return etfSeries(series, members, staleBy, { available:true });
+}
+
+// Explain one available-outcome point without changing its membership or
+// rounding. Every requested stock stays visible, including those not counted.
+// Contributions are index points, not raw values or evidence of causation.
+function availableContributions(series, members, day) {
+  const requested = [...new Set(members)];
+  const aggregate = availableSeries(series, requested).find(p => p.day === day);
+  const included = aggregate ? aggregate.included : [];
+  const missing = aggregate ? aggregate.missing : requested;
+  const contributions = requested.map(metric => {
+    const pts = series[metric], point = pts?.find(p => p.day === day);
+    const counted = included.includes(metric), rank = counted ? point.rank : null;
+    const weight = counted ? 1 / included.length : 0;
+    const why = counted ? null : point?.why || (!pts?.length
+      ? 'Not scored: no scored series is available.'
+      : indexState(pts) === 'none' ? noIndexWhy(pts)
+      : !point ? 'No counted reading on this day.' : 'No usable index on this day.');
+    return { metric, day, rank, counted, weight, points: counted ? rank * weight : null, why };
+  });
+  return { day, rank: aggregate ? aggregate.rank : null, included, missing, total: requested.length, contributions };
+}
+
+// Change from seven readings earlier, only when the same outcomes supplied
+// all eight points. No point on the day, short history or changing coverage
+// makes the change unavailable; nothing is carried forward.
+function availableChange(points, day) {
+  const p = points.find(p => p.day === day && Number.isFinite(p.rank));
+  const previous = points.filter(p => p.day <= day).slice(-8);
+  if (!p || previous.length !== 8 || !previous.every(x => x.included.join('|') === p.included.join('|'))) return null;
+  const first = previous[0].rank, last = previous[7].rank;
+  if (!Number.isFinite(first) || !Number.isFinite(last)) return null;
+  return Math.round((last - first) * 10) / 10;
+}
+
+// Descriptive comparison of already-gated, daily index points. This never
+// feeds a commit test, lever test or scan, and never fills an absent day.
+// Pearson r describes paired index LEVELS, not daily changes or causation.
+// Fourteen paired days is a display guardrail, not a significance threshold.
+const COMPARE_MIN_DAYS = 14;
+function compareHistory(pointsA, pointsB, { from = null, to = null, membersA = [], membersB = [] } = {}) {
+  const validDay = day => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) &&
+    Number.isFinite(Date.parse(day + 'T00:00:00Z')) && new Date(day + 'T00:00:00Z').toISOString().slice(0, 10) === day;
+  if ((from !== null && !validDay(from)) || (to !== null && !validDay(to)) || (from && to && from > to))
+    throw new Error('Comparison range must contain valid, ordered dates.');
+  const membersOf = (point, fallback) => {
+    // An aggregate must name what actually counted on EACH day. A requested
+    // list is not evidence of coverage. Only a single stock can use fallback.
+    const members = Array.isArray(point.included) ? point.included : fallback.length === 1 ? fallback : [];
+    return members.length && members.every(m => typeof m === 'string' && m.length)
+      ? [...new Set(members)].sort() : null;
+  };
+  const daily = (points, fallback) => {
+    const days = new Map();
+    for (const point of points) {
+      if (!validDay(point.day) || !Number.isFinite(point.rank) || (from && point.day < from) || (to && point.day > to)) continue;
+      const entry = { rank: point.rank, members: membersOf(point, fallback) }, prior = days.get(point.day);
+      if (prior && (prior.rank !== entry.rank || JSON.stringify(prior.members) !== JSON.stringify(entry.members)))
+        throw new Error('Comparison requires one scored reading per date.');
+      days.set(point.day, entry);
+    }
+    return days;
+  };
+  const a = daily(pointsA, membersA), b = daily(pointsB, membersB);
+  const days = [...a.keys()].filter(day => b.has(day)).sort();
+  const pairs = days.map(day => ({ day, a: a.get(day).rank, b: b.get(day).rank, gap: a.get(day).rank - b.get(day).rank }));
+  const composition = series => {
+    const memberships = days.map(day => series.get(day).members);
+    return { known: memberships.every(Boolean), changing: new Set(memberships.filter(Boolean).map(ms => JSON.stringify(ms))).size > 1,
+      members: new Set(memberships.filter(Boolean).flat()) };
+  };
+  const ca = composition(a), cb = composition(b), sharedMembers = [...ca.members].filter(m => cb.members.has(m)).sort();
+  const out = { pairedDays: pairs.length, pairs, latest: pairs.at(-1) || null, sharedMembers,
+    changingA: ca.changing, changingB: cb.changing,
+    correlation: { r: null, status: 'unavailable', why: '', minPairs: COMPARE_MIN_DAYS } };
+  const refuse = (status, why) => { Object.assign(out.correlation, { status, why }); return out; };
+  if (!pairs.length) return refuse('no-pairs', 'No dates have a usable index in both histories.');
+  if (!ca.known || !cb.known) return refuse('unknown-membership', 'The counted outcomes are not known on every paired date.');
+  if (ca.changing || cb.changing) return refuse('changing-membership', 'The outcomes counted in a line change across the paired dates.');
+  if (sharedMembers.length) return refuse('shared-outcomes', 'These histories share outcomes, so part of their similarity is built in.');
+  if (pairs.length < COMPARE_MIN_DAYS) return refuse('too-few-pairs', `Needs ${COMPARE_MIN_DAYS} paired dates; this is a display guardrail, not a significance test.`);
+  let n = 0, avgA = 0, avgB = 0, sumAA = 0, sumBB = 0, sumAB = 0;
+  for (const pair of pairs) {
+    n++;
+    const da = pair.a - avgA, db = pair.b - avgB;
+    avgA += da / n; avgB += db / n;
+    sumAA += da * (pair.a - avgA); sumBB += db * (pair.b - avgB); sumAB += da * (pair.b - avgB);
+  }
+  if (!(sumAA > 0) || !(sumBB > 0)) return refuse('no-variation', 'Both histories need variation across the paired dates.');
+  const r = (sumAB / Math.sqrt(sumAA)) / Math.sqrt(sumBB);
+  if (!Number.isFinite(r)) return refuse('unavailable', 'The paired indices cannot produce a finite correlation.');
+  Object.assign(out.correlation, { r: Math.max(-1, Math.min(1, r)), status: 'available',
+    why: 'Pearson r of paired index levels. Trends, serial dependence and shared influences can create association; this does not establish causation or significance.' });
   return out;
 }
 

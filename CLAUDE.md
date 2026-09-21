@@ -23,9 +23,15 @@ out loud. Keep it that way.
    afterwards, and a fake reading sits in the frozen baseline forever.
    An empty page is the correct output for an empty ledger.
 3. **Never carry a number forward and never quietly drop a stock.** If a
-   reading is missing, the answer is silence. Carrying yesterday forward
-   invents a reading. Dropping the stock means skipping a bad number
-   raises the score. Missing is measured against the door, not against one
+   reading is missing, that stock has no number on that day. Carrying
+   yesterday forward invents a reading. The signed-in dashboard draws the
+   average of the usable indices actually recorded that day, showing the
+   contributing count and naming every omitted outcome on hover. Its
+   membership can change, so this display average is not a complete YOU
+   index and must never supply a commit test or a scan. The complete index
+   still requires every active stock. A day with raw readings but no usable
+   index is marked on the same timeline, without inventing a score.
+   Missing is measured against the door, not against one
    number for every stock: a reading is stale when it is older than its
    door's promise plus `STALE_DAYS` of slack, so a whoop reading six days
    old means the cable is dead and a youtube reading six days old means
@@ -168,8 +174,10 @@ out loud. Keep it that way.
 - **Notes** are rows with event_type 'note'. They never appear on a page and
   never enter the maths. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.
-- **YOU** is not a row. It is the average of every index you own, per day,
-  drawn only on days where every live stock is fresh.
+- **YOU** is not a row. Its complete index is the average of every index
+  you own on days where every active stock has a usable index. The signed-in
+  dashboard shows the available-outcome average with explicit coverage;
+  tests, scans and the MCP keep using the complete index.
 - The **index** is 100 at the frozen baseline, which is the first thirty
   readings, and ten points is one standard deviation of that baseline. It
   has three states and `indexState` in `you-reader.js` is all of them:
