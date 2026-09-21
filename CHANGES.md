@@ -3,6 +3,17 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, the sidebar is two levels.** Areas and accounts were full
+  rows beside the goals under them, every row carried two lines, and three
+  more rows trailed at the bottom, so the list read as noise. An area or
+  an account that holds something is now a small grey heading, still a
+  button, and the goals under it carry one number each. How much of today
+  is in, and a source that has stopped, are a small dot beside the number
+  with the words on hover. Unplaced stocks, empty areas and Yourself are
+  one quiet line at the foot, the first two opening a short list above it.
+  Everything starts on one left edge. A goal placed in Social media under
+  no account keeps the area's own heading, where it used to be left off
+  the rail.
 - **21 Sep 2026, the ledger shows what is tested against what.** A new
   Cross-reference tab draws every goal that names a lever as a map: levers
   on the left with the days later each is read, outcomes on the right, a

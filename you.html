@@ -608,6 +608,16 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
 #area-rail .nav-loose>.area-button{color:#91a4af;font-size:13px}#area-rail .nav-loose .nav-stock{padding-left:22px}
 @media(max-width:1100px){.nav-val small{display:none}}
 #area-rail [data-other-areas]{display:flex;align-items:center;justify-content:space-between;gap:10px}
+/* two levels: a small heading, then one number a row; the rest in one line at the foot */
+#area-rail .nav-head{display:block;width:100%;margin:0;padding:22px 11px 7px;border:0;background:none;box-shadow:none;text-align:left;cursor:pointer;color:var(--muted);font:500 10.5px/1.4 var(--ui);letter-spacing:.14em;text-transform:uppercase;min-height:0;white-space:normal}
+#area-rail p.nav-head{cursor:default}#area-rail button.nav-head:hover{color:var(--ink);background:none}#area-rail .nav-head[aria-pressed="true"]{color:#b2e6f5;background:none;box-shadow:none}
+#area-rail .nav-children{padding:0}#area-rail .nav-area .nav-goal:not(.account-row),#area-rail .nav-area .nav-platform{padding:11px;min-height:42px;font-size:14px;border-bottom:0}
+#area-rail .nav-platforms{margin:0;padding:0;border:0}#area-rail .nav-empty{padding:4px 11px 8px}
+.nav-val{flex-direction:row;align-items:center;gap:7px}.nav-dead,.nav-part{position:static;display:block;width:5px;height:5px;border-radius:50%;text-decoration:none}.nav-dead{background:var(--leak)}.nav-part{background:none;border:1px solid var(--muted)}
+#area-rail .area-bottom{margin-top:auto;padding:0;border-top:1px solid var(--edge)}
+.nav-foot{display:flex;flex-wrap:wrap;gap:4px 16px;padding:14px 11px 18px}.nav-foot button{background:none;border:0;padding:4px 0;color:var(--muted);font:12px/1.4 var(--ui);cursor:pointer}
+.nav-foot button:hover{color:var(--ink)}.nav-foot button[aria-expanded="true"],.nav-foot button[aria-pressed="true"]{color:#b2e6f5}
+.nav-drawer{padding:0 0 8px;border-bottom:1px solid var(--edge);max-height:40vh;overflow:auto}#area-rail .nav-drawer .nav-stock{padding:8px 11px;min-height:34px}#area-rail .nav-drawer .nav-head{padding-top:14px}
 /* the goal page reads top to bottom: the graph, what you are testing folded to a line, the photos, the outcomes */
 body:not(.section-focused) #shots:not([hidden]){display:block;padding-left:22px}
 .lever-timeline-head button{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
@@ -1750,47 +1760,59 @@ function storeOrganization(areas, homes){
   localStorage.setItem(AREAKEY, JSON.stringify({areas, homes}));
   AREAS = areas; HOMES = homes; readAccounts();
 }
-// The rail is the overview. Every area, account and goal that holds something stays listed whatever is
-// open, so opening one thing never hides the rest. What holds nothing is left out: an empty area, an
-// account with no goal behind it. The one you are standing in always shows, and the title's ··· organizes them. Each row reads the index it shows now and, only when there is something to
-// say, how much of today is in: doors arrive late by their own promise, so today is rarely whole.
+// The rail is the overview, two levels deep: a small heading for each area or account that holds something,
+// and under it the goals, one number each. Everything stays listed whatever is open, so opening one thing
+// never hides the rest. How much of today is in, and a source that has stopped, are a dot beside the number
+// and words on hover: doors arrive late by their own promise, so today is rarely whole. What holds nothing,
+// and what no goal names yet, waits in one quiet line at the foot.
 let UNPLACED_OPEN = false, OTHER_AREAS_OPEN = false, TESTS_OPEN = false, SHOTS_OPEN = false;
-function navVal(g, pts){
-  const p = pts.at(-1), total = new Set(g.measures).size;
-  const today = pts.find(x => x.day === TODAY), n = today ? today.included.length : 0;
-  const fact = total && n < total ? `<small>${n} of ${total} in</small>` : '';
-  const dead = g.measures.some(stale) ? '<u class="nav-dead" title="A source feeding this has stopped"></u>' : '';
-  return `<span class="nav-val">${dead}<b class="${p ? indexTone(p.rank) : ''}">${p ? p.rank : '&#183;'}</b>${fact}</span>`;
+function navState(g, pts){
+  const total = new Set(g.measures).size, today = pts.find(x => x.day === TODAY), n = today ? today.included.length : 0;
+  const part = total > 0 && n < total, dead = g.measures.some(stale);
+  return { part, dead, tip: [part ? `${n} of ${total} in today` : '', dead ? 'a source feeding this has stopped' : ''].filter(Boolean).join(' · ') };
 }
+function navVal(g, pts){
+  const p = pts.at(-1), st = navState(g, pts);
+  return `<span class="nav-val">${st.dead ? '<u class="nav-dead"></u>' : st.part ? '<u class="nav-part"></u>' : ''}<b class="${p ? indexTone(p.rank) : ''}">${p ? p.rank : '&#183;'}</b></span>`;
+}
+const navTip = (g, pts) => { const t = navState(g, pts).tip; return t ? ` title="${esc(t)}"` : ''; };
 function navGoal(g){
   const pts = chartPointsOf(g), p = pts.at(-1);
-  return `<button type="button" class="nav-goal" data-open-goal="${esc(g.id)}" aria-pressed="${!ACCOUNT && !AREAVIEW && SEL === g.id && !FM}"><span>${esc(g.name)}</span>${navVal(g, pts)}${spark(pts,indexTone(p?.rank))}</button>`;
+  return `<button type="button" class="nav-goal" data-open-goal="${esc(g.id)}" aria-pressed="${!ACCOUNT && !AREAVIEW && SEL === g.id && !FM}"${navTip(g, pts)}><span>${esc(g.name)}</span>${navVal(g, pts)}${spark(pts,indexTone(p?.rank))}</button>`;
 }
 function drawAreas(){
   $('ask-launch').disabled = false;
   const you = youGoal(), pts = chartPointsOf(you);
-  const root = `<button type="button" class="area-button area-you" data-area="YOU" aria-pressed="${AREA === YOU_ID && !SHOWLEDGER}"><span>YOU</span>${navVal(you, pts)}${spark(pts,indexTone(pts.at(-1)?.rank))}</button>`;
+  const root = `<button type="button" class="area-button area-you" data-area="YOU" aria-pressed="${AREA === YOU_ID && !SHOWLEDGER}"${navTip(you, pts)}><span>YOU</span>${navVal(you, pts)}${spark(pts,indexTone(pts.at(-1)?.rank))}</button>`;
+  const head = (attr, label, pressed) => `<button type="button" class="nav-head" ${attr} aria-pressed="${pressed}">${label}</button>`;
   const empty = [];
   const areas = AREAS.map(a => {
-    const open = AREA === a.id, goals = GOALS.filter(g => HOMES[g.id]?.area === a.id);
-    const content = a.id === 'area-social' ? SOCIAL_ACCOUNTS.map(account => {
-      const whole = socialScope(account.id,''), p = chartPointsOf(whole), expanded = ACCOUNT === account.id;
-      // a platform with a goal behind it is always listed; the rest of an account's platforms show once it is opened
+    const open = AREA === a.id && !ACCOUNT, goals = GOALS.filter(g => HOMES[g.id]?.area === a.id);
+    if (a.id !== 'area-social'){
+      if (!goals.length && !open){ empty.push(a); return ''; }
+      return `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${goals.map(navGoal).join('') || '<p class="nav-empty">Nothing placed yet</p>'}</div></div>`;
+    }
+    // Social media: a heading for each account that holds a goal, its platforms under it; a goal placed in the
+    // area but under no account keeps the area's own heading, so none is ever left off the rail
+    const named = new Set(SOCIAL_ACCOUNTS.map(x => x.section.toLowerCase()));
+    const accounts = SOCIAL_ACCOUNTS.map(account => {
+      const expanded = ACCOUNT === account.id;
       const rows = account.platforms.map(platform => ({ platform, scope: socialScope(account.id,platform) })).filter(r => r.scope.measures.length || (expanded && PLATFORM === r.platform));
-      const platforms = rows.length ? '<div class="nav-platforms">' + rows.map(({ platform, scope }) => { const pp = chartPointsOf(scope); return `<button type="button" class="nav-platform" data-platform="${esc(platform)}" data-platform-account="${account.id}" aria-pressed="${ACCOUNT === account.id && PLATFORM === platform}"><span class="nav-identity"><span class="social-logo">${platformMark(platform)}</span><span>${esc(platform)}</span></span>${navVal(scope, pp)}${spark(pp,indexTone(pp.at(-1)?.rank))}</button>`; }).join('') + '</div>' : '';
-      if (!whole.measures.length && !expanded) return '';   // an account with no goal behind it has nothing to show yet
-      return `<div class="nav-account"><button type="button" class="nav-goal account-row" data-account="${account.id}" aria-expanded="${expanded}" aria-pressed="${ACCOUNT === account.id && !PLATFORM}">${navAccountLabel(account)}${navVal(whole, p)}${spark(p,indexTone(p.at(-1)?.rank))}</button>${platforms}</div>`;
-    }).join('') : goals.map(navGoal).join('');
-    if (!content && !open){ empty.push(a); return ''; }   // an area holding nothing folds into one row below
-    return `<div class="nav-area"><button type="button" class="area-button" data-area="${esc(a.id)}" aria-expanded="true" aria-pressed="${open}"><span>${esc(a.name)}</span></button>${content ? '<div class="nav-children">' + content + '</div>' : ''}</div>`;
+      if (!rows.length && !expanded) return '';
+      return `<div class="nav-area">${head(`data-account="${account.id}" title="${esc(a.name + ' · ' + account.name)}"`, esc(account.name), expanded && !PLATFORM)}<div class="nav-children">` + rows.map(({ platform, scope }) => { const pp = chartPointsOf(scope);
+        return `<button type="button" class="nav-platform" data-platform="${esc(platform)}" data-platform-account="${account.id}" aria-pressed="${expanded && PLATFORM === platform}"${navTip(scope, pp)}><span class="nav-identity"><span class="social-logo">${platformMark(platform)}</span><span>${esc(platform)}</span></span>${navVal(scope, pp)}${spark(pp,indexTone(pp.at(-1)?.rank))}</button>`; }).join('') + '</div></div>';
+    }).join('');
+    const own = goals.filter(g => !named.has(String(HOMES[g.id].section || '').toLowerCase()));
+    if (!accounts && !own.length && !open){ empty.push(a); return ''; }
+    return accounts + (own.length || open ? `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${own.map(navGoal).join('') || (accounts ? '' : '<p class="nav-empty">Nothing placed yet</p>')}</div></div>` : '');
   }).join('');
-  // goals with no area yet, then stocks that no goal names: a new stock is here from its first reading
+  // goals with no area yet sit under the list; stocks no goal names, and areas holding nothing, open from the foot
   const placed = new Set(GOALS.flatMap(g => [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]));
-  const loose = ALL.filter(m => !placed.has(m));
-  const unplaced = !loose.length ? '' : `<div class="nav-area nav-loose"><button type="button" class="area-button" data-unplaced aria-expanded="${UNPLACED_OPEN}"><span>Unplaced</span><span class="nav-val"><b>${loose.length}</b></span></button>${UNPLACED_OPEN ? '<div class="nav-children">' + loose.map(m => `<button type="button" class="nav-stock" data-nav-stock="${esc(m)}"><span>${esc(human(m))}</span><span class="nav-val"><b>${LAST[m] ? num(Number(LAST[m].mean)) : '&#183;'}</b></span></button>`).join('') + '</div>' : ''}</div>`;
-  const others = !empty.length ? '' : `<div class="nav-area nav-loose"><button type="button" class="area-button" data-other-areas aria-expanded="${OTHER_AREAS_OPEN}"><span>Empty areas</span><span class="nav-val"><b>${empty.length}</b></span></button>${OTHER_AREAS_OPEN ? '<div class="nav-children">' + empty.map(a => `<button type="button" class="nav-stock" data-area="${esc(a.id)}"><span>${esc(a.name)}</span></button>`).join('') + '</div>' : ''}</div>`;
-  $('area-rail').innerHTML = root + '<div class="area-list">' + areas + GOALS.filter(g => !HOMES[g.id]).map(navGoal).join('') + unplaced + others
-    + `</div><div class="area-bottom"><button type="button" class="area-button" data-area="stats" aria-pressed="${AREA === 'stats'}">Yourself</button></div>`;
+  const loose = ALL.filter(m => !placed.has(m)), unhomed = GOALS.filter(g => !HOMES[g.id]);
+  const drawer = UNPLACED_OPEN && loose.length ? '<div class="nav-drawer"><p class="nav-head">Unplaced stocks</p>' + loose.map(m => `<button type="button" class="nav-stock" data-nav-stock="${esc(m)}"><span>${esc(human(m))}</span><span class="nav-val"><b>${LAST[m] ? num(Number(LAST[m].mean)) : '&#183;'}</b></span></button>`).join('') + '</div>'
+    : OTHER_AREAS_OPEN && empty.length ? '<div class="nav-drawer"><p class="nav-head">Empty areas</p>' + empty.map(x => `<button type="button" class="nav-stock" data-area="${esc(x.id)}"><span>${esc(x.name)}</span></button>`).join('') + '</div>' : '';
+  const foot = `<div class="nav-foot">${loose.length ? `<button type="button" data-unplaced aria-expanded="${UNPLACED_OPEN}">Unplaced · ${loose.length}</button>` : ''}${empty.length ? `<button type="button" data-other-areas aria-expanded="${OTHER_AREAS_OPEN}">Empty areas · ${empty.length}</button>` : ''}<button type="button" data-area="stats" aria-pressed="${AREA === 'stats'}">Yourself</button></div>`;
+  $('area-rail').innerHTML = root + '<div class="area-list">' + areas + (unhomed.length ? `<div class="nav-area">${areas ? '<p class="nav-head">Not in an area</p>' : ''}<div class="nav-children">${unhomed.map(navGoal).join('')}</div></div>` : '') + '</div><div class="area-bottom">' + drawer + foot + '</div>';
 }
 function pickArea(id, section = ''){
   if (id !== YOU_ID && id !== 'stats' && !areaOf(id)) return;
@@ -3653,8 +3675,8 @@ document.addEventListener('click', e => {
   if (action){ ASK_ACTION = action.dataset.askAction; $('ask-copy-status').textContent = ''; drawAsk(); return; }
   if (e.target.closest('#ask-panel')) return;
   if (e.target.closest('[data-back-goal]')){ PAGE_SECTION = 'overview'; FM = null; FC = null; FX = null; drawAreas(); draw(false); return; }
-  if (e.target.closest('[data-unplaced]')){ UNPLACED_OPEN = !UNPLACED_OPEN; drawAreas(); return; }
-  if (e.target.closest('[data-other-areas]')){ OTHER_AREAS_OPEN = !OTHER_AREAS_OPEN; drawAreas(); return; }
+  if (e.target.closest('[data-unplaced]')){ UNPLACED_OPEN = !UNPLACED_OPEN; OTHER_AREAS_OPEN = false; drawAreas(); return; }
+  if (e.target.closest('[data-other-areas]')){ OTHER_AREAS_OPEN = !OTHER_AREAS_OPEN; UNPLACED_OPEN = false; drawAreas(); return; }
   if (e.target.closest('[data-tests-fold]')){ TESTS_OPEN = !TESTS_OPEN; drawLeverTimeline(); return; }
   if (e.target.closest('[data-shots-fold]')){ SHOTS_OPEN = !SHOTS_OPEN; drawShots(cur()); return; }
   const ctxGoal = e.target.closest('[data-ctx-goal]');
