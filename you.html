@@ -634,6 +634,20 @@ body:not(.section-focused) #shots:not([hidden]){display:block;padding-left:22px}
 .ctx-void{color:var(--muted)!important;text-decoration:line-through}
 .ctx-table td u,.ctx-key u{display:inline-block;width:4px;height:4px;margin-left:4px;border-radius:50%;background:var(--amber);vertical-align:super;text-decoration:none}
 .ctx [data-ctx-more]{margin-top:14px}
+/* the cross-reference: levers wired to outcomes, the verdict in the wire */
+.xr-counts{margin:18px 0 26px;font-size:13px}.xr-block{margin-top:44px;border-top:1px solid var(--edge2);padding-top:24px}.xr-block h2{font:400 26px/1.2 var(--ui);letter-spacing:-.02em;margin:0 0 18px;text-transform:uppercase}
+.xr-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--edge2)}.xr-step{padding:18px 16px;border-right:1px solid var(--edge2)}.xr-step:last-child{border-right:0}
+.xr-step i{font-style:normal;font:12px var(--ui);color:var(--muted)}.xr-step b{display:block;margin:8px 0 6px;font:500 16px var(--ui)}.xr-step p{margin:0;font:12px/1.6 var(--ui);color:var(--dim)}
+.xr-key{display:flex;flex-wrap:wrap;gap:8px 22px;margin:20px 0 0;font:12px var(--ui)}.xr-key span::before{content:'';display:inline-block;width:22px;height:0;border-top:2px solid currentColor;margin-right:8px;vertical-align:middle}
+.xr-map{display:block;width:100%;height:auto;margin:6px 0 20px;overflow:visible}.xr-map path{fill:none;stroke:currentColor;stroke-width:1.2}.xr-map circle{fill:var(--dim)}
+.xr-map text{font:14px var(--ui);fill:var(--ink)}.xr-map .xr-sub{font-size:11px;fill:var(--muted)}.xr-map .xr-head{font-size:11px;letter-spacing:.14em;fill:var(--dim)}.xr-map .xr-off{fill:var(--muted)}.xr-map .xr-mark{font-size:13px;fill:currentColor;paint-order:stroke;stroke:var(--ground);stroke-width:5px}
+.xr-up{color:var(--teal)}.xr-down{color:var(--leak)}.xr-before{color:var(--amber)}.xr-none{color:#4a5a63}.xr-early{color:#4a5a63}.xr-fixed{color:var(--muted)}.xr-empty{color:#2a363d}
+.xr-map path.xr-up,.xr-map path.xr-down{stroke-width:2.2}.xr-map path.xr-before{stroke-width:1.8}.xr-map path.xr-early{stroke-dasharray:6 6}.xr-map path.xr-fixed{stroke-dasharray:2 5}.xr-map path.xr-empty{stroke-dasharray:3 7}
+.xr-map path.xr-live{stroke:var(--ink);stroke-opacity:.85;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:1 22;animation:xrflow 1.8s linear infinite}
+@keyframes xrflow{to{stroke-dashoffset:-23}}@media(prefers-reduced-motion:reduce){.xr-map path.xr-live{animation:none;display:none}}
+.xr-table th span{color:var(--muted);margin:0 4px}.xr-table .xr-verdict{text-transform:uppercase;letter-spacing:.08em;font-size:11px}.xr-table td small{display:block;margin-top:3px;font-size:10px;color:var(--muted)}.xr-commits tbody th small{display:block;margin:3px 0 0}
+.xr-key .xr-none,.xr-key .xr-early,.xr-key .xr-empty,.xr-table .xr-none,.xr-table .xr-early,.xr-table .xr-empty{color:var(--dim)}
+@media(max-width:900px){.xr-steps{grid-template-columns:1fr}.xr-step{border-right:0;border-bottom:1px solid var(--edge2)}.xr-map text{font-size:20px}.xr-map .xr-sub,.xr-map .xr-head{font-size:15px}}
 </style>
 
 <button type="button" id="nav-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="area-rail rail"><span aria-hidden="true">☰</span></button><div id="nav-edge" aria-hidden="true"></div>
@@ -1591,6 +1605,43 @@ function contextPanel(){
     <section class="lane" aria-label="goals"><div class="lh"><div class="lt">goals</div><span>what your stocks are for</span></div>${GOALS.length ? GOALS.map(goalRow).join('') : '<p class="empty">No goals yet.</p>'}</section>
     <section class="lane" aria-label="commits"><div class="lh"><div class="lt">commits</div><span>what you did</span></div>${COMMITS.length ? COMMITS.map(commitRow).join('') : '<p class="empty">No commits yet.</p>'}</section>
     ${notesPanel().replace('<div class="lt">notes</div><span>current per subject</span>', '<div class="lt">remembered</div><span>notes, current per subject · yours beat the assistant’s</span>')}
+  </section>`;
+}
+// ---- the cross-reference: every lever against its goal's outcomes, and every commit against every line ----
+// Drawn from CROSS (crossGrid) and testCommit, the numbers the Tests view and the MCP's cross and did_it_work
+// already give. Nothing is worked out here. A whole grid is a scan, so a commit's cell says lead at the
+// raised bar and never finding (law 5).
+function crossPanel(){
+  const blocks = CROSS ? CROSS.blocks : [], W = 1100, ROW = 46;
+  const tone = c => c.verdict === 'lead' ? (c.effect > 0 ? 'xr-up' : 'xr-down') : c.verdict === 'before' ? 'xr-before' : c.verdict === 'no lead' ? 'xr-none' : c.verdict === 'early' ? 'xr-early' : c.verdict === 'fixed' ? 'xr-fixed' : 'xr-empty';
+  const diagram = b => { const L = b.levers, O = b.outcomes, H = Math.max(L.length, O.length) * ROW + 24;
+    const yL = i => 24 + (i + .5) * (H - 24) / L.length, yO = j => 24 + (j + .5) * (H - 24) / O.length;
+    let wires = '', marks = '';
+    L.forEach((l, i) => O.forEach((o, j) => { const c = l.cells[o]; if (!c) return;
+      const d = `M300 ${yL(i).toFixed(1)}C${W / 2} ${yL(i).toFixed(1)} ${W / 2} ${yO(j).toFixed(1)} ${W - 300} ${yO(j).toFixed(1)}`, t = tone(c);
+      wires += `<path class="${t}" d="${d}"/>` + (c.verdict === 'lead' ? `<path class="${t} xr-live" d="${d}"/>` : '');
+      if (c.verdict === 'lead' || c.verdict === 'before') marks += `<text class="xr-mark ${t}" x="${W / 2}" y="${((yL(i) + yO(j)) / 2 - 6).toFixed(1)}" text-anchor="middle">${sgn(c.effect)}</text>`; }));
+    const left = L.map((l, i) => `<text class="xr-name" x="288" y="${(yL(i) + 4).toFixed(1)}" text-anchor="end">${esc(human(l.metric))}</text><text class="xr-sub" x="288" y="${(yL(i) + 19).toFixed(1)}" text-anchor="end">read ${l.lag} d later</text><circle cx="300" cy="${yL(i).toFixed(1)}" r="3.5"/>`).join('');
+    const right = O.map((o, j) => `<circle cx="${W - 300}" cy="${yO(j).toFixed(1)}" r="3.5"/><text class="xr-name${SERIES[o] ? '' : ' xr-off'}" x="${W - 288}" y="${(yO(j) + 4).toFixed(1)}">${esc(human(o))}</text>`).join('');
+    return `<svg class="xr-map" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(b.name)}: levers on the left, outcomes on the right, a wire for every pair"><text class="xr-head" x="288" y="12" text-anchor="end">LEVERS · what you move</text><text class="xr-head" x="${W - 288}" y="12">OUTCOMES · what you want</text>${wires}${marks}${left}${right}</svg>`; };
+  const rows = b => b.levers.flatMap(l => b.outcomes.map(o => { const c = l.cells[o]; if (!c) return '';
+    const has = c.effect !== undefined;
+    return `<tr><th scope="row">${esc(human(l.metric))} <span>→</span> ${esc(human(o))}</th><td>+${l.lag} d</td><td>${c.high ?? '·'}</td><td>${c.low ?? '·'}</td><td>${c.weeks ?? '·'}</td><td>${c.highMean ?? '·'}</td><td>${c.lowMean ?? '·'}</td><td class="${c.verdict === 'lead' ? (c.effect > 0 ? 'pos' : 'neg') : ''}">${has ? sgn(c.effect) : '·'}</td><td>${c.raised ?? '·'}</td><td class="xr-verdict ${tone(c)}" title="${esc(c.why || '')}">${esc(c.verdict)}</td></tr>`; })).join('');
+  const block = b => `<section class="xr-block"><h2>${esc(b.name)}</h2>${diagram(b)}<div class="ctx-wrap"><table class="ctx-table xr-table"><thead><tr><th scope="col">Pair</th><th scope="col">Lag</th><th scope="col">High days</th><th scope="col">Low days</th><th scope="col">Weeks</th><th scope="col">After high</th><th scope="col">After low</th><th scope="col">Effect</th><th scope="col">Bar</th><th scope="col">Verdict</th></tr></thead><tbody>${rows(b)}</tbody></table></div></section>`;
+  // every commit against YOU and every goal's complete line, the series the tests use
+  const lines = [youGoal(), ...GOALS], tests = COMMITS.map(c => ({ c, cells: lines.map(g => { const r = testCommit(pointsOf(g), c, COMMITS, TODAY); return { r, lead: scanLead(r).lead }; }) }));
+  const commitCell = ({ r, lead }) => r.effect === undefined ? `<td class="ctx-none" title="${esc(r.why || '')}">${esc(r.verdict)}</td>`
+    : `<td class="${lead ? (r.effect > 0 ? 'pos' : 'neg') : ''}" title="${esc(r.why || '')}">${sgn(r.effect)}<small>${lead ? 'lead' : r.verdict === 'early' ? r.needs + ' d more' : r.verdict === 'tangled' ? 'tangled' : 'under the bar'}</small></td>`;
+  const commits = !COMMITS.length ? '<p class="empty">No commits yet. A commit is something you did, with a start and an end.</p>'
+    : `<div class="ctx-wrap"><table class="ctx-table xr-table xr-commits"><thead><tr><th scope="col">Commit</th>${lines.map(g => `<th scope="col">${esc(g.name)}</th>`).join('')}</tr></thead><tbody>${tests.map(t => `<tr><th scope="row">${esc(t.c.name)}<small>${esc(t.c.from)} → ${esc(t.c.to || 'now')} · ${t.c.days} d</small></th>${t.cells.map(commitCell).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const step = (n, title, text) => `<div class="xr-step"><i>${n}</i><b>${title}</b><p>${text}</p></div>`;
+  return `<section class="xr" aria-label="Cross-reference">
+    <header class="ws-intro"><span class="ws-eyebrow">Levers × outcomes · commits × lines</span><h2>What is tested against what.</h2><p>A lever is something you move. An outcome is something you want. Every lever of a goal is read against every outcome of that goal, a set number of days later. A commit is something you did, tested against every line you own.</p></header>
+    <div class="types xr-counts"><span>questions asked<b>${CROSS ? CROSS.asked : 0}</b></span><span>leads<b>${CROSS ? CROSS.leads : 0}</b></span><span>goals with levers<b>${blocks.length}</b></span><span>commits<b>${COMMITS.length}</b></span></div>
+    <div class="xr-steps">${step(1, 'Pair', 'Each lever day is paired with the outcome the declared number of days later. Only finished weeks count.')}${step(2, 'Level', 'Each reading is read against its own usual for that weekday, so a Saturday is compared with Saturdays.')}${step(3, 'Week', 'Then against the other days of its own week, so a busy week that moves everything cancels out.')}${step(4, 'Bar', `The bar starts at ${SCAN_BAR} standard errors and rises with every question ever asked: ${CROSS ? CROSS.asked : 0} so far. Trying lags until one lights up is paid for.`)}${step(5, 'Before', 'The same reading is run on the lever’s own day. If the outcome had already moved, the verdict is before, not lead.')}</div>
+    <div class="xr-key"><span class="xr-up">lead · better</span><span class="xr-down">lead · worse</span><span class="xr-before">before</span><span class="xr-none">no lead</span><span class="xr-early">early · under ${MIN_DAYS} days a side</span><span class="xr-fixed">fixed · same every week</span><span class="xr-empty">empty · no index</span></div>
+    ${blocks.length ? blocks.map(block).join('') : '<p class="empty">No goal names a lever yet. Tell your Wire which stock you move and which goal it is for.</p>'}
+    <section class="xr-block"><h2>Commits</h2><p class="part-copy">Each commit against YOU and every goal’s complete line: the days it ran against the same number of days before. A whole grid is a scan, so a cell says lead at the raised bar and never finding.</p>${commits}</section>
   </section>`;
 }
 function wireSystemPanel(){
@@ -3184,9 +3235,9 @@ function detail(m){
     + (log ? `<div class="log"><table><thead><tr><th scope="col">Day</th><th scope="col">Readings</th><th scope="col">Raw value</th><th scope="col">Index</th></tr></thead><tbody>${log}</tbody></table></div>` : '<p class="part-copy">No readings yet.</p>') + '</div>';
 }
 // The ledger flow is a read-only view of existing rows and declared goal roles.
-let LEDGER_TAB = ['path','flow','entries','notes','profiles','system'].includes(NAV.get('ledgerTab')) ? NAV.get('ledgerTab') : 'flow', LF_SOURCE = '', LF_FILTER = 'all', LF_PAGE = 0, LF_ENTRY_PAGE = 0, LF_ENTRY_QUERY = '', LF_METRIC = null;
+let LEDGER_TAB = ['path','flow','entries','notes','profiles','system','cross'].includes(NAV.get('ledgerTab')) ? NAV.get('ledgerTab') : 'flow', LF_SOURCE = '', LF_FILTER = 'all', LF_PAGE = 0, LF_ENTRY_PAGE = 0, LF_ENTRY_QUERY = '', LF_METRIC = null;
 const LF_PAGE_SIZE = 8, LF_ENTRY_SIZE = 20;
-function setLedgerTab(tab){ if (['path','flow','entries','notes','profiles','system'].includes(tab)) LEDGER_TAB = tab; }
+function setLedgerTab(tab){ if (['path','flow','entries','notes','profiles','system','cross'].includes(tab)) LEDGER_TAB = tab; }
 const ledgerLane = source => { const key = sourceLane(source); return {key, ...(typeof LANE_META !== 'undefined' ? LANE_META[key] : {label:{api:'API',mcp:'MCP',pad:'Manual',import:'Import',other:'Other'}[key],color:{api:'#70c9dc',mcp:'#b1a0e6',pad:'#d8b16b',import:'#86a9e7',other:'#92999d'}[key]})}; };
 const ledgerScopeMetrics = () => { const goal = GOALS.find(g => g.id === LG); return goal ? trackedOf(goal) : [...new Set([...ALL, ...GOALS.flatMap(trackedOf)])]; };
 const ledgerLatest = m => { const r = LAST[m]; return r ? esc(num(Number(r.mean))) + (UNITS[m] ? ' ' + esc(UNITS[m]) : '') : 'No counted reading'; };
@@ -3305,9 +3356,9 @@ function ledgerFlow(){
 function drawLedger(){
   if (LEDGER_TAB === 'profiles' && PROFILEDIRTY && $('profile-form')) return; // an in-flight read must not replace an edited form
   const active = document.activeElement, search = active && ['lf-search','lf-entry-search'].includes(active.id) ? active.id : null, caret = search ? active.selectionStart : null;
-  const tabs = [['path','Path'],['flow','Data flow'],['entries','Entries'],['system','System & MCP'],['profiles','Profiles'],['notes','Notes']];
-  const body = LEDGER_TAB === 'path' ? pathPanel() : LEDGER_TAB === 'system' ? wireSystemPanel() : LEDGER_TAB === 'entries' ? ledgerEntries() : LEDGER_TAB === 'notes' ? notesPanel() : LEDGER_TAB === 'profiles' ? profileSettings() : ledgerFlow();
-  const titles = {path:'Your path.',flow:'Ledger.',entries:'The record.',system:'Inside the Wire.',profiles:'Your identities.',notes:'Context.'};
+  const tabs = [['path','Path'],['flow','Data flow'],['cross','Cross-reference'],['entries','Entries'],['system','System & MCP'],['profiles','Profiles'],['notes','Notes']];
+  const body = LEDGER_TAB === 'path' ? pathPanel() : LEDGER_TAB === 'system' ? wireSystemPanel() : LEDGER_TAB === 'cross' ? crossPanel() : LEDGER_TAB === 'entries' ? ledgerEntries() : LEDGER_TAB === 'notes' ? notesPanel() : LEDGER_TAB === 'profiles' ? profileSettings() : ledgerFlow();
+  const titles = {path:'Your path.',flow:'Ledger.',entries:'The record.',system:'Inside the Wire.',cross:'How it connects.',profiles:'Your identities.',notes:'Context.'};
   $('ledgerview').innerHTML = `<header class="lf-header"><div><span class="lf-overline">Ledger${LEDGER_TAB === 'flow' ? ' / Everything connected' : ''}</span><h1>${titles[LEDGER_TAB]}</h1></div><button type="button" class="back" id="lback">Back to ${esc(cur()?.name || 'YOU')} ↗</button></header><div class="lf-layout"><div class="lf-content">${body}</div><nav class="lf-nav section-nav" aria-label="Ledger sections"><span class="section-scope">All your data</span>${tabs.map(([id,label]) => `<button type="button" data-lf-tab="${id}" aria-pressed="${LEDGER_TAB === id}">${label}</button>`).join('')}</nav></div>`;
   applyView();
   if (search){ const input = $(search); if (input){ input.focus({preventScroll:true}); if (caret != null) input.setSelectionRange(caret,caret); } }

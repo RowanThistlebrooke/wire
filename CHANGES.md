@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, the ledger shows what is tested against what.** A new
+  Cross-reference tab draws every goal that names a lever as a map: levers
+  on the left with the days later each is read, outcomes on the right, a
+  wire for every pair, and the verdict in the wire. A lead is coloured and
+  moves, before is amber, no lead is plain, early is dashed, fixed is
+  dotted, and a pair with nothing to read is faint. Under each map every
+  pair has its row: high days, low days, weeks, the plain average after
+  each, the effect, the raised bar and the verdict, and only a lead is
+  coloured. Five short steps say how a pair is read, with the real count
+  of questions asked, because that count raises the bar. Below, every
+  commit is set against YOU and every goal's complete line; a whole grid
+  is a scan, so a cell says lead at the raised bar and never finding. It
+  draws crossGrid, testCommit and scanLead as they are and works nothing
+  out.
 - **21 Sep 2026, the ledger shows what your assistant reads.** The System
   & MCP tab gains the MCP's context as one block: a table with a row for
   every calendar day, newest first, and a column for every stock, each
