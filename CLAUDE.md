@@ -171,8 +171,9 @@ out loud. Keep it that way.
   a typed number: `estimate` reads the picture again and writes the
   correction signed `photo`, with its model. A void and a correction name
   a stock and a day, never a source: that is a known limit, not a promise.
-- **Notes** are rows with event_type 'note'. They never appear on a page and
-  never enter the maths. A note you wrote on the pad (source 'you') always
+- **Notes** are rows with event_type 'note'. They never appear on a goal's
+  page and never enter the maths; the signed-in ledger lists the current
+  note per subject, the same ones the MCP reads. A note you wrote on the pad (source 'you') always
   beats one the AI wrote (source 'claude'), whatever the date.
 - **YOU** is not a row. Its complete index is the average of every index
   you own on days where every active stock has a usable index. The signed-in

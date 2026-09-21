@@ -3,6 +3,18 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, the ledger shows what your assistant reads.** The System
+  & MCP tab gains the MCP's context as one block: a table with a row for
+  every calendar day, newest first, and a column for every stock, each
+  column naming the door it reads from and its unit. A cell is the value
+  that day reads, to the hundredth: corrected where it was corrected,
+  struck where it was voided, a dot where nothing was logged, and coloured
+  by that day's index against 100 where the stock has one. Nothing is
+  filled in, so a gap shows as a gap. Chips narrow it to one goal's stocks
+  or to the unplaced ones, and older days load thirty at a time. Below it
+  sit your goals with their outcomes, levers and targets, your commits,
+  and what the assistant was told to remember, the current note per
+  subject with yours beating its own.
 - **21 Sep 2026, a progress photo shows wherever its readings are used.**
   A photo showed only on the goal it names, or on goals sharing the body
   area with it, so a goal outside an area never showed one. A goal now
