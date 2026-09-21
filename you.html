@@ -618,6 +618,17 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
 .nav-foot{display:flex;flex-wrap:wrap;gap:4px 16px;padding:14px 11px 18px}.nav-foot button{background:none;border:0;padding:4px 0;color:var(--muted);font:12px/1.4 var(--ui);cursor:pointer}
 .nav-foot button:hover{color:var(--ink)}.nav-foot button[aria-expanded="true"],.nav-foot button[aria-pressed="true"]{color:#b2e6f5}
 .nav-drawer{padding:0 0 8px;border-bottom:1px solid var(--edge);max-height:40vh;overflow:auto}#area-rail .nav-drawer .nav-stock{padding:8px 11px;min-height:34px}#area-rail .nav-drawer .nav-head{padding-top:14px}
+/* each row: the name, its line strong beside the name and fading out before the number, then an arrow and the number.
+   The line is always there. On hover it is drawn in once from the left, and that is all it does. */
+#area-rail.area-rail :is(.area-you,.nav-goal,.nav-platform)>svg:last-of-type{display:block;flex:1 1 0;min-width:0;width:auto;max-width:76px;height:18px;margin:0 4px 0 8px;opacity:.9;
+  -webkit-mask:linear-gradient(90deg,#000 0,#000 18%,transparent 96%) 0 0/100% 100% no-repeat;mask:linear-gradient(90deg,#000 0,#000 18%,transparent 96%) 0 0/100% 100% no-repeat}
+#area-rail.area-rail :is(.area-you,.nav-goal,.nav-platform)>svg:last-of-type circle{display:none}
+#area-rail.area-rail :is(.area-you,.nav-goal,.nav-platform):hover>svg:last-of-type{animation:navdraw .8s cubic-bezier(.3,0,.2,1) 1}
+@keyframes navdraw{from{-webkit-mask-position:-76px 0;mask-position:-76px 0;opacity:.35}to{-webkit-mask-position:0 0;mask-position:0 0;opacity:.9}}
+@media(prefers-reduced-motion:reduce){#area-rail.area-rail :is(.area-you,.nav-goal,.nav-platform):hover>svg:last-of-type{animation:none}}
+#area-rail :is(.nav-goal,.nav-platform,.area-you)>span:first-child{flex:0 1 auto}
+#area-rail.area-rail .nav-platform .nav-identity{gap:6px}#area-rail.area-rail .nav-platform .social-logo svg{width:16px;height:16px}#area-rail.area-rail :is(.area-you,.nav-goal,.nav-platform)>svg:last-of-type{margin:0 2px 0 6px}
+.nav-arrow{font:12px/1 var(--ui);color:var(--muted)}.nav-arrow.pos{color:var(--teal)}.nav-arrow.neg{color:var(--leak)}.nav-val{gap:5px}
 /* the goal page reads top to bottom: the graph, what you are testing folded to a line, the photos, the outcomes */
 body:not(.section-focused) #shots:not([hidden]){display:block;padding-left:22px}
 .lever-timeline-head button{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
@@ -1045,7 +1056,7 @@ body.scope-overview-open #lever-timeline{display:none}
 @media(min-width:1101px){.scope-overview-list{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}}
 #scope-overview{margin:0 0 24px!important}.scope-overview-heading h2{color:#91c9e1}.scope-overview-heading p{display:none}.scope-overview-heading{margin-bottom:2px}.scope-child-name img{width:32px;height:32px}.scope-child-score{font-weight:500}.scope-child-meta{line-height:1.5}.lever-timeline-head h2{font-size:14px;font-weight:500}.lever-timeline-head p,.lever-track-meta,.lever-track-name small,.lever-timeline-note,.commit-scope-note,.cr .comparison-target{font-size:12px}.lever-track-name{font-size:14px}.lever-track-name b{font-weight:500}.cr .cn span{font-size:12px}.graph-main .chart-footer{margin-bottom:10px}
 
-:root{--nav-left:196px;--nav-right:176px;--dim:#b0b9be;--muted:#929fa6;--edge:#202a30;--edge2:#34434b}
+:root{--nav-left:216px;--nav-right:176px;--dim:#b0b9be;--muted:#929fa6;--edge:#202a30;--edge2:#34434b}
 body{font-weight:450}button,a,input,select,summary{touch-action:manipulation}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #81bfd9;outline-offset:3px}
 .goal-header .goal-title{font-weight:500}.goal-header .big{font-weight:450}.goal-header .score-label,.goal-meta,.chart-footer>span{font-size:13px;line-height:1.5}.goal-meta b{font-weight:550}.goal-header .profile-badge.large{width:48px;height:48px}.plot-heading,#plot-gap-key{font-size:12px;font-weight:500;letter-spacing:.04em}.graph-main{border-top:1px solid #425963;background:linear-gradient(180deg,#101c2055,transparent 65%)}
 .overview-graph-row{grid-template-columns:minmax(0,1.85fr) minmax(310px,1fr);gap:32px}.overview-graph-row #gvw{max-height:440px;overflow:auto;padding:12px 4px 0 0;scrollbar-width:thin;overscroll-behavior:contain}.distance-row{min-height:40px;font-size:15px;font-weight:500;border-bottom:1px solid var(--edge);padding:7px 0}.distance-row b{font-size:19px;font-weight:500}.distance-label,.distance-heading time,.distance-name small,.distance-missing summary{font-size:12px}.distance-heading h2{font-size:19px!important;font-weight:500}.distance-missing p{font-size:13px}.distance-missing button{font-size:15px;font-weight:500}.distance-axis i,#c text{font-size:11px}
@@ -1773,17 +1784,18 @@ function navState(g, pts){
 }
 function navVal(g, pts){
   const p = pts.at(-1), st = navState(g, pts);
-  return `<span class="nav-val">${st.dead ? '<u class="nav-dead"></u>' : st.part ? '<u class="nav-part"></u>' : ''}<b class="${p ? indexTone(p.rank) : ''}">${p ? p.rank : '&#183;'}</b></span>`;
+  const tone = p ? indexTone(p.rank) : '';
+  return `<span class="nav-val"><span class="nav-arrow ${tone}" aria-hidden="true">${tone === 'pos' ? '&#8593;' : tone === 'neg' ? '&#8595;' : '&#8212;'}</span><b class="${tone}">${p ? p.rank : '&#183;'}</b></span>`;
 }
 const navTip = (g, pts) => { const t = navState(g, pts).tip; return t ? ` title="${esc(t)}"` : ''; };
 function navGoal(g){
   const pts = chartPointsOf(g), p = pts.at(-1);
-  return `<button type="button" class="nav-goal" data-open-goal="${esc(g.id)}" aria-pressed="${!ACCOUNT && !AREAVIEW && SEL === g.id && !FM}"${navTip(g, pts)}><span>${esc(g.name)}</span>${navVal(g, pts)}${spark(pts,indexTone(p?.rank))}</button>`;
+  return `<button type="button" class="nav-goal" data-open-goal="${esc(g.id)}" aria-pressed="${!ACCOUNT && !AREAVIEW && SEL === g.id && !FM}"${navTip(g, pts)}><span>${esc(g.name)}</span>${spark(pts,indexTone(p?.rank))}${navVal(g, pts)}</button>`;
 }
 function drawAreas(){
   $('ask-launch').disabled = false;
   const you = youGoal(), pts = chartPointsOf(you);
-  const root = `<button type="button" class="area-button area-you" data-area="YOU" aria-pressed="${AREA === YOU_ID && !SHOWLEDGER}"${navTip(you, pts)}><span>YOU</span>${navVal(you, pts)}${spark(pts,indexTone(pts.at(-1)?.rank))}</button>`;
+  const root = `<button type="button" class="area-button area-you" data-area="YOU" aria-pressed="${AREA === YOU_ID && !SHOWLEDGER}"${navTip(you, pts)}><span>YOU</span>${spark(pts,indexTone(pts.at(-1)?.rank))}${navVal(you, pts)}</button>`;
   const head = (attr, label, pressed) => `<button type="button" class="nav-head" ${attr} aria-pressed="${pressed}">${label}</button>`;
   const empty = [];
   const areas = AREAS.map(a => {
@@ -1800,7 +1812,7 @@ function drawAreas(){
       const rows = account.platforms.map(platform => ({ platform, scope: socialScope(account.id,platform) })).filter(r => r.scope.measures.length || (expanded && PLATFORM === r.platform));
       if (!rows.length && !expanded) return '';
       return `<div class="nav-area">${head(`data-account="${account.id}" title="${esc(a.name + ' · ' + account.name)}"`, esc(account.name), expanded && !PLATFORM)}<div class="nav-children">` + rows.map(({ platform, scope }) => { const pp = chartPointsOf(scope);
-        return `<button type="button" class="nav-platform" data-platform="${esc(platform)}" data-platform-account="${account.id}" aria-pressed="${expanded && PLATFORM === platform}"${navTip(scope, pp)}><span class="nav-identity"><span class="social-logo">${platformMark(platform)}</span><span>${esc(platform)}</span></span>${navVal(scope, pp)}${spark(pp,indexTone(pp.at(-1)?.rank))}</button>`; }).join('') + '</div></div>';
+        return `<button type="button" class="nav-platform" data-platform="${esc(platform)}" data-platform-account="${account.id}" aria-pressed="${expanded && PLATFORM === platform}"${navTip(scope, pp)}><span class="nav-identity"><span class="social-logo">${platformMark(platform)}</span><span>${esc(platform)}</span></span>${spark(pp,indexTone(pp.at(-1)?.rank))}${navVal(scope, pp)}</button>`; }).join('') + '</div></div>';
     }).join('');
     const own = goals.filter(g => !named.has(String(HOMES[g.id].section || '').toLowerCase()));
     if (!accounts && !own.length && !open){ empty.push(a); return ''; }

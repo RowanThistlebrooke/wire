@@ -3,6 +3,14 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, a line and an arrow on every sidebar row.** Each row now
+  reads name, its recent line, an arrow and the number. The line is strong
+  beside the name and fades out before the number, always there, and drawn
+  in once from the left when the pointer is on the row. The arrow is the
+  one the Outcomes legend already uses: up and green above your baseline,
+  down and red below it, a quiet dash at it or with no index. How much of
+  today is in stays on hover. The sidebar is 20px wider so a platform's
+  mark, name, line and number fit on one row.
 - **21 Sep 2026, the sidebar is two levels.** Areas and accounts were full
   rows beside the goals under them, every row carried two lines, and three
   more rows trailed at the bottom, so the list read as noise. An area or
