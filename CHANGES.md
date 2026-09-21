@@ -3,6 +3,14 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **21 Sep 2026, a progress photo shows wherever its readings are used.**
+  A photo showed only on the goal it names, or on goals sharing the body
+  area with it, so a goal outside an area never showed one. A goal now
+  also shows a photo when it counts a stock the photo door writes for the
+  goal the photo names, a body fat estimate say, so the same pictures sit
+  under the graph of every goal built on them and under none that is not.
+  YOU counts them all, so it holds every picture, folded to one `Progress
+  photos` line that opens on a click.
 - **21 Sep 2026, the sidebar is the overview, and the goal page reads top
   to bottom.** Opening a goal used to collapse the sidebar to that one
   goal, and only the open area showed what was in it, so you could never

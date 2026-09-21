@@ -614,6 +614,9 @@ body:not(.section-focused) #shots:not([hidden]){display:block;padding-left:22px}
 .lever-timeline-head button span{color:var(--muted);font-size:13px}.lever-timeline-head button i{margin-left:auto;font-style:normal;color:var(--dim)}
 .lever-timeline-head button:hover i{color:var(--ink)}
 .lever-timeline.folded>:not(.lever-timeline-head){display:none}.lever-timeline.folded{margin-bottom:6px}
+.shots h2 button{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.shots h2 button span{color:var(--muted);font-size:13px}.shots h2 button i{margin-left:auto;font-style:normal;color:var(--dim)}.shots h2 button:hover i{color:var(--ink)}
+.shots.folded>:not(h2){display:none}.shots.folded h2{margin-bottom:0}.shots.folded{margin:18px 0 10px}
 </style>
 
 <button type="button" id="nav-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="area-rail rail"><span aria-hidden="true">☰</span></button><div id="nav-edge" aria-hidden="true"></div>
@@ -1641,7 +1644,7 @@ function storeOrganization(areas, homes){
 // open, so opening one thing never hides the rest. What holds nothing is left out: an empty area, an
 // account with no goal behind it. The one you are standing in always shows, and the title's ··· organizes them. Each row reads the index it shows now and, only when there is something to
 // say, how much of today is in: doors arrive late by their own promise, so today is rarely whole.
-let UNPLACED_OPEN = false, OTHER_AREAS_OPEN = false, TESTS_OPEN = false;
+let UNPLACED_OPEN = false, OTHER_AREAS_OPEN = false, TESTS_OPEN = false, SHOTS_OPEN = false;
 function navVal(g, pts){
   const p = pts.at(-1), total = new Set(g.measures).size;
   const today = pts.find(x => x.day === TODAY), n = today ? today.included.length : 0;
@@ -1965,11 +1968,18 @@ function drawMeasurements(g){
 
 // ---- progress photos: under the chart of the goal a photo names, newest day first, the day under each ----
 // the bucket is private, so every photo's address is signed in one call, and asked for again before the hour runs out
+// A picture shows wherever its readings are used: on the goal it names, on goals that share the body area
+// with it, and on any goal that counts a stock the photo door writes for that goal, a body fat estimate
+// say. YOU counts them all, so it holds every picture, folded to a line until it is opened.
+const fromPhoto = m => (SOURCES[m] || []).includes('photo');
+const photoStocks = goal => new Set([...(goal.measures || []), ...(goal.levers || []).map(l => l.metric)].filter(fromPhoto));
 async function drawShots(g){
-  const body = AREA === 'area-body' || HOMES[g.id]?.area === 'area-body';
+  const body = AREA === 'area-body' || HOMES[g.id]?.area === 'area-body', you = g.id === YOU_ID && !g.presentation;
   const goals = body ? new Set(GOALS.filter(x => HOMES[x.id]?.area === 'area-body').map(x => x.id)) : new Set([g.id]);
-  const box = $('shots'), mine = PHOTOS.filter(p => goals.has(p.goal));
-  if (!mine.length){ box.innerHTML = body ? '<h2>Progress photos</h2><p>No progress photos saved yet.</p>' : ''; SHOTKEY = ''; SHOTS = []; return; }
+  const used = photoStocks(g), shares = id => { const named = GOALS.find(x => x.id === id); return !!named && [...photoStocks(named)].some(m => used.has(m)); };
+  const box = $('shots'), mine = PHOTOS.filter(p => you || goals.has(p.goal) || shares(p.goal));
+  box.classList.toggle('folded', you && !SHOTS_OPEN);
+  if (!mine.length){ box.innerHTML = (body || used.size) && !you ? '<h2>Progress photos</h2><p>No progress photos saved yet.</p>' : ''; SHOTKEY = ''; SHOTS = []; return; }
   if (!SIGNED || Date.now() - SIGNAT > 50 * 60e3){
     SIGNAT = Date.now();
     SIGNED = db.storage.from('photos').createSignedUrls(PHOTOS.map(p => p.path), 3600)
@@ -1977,9 +1987,10 @@ async function drawShots(g){
   }
   let url; try { url = await SIGNED; } catch (e) { SIGNED = null; say(e.message || String(e)); return; }
   if (SHOWLEDGER || cur().id !== g.id) return;   // the page moved on while the addresses were signed
-  const key = g.id + '|' + SIGNAT + '|' + REVISION + '|' + mine.map(p => p.goal + ':' + p.day + ':' + p.path).join('|'); if (SHOTKEY === key) return; SHOTKEY = key;
+  const key = g.id + '|' + (you ? SHOTS_OPEN : '') + '|' + SIGNAT + '|' + REVISION + '|' + mine.map(p => p.goal + ':' + p.day + ':' + p.path).join('|'); if (SHOTKEY === key) return; SHOTKEY = key;
   // a photo whose address could not be signed keeps its frame and its day, empty: silence, not a gap closed over
-  box.innerHTML = '<h2>Progress photos</h2><div class="photo-strip">' + mine.map((p, i) => `<figure class="shot">${url[p.path] ? `<button type="button" class="shot-open" data-shot="${i}" aria-label="Open progress photo from ${esc(p.day)}"><img src="${esc(url[p.path])}" alt="" loading="lazy" decoding="async"></button>` : '<i></i>'}<figcaption>${esc(p.day)} · ${esc(GOALS.find(x => x.id === p.goal)?.name || p.goal)}</figcaption>${readsOf(GOALS.find(x => x.id === p.goal), p.day)}</figure>`).join('') + '</div>';
+  const head = you ? `<h2><button type="button" data-shots-fold aria-expanded="${SHOTS_OPEN}">Progress photos<span>${mine.length}</span><i aria-hidden="true">${SHOTS_OPEN ? '&#8722;' : '+'}</i></button></h2>` : '<h2>Progress photos</h2>';
+  box.innerHTML = head + '<div class="photo-strip">' + mine.map((p, i) => `<figure class="shot">${url[p.path] ? `<button type="button" class="shot-open" data-shot="${i}" aria-label="Open progress photo from ${esc(p.day)}"><img src="${esc(url[p.path])}" alt="" loading="lazy" decoding="async"></button>` : '<i></i>'}<figcaption>${esc(p.day)} · ${esc(GOALS.find(x => x.id === p.goal)?.name || p.goal)}</figcaption>${readsOf(GOALS.find(x => x.id === p.goal), p.day)}</figure>`).join('') + '</div>';
   SHOTS = mine.map(p => ({ ...p, url: url[p.path] || '' }));
 }
 
@@ -3535,6 +3546,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-unplaced]')){ UNPLACED_OPEN = !UNPLACED_OPEN; drawAreas(); return; }
   if (e.target.closest('[data-other-areas]')){ OTHER_AREAS_OPEN = !OTHER_AREAS_OPEN; drawAreas(); return; }
   if (e.target.closest('[data-tests-fold]')){ TESTS_OPEN = !TESTS_OPEN; drawLeverTimeline(); return; }
+  if (e.target.closest('[data-shots-fold]')){ SHOTS_OPEN = !SHOTS_OPEN; drawShots(cur()); return; }
   const navStock = e.target.closest('[data-nav-stock]');
   if (navStock){ openMetricDetail(navStock.dataset.navStock); return; }
   const stock = e.target.closest('[data-stock]');
