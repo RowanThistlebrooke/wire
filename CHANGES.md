@@ -3,6 +3,13 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, an example that cannot be real.** The example site
+  address in step one, `my-wire.vercel.app`, became a real site the
+  moment someone deployed with the default name, so an AI reading a
+  pasted address that matched it stopped to ask whether the buyer had
+  copied the example. It is `my-wire-xxxx.vercel.app` now, which no
+  deploy produces.
+
 - **22 Sep 2026, when Supabase asks for money.** The steps no longer
   warn about the free limit up front. When a buyer says Supabase wants
   them to pay, or that Free is unavailable, their AI calls setup with

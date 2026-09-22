@@ -94,7 +94,7 @@ const FIX = {
 };
 
 const ASK = {
-  site: 'Before the next step: paste your site address from Vercel, like https://my-wire.vercel.app.',
+  site: 'Before the next step: paste your site address from Vercel, like https://my-wire-xxxx.vercel.app.',
   timezone: 'Before the table: which timezone do you live in? Say its name, like Europe/London or America/New_York.',
   ai: 'Before the connector: which AI are you using, the Claude app, Claude Code, Codex, or another?'
 };
@@ -153,7 +153,7 @@ function steps(site, ai, self) {
         'Fill the three fields: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, the one you just copied.',
         'Press Deploy.'
       ],
-      ask: 'Say done when it is live, with the site address it shows, like https://my-wire.vercel.app, and the timezone you live in, like Europe/London.' },
+      ask: 'Say done when it is live, with the site address it shows, like https://my-wire-xxxx.vercel.app, and the timezone you live in, like Europe/London.' },
     { need: ['timezone'], lines: [
         'Open your Supabase project: in Vercel, Storage, Supabase, Open in Supabase. If you used deploy-existing, open it at supabase.com.',
         { say: 'SQL Editor, New query. Paste the SQL below and press Run.', sql: true },
