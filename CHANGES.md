@@ -3,6 +3,26 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, one line at a time.** The `/you` walkthrough is seven
+  steps, and every turn is one line: the buyer reads it, does it, says
+  done, gets the next. `done` counts lines and has no ceiling in the
+  tool's schema, so an AI holding an old copy of the tool can no longer
+  cap the walk. The old first three steps, fork, deploy and env vars,
+  are one Vercel Deploy link: it copies the repo into the buyer's own
+  GitHub (a copy, not a fork, so the owner can walk it too), adds the
+  Supabase store from the Marketplace, asks for WIRE_EMAIL,
+  WIRE_PASSWORD and WIRE_TOKEN in a form, and deploys. The lines name
+  what the Vercel screens actually show: Add Products, Accept and
+  Create, the region, the prefix, and Free, with what to do when Free
+  is unavailable and never Pro. A buyer with no terminal gets their
+  token from the new `token.html`, made in the browser, never pasted
+  into the chat. The iPhone Shortcut setup is gone from the phone step;
+  the Claude app on the phone already has the connector. The connector
+  asks which AI the buyer is using and hands over only that AI's
+  connector line. The connector's instructions now say to show the line
+  and nothing else, no commentary. `start.html` carries the same Deploy
+  link and the seven steps.
+
 - **22 Sep 2026, /you.** The setup walkthrough is nine steps and one
   prompt. The connector now publishes a prompt called `you`: an AI that
   turns a connector's prompts into commands shows it as `/you`, and any

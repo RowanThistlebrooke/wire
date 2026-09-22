@@ -25,6 +25,7 @@
   ol li { display:flex; gap:14px; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--edge); }
   ol li::before { counter-increment:s; content:counter(s); width:22px; flex:none; color:var(--muted); font-weight:800; }
   ol li span { flex:1; } ol li small { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  a.deploy { color:var(--teal); font-weight:800; text-decoration:none; border-bottom:1px solid var(--teal); }
   .safe { margin-top:44px; color:var(--dim); border-top:1px solid var(--edge); padding-top:22px; }
   .safe b { color:var(--ink); }
 </style>
@@ -55,13 +56,11 @@ url = "<span class="addr">https://this-site</span>/api/setup"<button data-copy>C
   <h2>2 · Say it</h2>
   <p class="q">An AI that turns a connector's prompts into commands, Claude Code among them, now has one. Type <code>/you</code> and pick it. Everywhere else, say this:</p>
   <p class="say">Set up my Wire.</p>
-  <p class="q" style="margin-top:10px">It asks for your key, then gives you one step at a time. Say <b>done</b> after each. It never asks for a password, token or key, and you never paste one into the chat.</p>
+  <p class="q" style="margin-top:10px">It asks for your key, then gives you one line at a time. Say <b>done</b> after each. It never asks for a password, token or key, and you never paste one into the chat.</p>
 
   <h2>3 · What happens</h2>
   <ol>
-    <li><span>Fork the repo</span><small>easy</small></li>
-    <li><span>Deploy on Vercel</span><small>easy</small></li>
-    <li><span>Add the env vars</span><small>medium</small></li>
+    <li><span>Deploy. <a class="deploy" href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRowanThistlebrooke%2Fwire&repository-name=my-wire&project-name=my-wire&env=WIRE_EMAIL%2CWIRE_PASSWORD%2CWIRE_TOKEN&envDescription=WIRE_EMAIL+and+WIRE_PASSWORD+are+the+login+you+will+sign+in+with.+WIRE_TOKEN+is+a+long+random+string+you+make+up%3B+it+is+what+lets+your+AI+in.&envLink=https%3A%2F%2Fgithub.com%2FRowanThistlebrooke%2Fwire%23readme&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%2C%22protocol%22%3A%22storage%22%7D%5D">One link</a>: sign in with GitHub, add Supabase, three fields, Deploy. It copies the code to your GitHub, makes your database and puts it live. The token for the third field comes from <a class="deploy" href="token.html">this page</a>.</span><small>easy</small></li>
     <li><span>Run the table</span><small>medium</small></li>
     <li><span>Add your connector</span><small>easy</small></li>
     <li><span>Say a number</span><small>easy</small></li>
@@ -69,7 +68,7 @@ url = "<span class="addr">https://this-site</span>/api/setup"<button data-copy>C
     <li><span>Put it on your phone</span><small>easy</small></li>
     <li><span>Name your first goal</span><small>easy</small></li>
   </ol>
-  <p class="q" style="margin-top:14px">The AI relays each step and you do the clicking, so a step costs one short message, not a build.</p>
+  <p class="q" style="margin-top:14px">The AI relays each line and you do the clicking, so a step costs a few short messages, not a build.</p>
 
   <p class="safe"><b>Where your data lives.</b> Your Wire lands on your own GitHub, Vercel and Supabase. This connector sees your license key and nothing else: it has no door to any ledger, yours or anyone's.</p>
 </main>

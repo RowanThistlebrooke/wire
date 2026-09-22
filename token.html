@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>a token</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap">
+<style>
+  /* Makes a WIRE_TOKEN in the browser, for a buyer with no terminal. Nothing here is sent anywhere and
+     nothing is kept: reload the page and it is a different token. */
+  :root { --ground:#0e1113; --ink:#e8e4dc; --dim:#9aa3a8; --muted:#5d666b; --edge:#252d33; --teal:#5fc4b4; }
+  body { background:var(--ground); color:var(--ink); font:500 16px/1.55 "Manrope",system-ui,sans-serif; margin:0; padding:48px 16px 80px; }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:40px; font-weight:800; letter-spacing:-.03em; margin:0 0 6px; color:var(--teal); }
+  p { margin:0 0 10px; } p.q { color:var(--dim); }
+  pre { position:relative; margin:22px 0 14px; padding:16px 92px 16px 16px; background:#151a1d; border:1px solid var(--edge); border-radius:8px;
+        font:600 15px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-all; user-select:all; }
+  pre button { position:absolute; top:9px; right:9px; font:600 12px/1 "Manrope",system-ui,sans-serif; padding:8px 10px; border:0; border-radius:6px; background:var(--ink); color:var(--ground); cursor:pointer; }
+  pre button:active { background:var(--teal); }
+  a { color:var(--teal); }
+</style>
+
+<main>
+  <h1>Your token</h1>
+  <p class="q">Made in your browser just now. This page keeps nothing and sends nothing.</p>
+  <pre><span id="token"></span><button id="copy">Copy</button></pre>
+  <p>Paste it into the <b>WIRE_TOKEN</b> field, and keep a copy somewhere safe: it is what lets your AI in, and step three asks for it.</p>
+  <p class="q">Never paste it into a chat. <a href="#" id="again">Make another</a>.</p>
+</main>
+
+<script>
+  // Thirty-two random bytes as hex, the same shape openssl rand -hex 32 gives.
+  const make = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+  const out = document.getElementById('token'), copy = document.getElementById('copy');
+  out.textContent = make();
+  document.getElementById('again').onclick = e => { e.preventDefault(); out.textContent = make(); copy.textContent = 'Copy'; };
+  copy.onclick = () => {
+    const said = t => { copy.textContent = t; setTimeout(() => copy.textContent = 'Copy', 1500); };
+    navigator.clipboard?.writeText(out.textContent).then(() => said('Copied'), () => { getSelection().selectAllChildren(out); said('Select and copy'); });
+  };
+</script>
