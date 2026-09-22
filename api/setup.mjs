@@ -155,7 +155,7 @@ function setupServer() {
     'timezone is their timezone name, once given. Show the result to the user as it is and wait for them to say done.',
     {
       license_key: z.string(),
-      done: z.number().int().min(0).max(6).optional(),
+      done: z.number().int().min(0).max(STEPS.length).optional(),
       site: z.string().optional(),
       timezone: z.string().optional()
     },

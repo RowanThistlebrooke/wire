@@ -3,6 +3,11 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, the setup walkthrough reaches its last word.** When the
+  seventh step was added, the `done` count the setup tool accepts stayed
+  at six, so a buyer who finished bringing their history in was refused
+  instead of shown the closing message with their connector address. The
+  limit is now the number of steps, wherever that goes next.
 - **21 Sep 2026, a line and an arrow on every sidebar row.** Each row now
   reads name, its recent line, an arrow and the number. The line is strong
   beside the name and fades out before the number, always there, and drawn
