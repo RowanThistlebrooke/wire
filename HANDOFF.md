@@ -1,7 +1,7 @@
 # RESUME HERE
 
 - **Working on:** the `/you` product. Next piece: grey outline of the two landing-page animations (the data tree; the `/you` walkthrough) in a new `landing.html`, sketch mode, no harness.
-- **Next step:** on "go", write `/Users/rowan/wire/landing.html`: plain SVG + CSS, one file, no library, no numbers anywhere. (1) Tree: `you` root → branches body / social media / business → leaves whoop, garmin, manual, mcp / instagram, youtube, mcp / your sales, a date ticking, leaves pulse, slow loop. (2) `/you`: split panel, left a chat where `/you` is typed and nine steps tick in one by one, right GitHub → Vercel → Supabase → connector → first leaf → history → phone → goal, ending in a small tree. Grey boxes and straight lines first. Then serve it: `cd /Users/rowan/wire && python3 -m http.server 8795 --bind 127.0.0.1` and give the user `http://localhost:8795/landing.html`. Screenshot once, kill the server.
+- **Next step:** on "go", write `~/wire/landing.html`: plain SVG + CSS, one file, no library, no numbers anywhere. (1) Tree: `you` root → branches body / social media / business → leaves whoop, garmin, manual, mcp / instagram, youtube, mcp / your sales, a date ticking, leaves pulse, slow loop. (2) `/you`: split panel, left a chat where `/you` is typed and nine steps tick in one by one, right GitHub → Vercel → Supabase → connector → first leaf → history → phone → goal, ending in a small tree. Grey boxes and straight lines first. Then serve it: `cd ~/wire && python3 -m http.server 8795 --bind 127.0.0.1` and give the user `http://localhost:8795/landing.html`. Screenshot once, kill the server.
 - **Waiting on you:** "go" for the grey tree. Also, only you can: (a) rotate the Whop API key and set the new one in Vercel as `WHOP_API_KEY`, redeploy; (b) in Whop → Software → The Wire → Download, set the Web App link to `https://<your site>/start.html`; (c) say "push" for local commit `f0a0f74`.
 
 -----
@@ -28,7 +28,7 @@
 - The user pasted a Whop API key into chat once; told them to rotate it. Never use it, never ask for keys, never write one anywhere.
 - The permission classifier blocks probing the live connector with a key. Test locally with the scratchpad script instead.
 - The user's `localhost:8794` server hands out a fixed list of pages; new files 404 there. Use a second port.
-- Playwright can only save screenshots under `/Users/rowan/wire/.playwright-mcp/` (git-ignored). Delete after reading.
+- Playwright can only save screenshots under `~/wire/.playwright-mcp/` (git-ignored). Delete after reading.
 - Fake-data pages get `<title>STUB</title>` and magenta/violet accents. The landing animations carry no numbers, so they need no mark.
 - Working style: one step at a time, short turns. "sketch" = no harness. Commit and CHANGES once per push, not per step. Say up front if a build needs more than one turn.
 - The old 1,513-line working notes this file replaced are at `/tmp/HANDOFF.local.keep`. They contain account names; never commit that version.
