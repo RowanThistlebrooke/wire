@@ -1,3 +1,16 @@
+-- The Wire adds one table, one function and one view, and it may share a
+-- project with other things. If any of its three names is already taken,
+-- stop here, before anything is made or replaced, and say which.
+do $$
+begin
+  if to_regclass('public.events') is not null then
+    raise exception 'A table called events already exists in this project. If it is the Wire''s own, the table is already made and there is nothing to run. If it is something else, put the Wire in a different Supabase project.';
+  end if;
+  if to_regclass('public.day_metrics') is not null or to_regprocedure('public.day_of(timestamptz)') is not null then
+    raise exception 'This project already has day_metrics or day_of. The Wire needs those names for its own, so put it in a different Supabase project.';
+  end if;
+end $$;
+
 -- One table. Everything you will ever measure goes in here.
 create table public.events (
   id uuid primary key default gen_random_uuid(),

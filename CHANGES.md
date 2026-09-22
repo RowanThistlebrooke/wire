@@ -3,6 +3,27 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, when Supabase asks for money.** The steps no longer
+  warn about the free limit up front. When a buyer says Supabase wants
+  them to pay, or that Free is unavailable, their AI calls setup with
+  `stuck` and gets the fix in one message: the free account already
+  holds two active projects, so pause one that is not in use (Settings,
+  General, Pause project; a paused one does not count) and pick Free;
+  or, if all are in use, put the Wire in a project they already have
+  through `/deploy-existing`, the same Deploy link without the Supabase
+  store, which asks for `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` as
+  well. Never Pro. A shared project can already hold the Wire's names,
+  so `sql/01_the_table.sql` now checks first and stops, saying which of
+  `events`, `day_of` or `day_metrics` is taken, before it makes or
+  replaces anything; a `create or replace` would otherwise have
+  overwritten another project's function or view in silence. Step two
+  opens the project either way, from Vercel or at supabase.com. The
+  timezone goes into that SQL and decides which day every reading
+  belongs to, and an AI that knows its user filled it in from memory
+  instead of asking; the tool now shows the timezone back with what it
+  means, and the SQL waits for the buyer's yes. The GitHub sign-up line
+  comes before the Deploy link.
+
 - **22 Sep 2026, one message per step.** A line per turn was too many
   turns: the first reply had no link in it, and a buyer said done to
   reach one. The `/you` walkthrough is back to one message per step,

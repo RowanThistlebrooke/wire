@@ -79,6 +79,20 @@ async function licensed(raw) {
 // step before, and asked for on its own if it is still missing when needed.
 const STEPS = ['deploy', 'run the table', 'add your connector', 'say a number', 'bring your history in', 'put it on your phone', 'name your first goal'];
 
+// The one place a buyer gets stuck that the steps do not name up front: Supabase asks for money because the free
+// account already holds two active projects. The steps never mention it, and the answer is one message with the
+// two ways out, neither of them Pro. `deploy-existing` is /deploy without the Supabase store, asking for the
+// existing project's URL and publishable key as well; the table's SQL stops by itself if that project already
+// holds any of the Wire's three names.
+const stuckOn = s => /supabase|free|pay|paid|pro\b|unavailable|limit/i.test(String(s || '')) ? 'supabase' : null;
+const FIX = {
+  supabase: self => 'Supabase asks for money when the account already has two active free projects; two is the free limit. Two ways out, and neither is Pro.\n'
+    + '1. Pause a project you are not using. At supabase.com open it, Settings, General, Pause project. A paused project does not count. Then go back to the Vercel page and pick Free.\n'
+    + `2. If you use them all, put the Wire in a Supabase project you already have: open ${self}/deploy-existing instead of /deploy. It is the same link without the Supabase store, and it asks for two more fields, SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY: in that project at supabase.com, under Project Settings, the Project URL and the publishable key, which starts sb_publishable_. Never the secret key. `
+    + 'The Wire adds a table called events, a function called day_of and a view called day_metrics; if that project already has any of those names, the table step stops and says so, and the Wire needs a different project.\n'
+    + 'Never pick Pro. Then carry on with the step.'
+};
+
 const ASK = {
   site: 'Before the next step: paste your site address from Vercel, like https://my-wire.vercel.app.',
   timezone: 'Before the table: which timezone do you live in? Say its name, like Europe/London or America/New_York.',
@@ -131,17 +145,17 @@ function steps(site, ai, self) {
   const s = site || 'https://YOUR-SITE';   // never shown: every step that uses it carries need: 'site'
   return [
     { lines: [
-        `Open ${self}/deploy and sign in with GitHub.`,
         'No GitHub account? Make a free one at github.com/signup first (email, password, a code to your email).',
+        `Open ${self}/deploy and sign in with GitHub.`,
         'Under Add Products: Storage, Supabase, Postgres backend, Add, then Accept and Create. That is your database, and the three fields stay locked until it is added.',
-        'Pick the region nearest you, leave the prefix as it is, and pick Free. If Free says Unavailable, pause a Supabase project you are not using at supabase.com first. Never pick Pro.',
+        'Pick the region nearest you, leave the prefix as it is, and pick Free.',
         `Open ${self}/token.html in a new tab and press Copy. That is your WIRE_TOKEN, made in your browser. Never paste it here.`,
         'Fill the three fields: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, the one you just copied.',
         'Press Deploy.'
       ],
       ask: 'Say done when it is live, with the site address it shows, like https://my-wire.vercel.app, and the timezone you live in, like Europe/London.' },
     { need: ['timezone'], lines: [
-        'In your Vercel project open Storage, Supabase, Open in Supabase.',
+        'Open your Supabase project: in Vercel, Storage, Supabase, Open in Supabase. If you used deploy-existing, open it at supabase.com.',
         { say: 'SQL Editor, New query. Paste the SQL below and press Run.', sql: true },
         'Authentication, Users, Add user, Create new user. Use your WIRE_EMAIL and WIRE_PASSWORD and tick Auto Confirm User.'
       ],
@@ -189,13 +203,19 @@ function end(site) {
     + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.';
 }
 
-function step(done, site, timezone, ai, self) {
+// The timezone goes into the table's SQL, where it decides which day every reading belongs to, and an AI that
+// knows its user is tempted to fill it in from memory. So the tool never uses one it has not shown back: the
+// first time a timezone arrives it is printed with what it means, and the SQL waits for the buyer's yes.
+const CONFIRM = tz => `${tz}: your day will end at 6am there, so a reading before 6am counts as the night before. Say yes if that is where you live, or say the timezone you do live in.`;
+
+function step(done, site, timezone, ai, self, confirmed) {
   const given = { site, timezone, ai };
   const S = steps(site, ai, self);
   const i = Math.min(Math.max(0, done), S.length);
   if (i >= S.length) return end(site);
   const st = S[i];
   for (const n of st.need || []) if (!given[n]) return ASK[n];
+  if ((st.need || []).includes('timezone') && !confirmed) return CONFIRM(timezone);
   const sql = '\n\n```sql\n' + TABLE_SQL.split("'Europe/Zurich'").join(`'${timezone}'`).trim() + '\n```\n';
   const body = st.lines.map(l => typeof l === 'string' ? '- ' + l : '- ' + l.say + (l.sql ? sql : '')).join('\n');
   const head = (i === 0 ? 'Seven steps, one message each. Say done after each one.\n\n' : '') + `Step ${i + 1} of ${STEPS.length}, ${STEPS[i]}.`;
@@ -208,25 +228,32 @@ function setupServer(self) {
       'Show the user exactly what setup returns and nothing else: no commentary, nothing about what comes later, links left as they are so they can be clicked. ' +
       'When the user says done, call setup again with done raised by one. ' +
       'Pass the site address, the timezone and the name of their AI on every call once the user has given them. ' +
-      'Never ask for a password, token or key.'
+      'If the user says Supabase wants them to pay, or that Free is unavailable, call setup with stuck set to supabase and the same done, and show its answer as it is. ' +
+      'The timezone is only ever what the user typed in this conversation, never filled in from memory or guessed. When setup shows a timezone back and asks, ' +
+      'pass timezone_confirmed true only after the user says yes to it. Never ask for a password, token or key.'
   });
   server.tool(
     'setup',
     'The next step of setting up the Wire, and only that step. Pass the user\'s Whop license key every time; without a valid one there is no walkthrough. ' +
     'done is how many steps the user has finished (0 to start); raise it by one when they say done. ' +
     'site is their Vercel site address, timezone their timezone name, ai which AI they are using, each passed on every call once given. ' +
+    'stuck is what the user is stuck on, with the same done: supabase when Supabase asks them to pay or Free is unavailable. ' +
+    'timezone is only what the user typed here, never from memory. timezone_confirmed is true only once the user has said yes to the timezone setup showed back. ' +
     'Show the result to the user as it is and wait.',
     {
       license_key: z.string(),
       done: z.number().int().min(0).optional(),
       site: z.string().optional(),
       timezone: z.string().optional(),
-      ai: z.string().optional()
+      ai: z.string().optional(),
+      stuck: z.string().optional(),
+      timezone_confirmed: z.boolean().optional()
     },
-    async ({ license_key, done = 0, site, timezone, ai }) => {
+    async ({ license_key, done = 0, site, timezone, ai, stuck, timezone_confirmed = false }) => {
       const gate = await licensed(license_key);
-      const text = gate.ok ? step(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self)
-                           : `No walkthrough without a valid Whop license key: ${gate.why}.`;
+      const text = !gate.ok ? `No walkthrough without a valid Whop license key: ${gate.why}.`
+                 : stuckOn(stuck) ? FIX[stuckOn(stuck)](self)
+                 : step(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self, timezone_confirmed === true);
       return { content: [{ type: 'text', text }] };
     }
   );
@@ -241,7 +268,9 @@ function setupServer(self) {
       'Set up my Wire. Use the setup tool on this connector. ' +
       (license_key ? `My license key is ${license_key}; pass it on every call. ` : 'Ask me for my Whop license key first and pass it on every call. ') +
       'Show me only what setup returns, as it is, with nothing added and links left clickable. When I say done, call it again with done raised by one, ' +
-      'and pass my site address, my timezone and which AI I am using on every call once I have given them. Never ask me for a password, token or key.' } }]
+      'and pass my site address, my timezone and which AI I am using on every call once I have given them. ' +
+      'If I say Supabase wants me to pay, or Free is unavailable, call it with stuck set to supabase and show me its answer. ' +
+      'My timezone is only what I type here; never fill it in from what you know about me. When setup shows a timezone back, pass timezone_confirmed only after I say yes. Never ask me for a password, token or key.' } }]
   }));
   return server;
 }
