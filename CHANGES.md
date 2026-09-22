@@ -3,6 +3,17 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, one message per step.** A line per turn was too many
+  turns: the first reply had no link in it, and a buyer said done to
+  reach one. The `/you` walkthrough is back to one message per step,
+  every line of the step in it, the link first, and "say done when"
+  last. The opening line, seven steps, one message each, is folded into
+  step one, so the first reply already carries the Deploy link. What a
+  later step needs is asked for in the closing line of the step before:
+  the site address and timezone with step one's done, the buyer's AI
+  with step two's, and each is asked for on its own if it is still
+  missing when a step needs it. `done` counts steps again.
+
 - **22 Sep 2026, a fresh deploy says what it is missing.** Before the
   table has been run, `you.html` said "Connection failed" and "The
   ledger revision could not be read". A HEAD count on a table that is

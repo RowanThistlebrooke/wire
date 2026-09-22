@@ -1,13 +1,12 @@
-// The setup connector: walks someone from nothing to their first goal, one line
+// The setup connector: walks someone from nothing to their first goal, one step
 // at a time, over MCP at /api/setup.
 //
 // It has no door to any ledger. It never reads WIRE_URL, WIRE_KEY, WIRE_EMAIL,
 // WIRE_PASSWORD or WIRE_TOKEN, and imports nothing that does: no Supabase
 // client, no mcp/server.mjs, no mcp/env.mjs. The one setting it reads is
-// WHOP_API_KEY, to check a Whop license key before any line is given.
+// WHOP_API_KEY, to check a Whop license key before any step is given.
 //
-// It follows mcp/MCP.md's rule for a step sequence, taken one notch further:
-// one line at a time, wait for done, never a list.
+// It follows mcp/MCP.md: one step at a time, wait for done, never a list of ten.
 
 import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -34,7 +33,7 @@ const TABLE_SQL = readFileSync(new URL('../sql/01_the_table.sql', import.meta.ur
 // period; canceled, expired, unresolved and drafted do not.
 const WHOP = 'https://api.whop.com/api/v1/memberships/';
 const ACCESS = new Set(['active', 'trialing', 'completed', 'past_due', 'canceling']);
-const checked = new Map();   // key -> answer for ten minutes, so each line does not ask Whop again
+const checked = new Map();   // key -> answer for ten minutes, so each step does not ask Whop again
 
 async function licensed(raw) {
   const key = String(raw || '').trim();
@@ -64,7 +63,7 @@ async function licensed(raw) {
   return keep({ ok: true });
 }
 
-// ---- the seven steps, cut into lines ----
+// ---- the seven steps ----
 //
 // Four of them build the thing. The fifth is the one that makes it worth
 // having: a ledger with one row in it says nothing, and everyone arrives with
@@ -74,16 +73,16 @@ async function licensed(raw) {
 // is the one the whole thing is for: a goal, what measures it, what moves
 // it. Without it the buyer has a ledger and no question to ask of it.
 //
-// A line is one turn: the buyer reads it, does it, says done, gets the next.
-// `done` counts lines, not steps. A line with `ask` wants an answer instead
-// of done, and once that answer is known the line is finished and skipped.
-// A line with `need` uses an answer, and asks for it again if it is missing.
+// A step is one message: every line of it, the link first, and "say done
+// when" last. `done` counts steps. What a later step needs, the site
+// address, the timezone, which AI, is asked for in the closing line of the
+// step before, and asked for on its own if it is still missing when needed.
 const STEPS = ['deploy', 'run the table', 'add your connector', 'say a number', 'bring your history in', 'put it on your phone', 'name your first goal'];
 
 const ASK = {
-  site: 'Press Deploy. When it is live, copy the site address it shows, like https://my-wire.vercel.app, and paste it here.',
-  timezone: 'Which timezone do you live in? Say its name, like Europe/London or America/New_York.',
-  ai: 'Which AI are you using: the Claude app, Claude Code, Codex, or another?'
+  site: 'Before the next step: paste your site address from Vercel, like https://my-wire.vercel.app.',
+  timezone: 'Before the table: which timezone do you live in? Say its name, like Europe/London or America/New_York.',
+  ai: 'Before the connector: which AI are you using, the Claude app, Claude Code, Codex, or another?'
 };
 
 // A site address is an https origin and nothing else.
@@ -125,50 +124,61 @@ function connect(site) {
   };
 }
 
-// `self` is this connector's own site, the one the buyer came from: it serves token.html, a page that makes
-// a WIRE_TOKEN in the browser, so a buyer with no terminal has one to paste into the form and never into the chat.
-function lines(site, ai, self) {
-  const s = site || 'https://YOUR-SITE';   // never shown: every line that uses it carries need: 'site'
-  const L = [];
-  const add = (step, say, more) => L.push({ step, say, ...more });
-  add(null, 'Seven steps, one line at a time. Say done after each line.');
-
-  add(0, 'No GitHub account? Make a free one at github.com/signup first (email, password, a code to your email).');
-  add(0, `Open ${self}/deploy and sign in with GitHub.`);
-  add(0, 'Under Add Products: Storage, Supabase, Postgres backend, Add, then Accept and Create. That is your database, and the three fields stay locked until it is added.');
-  add(0, 'Pick the region nearest you, leave the prefix as it is, and pick Free. If Free says Unavailable, pause a Supabase project you are not using at supabase.com first. Never pick Pro.');
-  add(0, `Open ${self}/token.html in a new tab and press Copy. That is your WIRE_TOKEN, made in your browser. Never paste it here.`);
-  add(0, 'Fill the three fields: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, the one you just copied.');
-  add(0, ASK.site, { ask: 'site' });
-
-  add(1, 'In your Vercel project open Storage, Supabase, Open in Supabase.');
-  add(1, ASK.timezone, { ask: 'timezone' });
-  add(1, 'SQL Editor, New query. Paste the SQL below and press Run.', { need: ['timezone'], sql: true });
-  add(1, 'Authentication, Users, Add user, Create new user. Use your WIRE_EMAIL and WIRE_PASSWORD and tick Auto Confirm User.');
-
-  add(2, ASK.ai, { ask: 'ai' });
-  for (const say of connect(s)[ai || 'app']) add(2, say, { need: ['site', 'ai'] });
-  add(2, 'Check that wire shows in your AI\'s connectors or servers.');
-
-  add(3, ai && ai !== 'app' ? 'Start a new session. It finds wire by itself.' : 'Start a new chat. Press +, Connectors, and turn wire on.');
-  add(3, 'Say a reading, like: my weight today is 81.4 kg.');
-  add(3, 'Your AI shows you the row before it writes it. Say yes.');
-
-  add(4, `Open ${s}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`, { need: ['site'] });
-  add(4, 'Export a CSV from something you already use: Whoop, Apple Health, Strava, a bank, a spreadsheet. Anything with an export button.');
-  add(4, 'Drag the CSV onto the page. It reads every row it can and says how many it could not, and why.');
-  add(4, 'Type a name beside each column you want. Leave the rest blank.');
-  add(4, 'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.');
-  add(4, 'Press go.');
-
-  add(5, 'The Claude app on your phone has wire already. New chat, +, Connectors, wire on, say a reading.');
-
-  add(6, 'In a chat with wire on, say what you are working toward, what measures it, and what moves it. Like: my goal is a leaner body; the outcomes are weight and waist; the levers are steps and sleep hours.');
-  add(6, 'Name only stocks you have already logged. A goal can only point at stocks that exist.');
-  add(6, 'For each outcome say which way is better: up, down, or a band between two numbers.');
-  add(6, 'Your AI shows the rows before it writes them. Say yes.');
-  add(6, `Open ${s}/you.html. The goal is in the sidebar; open it and its outcomes and levers are on its page.`, { need: ['site'] });
-  return L;
+// `self` is this connector's own site, the one the buyer came from: it serves /deploy, and token.html, a page
+// that makes a WIRE_TOKEN in the browser, so a buyer with no terminal has one to paste into the form and never
+// into the chat. A line marked `sql` has the table's SQL printed right under it.
+function steps(site, ai, self) {
+  const s = site || 'https://YOUR-SITE';   // never shown: every step that uses it carries need: 'site'
+  return [
+    { lines: [
+        `Open ${self}/deploy and sign in with GitHub.`,
+        'No GitHub account? Make a free one at github.com/signup first (email, password, a code to your email).',
+        'Under Add Products: Storage, Supabase, Postgres backend, Add, then Accept and Create. That is your database, and the three fields stay locked until it is added.',
+        'Pick the region nearest you, leave the prefix as it is, and pick Free. If Free says Unavailable, pause a Supabase project you are not using at supabase.com first. Never pick Pro.',
+        `Open ${self}/token.html in a new tab and press Copy. That is your WIRE_TOKEN, made in your browser. Never paste it here.`,
+        'Fill the three fields: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, the one you just copied.',
+        'Press Deploy.'
+      ],
+      ask: 'Say done when it is live, with the site address it shows, like https://my-wire.vercel.app, and the timezone you live in, like Europe/London.' },
+    { need: ['timezone'], lines: [
+        'In your Vercel project open Storage, Supabase, Open in Supabase.',
+        { say: 'SQL Editor, New query. Paste the SQL below and press Run.', sql: true },
+        'Authentication, Users, Add user, Create new user. Use your WIRE_EMAIL and WIRE_PASSWORD and tick Auto Confirm User.'
+      ],
+      ask: 'Say done when the SQL ran and the user exists, and say which AI you are using: the Claude app, Claude Code, Codex, or another.' },
+    { need: ['site', 'ai'], lines: [
+        ...connect(s)[ai || 'app'],
+        'Check that wire shows in your AI\'s connectors or servers.'
+      ],
+      ask: 'Say done when wire shows there.' },
+    { lines: [
+        ai && ai !== 'app' ? 'Start a new session. It finds wire by itself.' : 'Start a new chat. Press +, Connectors, and turn wire on.',
+        'Say a reading, like: my weight today is 81.4 kg.',
+        'Your AI shows you the row before it writes it. Say yes.'
+      ],
+      ask: 'Say done when it says it wrote the row.' },
+    { need: ['site'], lines: [
+        `Open ${s}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`,
+        'Export a CSV from something you already use: Whoop, Apple Health, Strava, a bank, a spreadsheet. Anything with an export button.',
+        'Drag the CSV onto the page. It reads every row it can and says how many it could not, and why.',
+        'Type a name beside each column you want. Leave the rest blank.',
+        'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.',
+        'Press go.'
+      ],
+      ask: 'Say done when the rows have landed.' },
+    { lines: [
+        'The Claude app on your phone has wire already. New chat, +, Connectors, wire on, say a reading.'
+      ],
+      ask: 'Say done when a reading from your phone has landed.' },
+    { need: ['site'], lines: [
+        'In a chat with wire on, say what you are working toward, what measures it, and what moves it. Like: my goal is a leaner body; the outcomes are weight and waist; the levers are steps and sleep hours.',
+        'Name only stocks you have already logged. A goal can only point at stocks that exist.',
+        'For each outcome say which way is better: up, down, or a band between two numbers.',
+        'Your AI shows the rows before it writes them. Say yes.',
+        `Open ${s}/you.html. The goal is in the sidebar; open it and its outcomes and levers are on its page.`
+      ],
+      ask: 'Say done when the goal is on your page.' }
+  ];
 }
 
 function end(site) {
@@ -179,32 +189,31 @@ function end(site) {
     + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.';
 }
 
-function line(done, site, timezone, ai, self) {
+function step(done, site, timezone, ai, self) {
   const given = { site, timezone, ai };
-  const L = lines(site, ai, self);
-  let i = Math.min(Math.max(0, done), L.length);
-  while (i < L.length && L[i].ask && given[L[i].ask]) i++;   // an answered ask is finished
-  if (i >= L.length) return end(site);
-  const l = L[i];
-  for (const n of l.need || []) if (!given[n]) return ASK[n];
-  const first = l.step !== null && (i === 0 || L[i - 1].step !== l.step);
-  const head = first ? `Step ${l.step + 1} of ${STEPS.length}, ${STEPS[l.step]}. ` : '';
-  const sql = l.sql ? '\n\n```sql\n' + TABLE_SQL.split("'Europe/Zurich'").join(`'${timezone}'`).trim() + '\n```' : '';
-  return head + l.say + sql;
+  const S = steps(site, ai, self);
+  const i = Math.min(Math.max(0, done), S.length);
+  if (i >= S.length) return end(site);
+  const st = S[i];
+  for (const n of st.need || []) if (!given[n]) return ASK[n];
+  const sql = '\n\n```sql\n' + TABLE_SQL.split("'Europe/Zurich'").join(`'${timezone}'`).trim() + '\n```\n';
+  const body = st.lines.map(l => typeof l === 'string' ? '- ' + l : '- ' + l.say + (l.sql ? sql : '')).join('\n');
+  const head = (i === 0 ? 'Seven steps, one message each. Say done after each one.\n\n' : '') + `Step ${i + 1} of ${STEPS.length}, ${STEPS[i]}.`;
+  return `${head}\n${body}\n\n${st.ask}`;
 }
 
 function setupServer(self) {
   const server = new McpServer({ name: 'wire-setup', version: '1.0.0' }, {
-    instructions: 'Sets up the Wire, one line at a time. Before anything, ask for the Whop license key and call setup with it. ' +
-      'Show the user exactly the line setup returns and nothing else: no commentary, nothing about what comes later. ' +
-      'When the user says done, or answers what the line asked, call setup again with done raised by one. ' +
+    instructions: 'Sets up the Wire, one step at a time. Before anything, ask for the Whop license key and call setup with it. ' +
+      'Show the user exactly what setup returns and nothing else: no commentary, nothing about what comes later, links left as they are so they can be clicked. ' +
+      'When the user says done, call setup again with done raised by one. ' +
       'Pass the site address, the timezone and the name of their AI on every call once the user has given them. ' +
       'Never ask for a password, token or key.'
   });
   server.tool(
     'setup',
-    'The next line of setting up the Wire, and only that line. Pass the user\'s Whop license key every time; without a valid one there is no walkthrough. ' +
-    'done is how many lines the user has finished (0 to start); raise it by one when they say done or answer a line. ' +
+    'The next step of setting up the Wire, and only that step. Pass the user\'s Whop license key every time; without a valid one there is no walkthrough. ' +
+    'done is how many steps the user has finished (0 to start); raise it by one when they say done. ' +
     'site is their Vercel site address, timezone their timezone name, ai which AI they are using, each passed on every call once given. ' +
     'Show the result to the user as it is and wait.',
     {
@@ -216,7 +225,7 @@ function setupServer(self) {
     },
     async ({ license_key, done = 0, site, timezone, ai }) => {
       const gate = await licensed(license_key);
-      const text = gate.ok ? line(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self)
+      const text = gate.ok ? step(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self)
                            : `No walkthrough without a valid Whop license key: ${gate.why}.`;
       return { content: [{ type: 'text', text }] };
     }
@@ -225,13 +234,13 @@ function setupServer(self) {
   // other is handed the same words to paste. It asks for the key itself, so the buyer types nothing else.
   server.registerPrompt('you', {
     title: '/you',
-    description: 'Set up your own Wire, one line at a time.',
+    description: 'Set up your own Wire, one step at a time.',
     argsSchema: { license_key: z.string().optional().describe('Your Whop license key, if you have it to hand') }
   }, ({ license_key }) => ({
     messages: [{ role: 'user', content: { type: 'text', text:
       'Set up my Wire. Use the setup tool on this connector. ' +
       (license_key ? `My license key is ${license_key}; pass it on every call. ` : 'Ask me for my Whop license key first and pass it on every call. ') +
-      'Show me only the line setup returns, as it is, with nothing added. When I say done, or answer what the line asked, call it again with done raised by one, ' +
+      'Show me only what setup returns, as it is, with nothing added and links left clickable. When I say done, call it again with done raised by one, ' +
       'and pass my site address, my timezone and which AI I am using on every call once I have given them. Never ask me for a password, token or key.' } }]
   }));
   return server;
