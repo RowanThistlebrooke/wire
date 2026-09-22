@@ -1,321 +1,35 @@
 # RESUME HERE
 
-Read this file, then open CLAUDE.md. The laws live only in CLAUDE.md.
-AGENTS.md is a pointer, not another copy. Do not answer from remembered
-repo state. This is ~/wire, not the earlier Life project or its database.
+- **Working on:** the `/you` product. Next piece: grey outline of the two landing-page animations (the data tree; the `/you` walkthrough) in a new `landing.html`, sketch mode, no harness.
+- **Next step:** on "go", write `/Users/rowan/wire/landing.html`: plain SVG + CSS, one file, no library, no numbers anywhere. (1) Tree: `you` root → branches body / social media / business → leaves whoop, garmin, manual, mcp / instagram, youtube, mcp / your sales, a date ticking, leaves pulse, slow loop. (2) `/you`: split panel, left a chat where `/you` is typed and nine steps tick in one by one, right GitHub → Vercel → Supabase → connector → first leaf → history → phone → goal, ending in a small tree. Grey boxes and straight lines first. Then serve it: `cd /Users/rowan/wire && python3 -m http.server 8795 --bind 127.0.0.1` and give the user `http://localhost:8795/landing.html`. Screenshot once, kill the server.
+- **Waiting on you:** "go" for the grey tree. Also, only you can: (a) rotate the Whop API key and set the new one in Vercel as `WHOP_API_KEY`, redeploy; (b) in Whop → Software → The Wire → Download, set the Web App link to `https://<your site>/start.html`; (c) say "push" for local commit `f0a0f74`.
 
-## Current Instagram work, 18 Sep
+-----
 
-The user subsequently asked to push the real Instagram metrics into their
-dashboard and expose Up, Down and Best between. That explicitly authorized
-this scoped import and dashboard change. The earlier preview-only hold below
-is historical. The user also requested a Git commit in the preceding turn.
-No SQL, deployment, schedule edits, credential edits or test readings here.
+## Done so far
 
-Implemented in `pull/social.mjs`: daily account reach, profile views, views,
-saves and shares. Current followers remains a separately timed reading.
-`--instagram` runs only Instagram; `--dry` shows new rows without inserting.
-`--instagram-preview` still exits before a ledger connection. The normal
-scheduled job now includes the extra daily account fields. Every field must
-match between the existing query window and a narrow window crossing the
-reach series' dated Pacific-midnight boundary, with daily reach as a control.
-A mismatch aborts the batch. Missing stays missing. New daily rows retain
-both windows, timezone and end_time in context. Settling delays and the
-existing duplicate and cross-source checks were left alone.
+- Pushed `d9bf9fa` (v1.44.0): context table, cross-reference tab, two-level sidebar, row lines and arrows, and the setup `done` fix.
+- Local only, not pushed: `f0a0f74` "/you: nine steps, one prompt, any AI". `api/setup.mjs` now has nine steps (phone, first goal added), step 5 covers claude.ai / Claude Code / Codex / any MCP AI, and a `you` prompt via `registerPrompt`. `start.html` is the buyer landing page from Whop. README row and CHANGES entry written. **Bump `package.json` to 1.45.0 before pushing.**
+- Tested with the scratchpad script `scratchpad/setup-test.mjs` (drives the connector over HTTP with Whop's fetch faked): bad key refused, `/you` listed, steps 0–9 in order, step 10 refused.
+- Reel script settled (60 words, under 22 s). Landing page plan agreed: fold = the user's live YOU page read-only (`sell.html` + `sql/sell_public_readonly.*` draft, not activated), then intro video, step map, price. Whop is checkout + delivery only.
+- Design work still queued after the animations: step 2 pillars in the top bar (auto-sort by source door), step 3 YOU page redesign (Best / Worst / Weak point top right, stocks by pillar, photos, minimal).
 
-Evidence boundary: a targeted probe of one midnight returned matching reach,
-views, saves and shares across the usual window and the narrow boundary
-window; a window entirely after that midnight returned no rows. The importer
-then checked every field over 12 returned daily buckets, 4-15 Sep 2026, on
-both its dry run and its actual run. This verifies consistency of the API
-buckets. It is not an independent Instagram-app or export date comparison;
-that comparison remains unperformed. Do not relabel it Insights-verified.
+## Key files
 
-Actual write: the Instagram-only importer appended 38 real measurements
-across those 12 days, after the read-only preview. The run made 27 Graph GETs
-and skipped 23 readings already present. A fetch guard allowed only Graph
-GETs, Wire authentication/day reads, ledger reads and the scoped Instagram
-measurement insert. No other platform ran. Readback found 12 daily readings
-each for views, saves and shares; 14 each for reach and profile views; and
-3 current follower snapshots. Each stock has one reading on each of its
-reported days. A final guarded dry run returned zero new rows and 61
-already present, covering the same 12 daily buckets plus the current
-follower reading. No repeated import was written.
+- `api/setup.mjs`: the walkthrough. `STEPS`, `EASE`, `step(done, site, tz)`, `registerPrompt('you', …)`. `done` max is `STEPS.length`.
+- `start.html`: what the Whop Download button should open. Fills its own `location.origin`.
+- `you.html`: the dashboard (3,700+ lines). Sidebar in `drawAreas`/`navGoal`/`navVal`; later `<style>` blocks override earlier ones, use `#area-rail.area-rail …` to win.
+- `CHANGES.md`: one entry per change, newest first, `- **22 Sep 2026, …**`, wrapped at 74 columns.
+- Untracked, never add or commit: `the-door.html`, `sell.html`, `sell.js`, `sell.css`, `sql/sell_public_readonly.*`, `episode-1.html`.
 
-The existing Instagram goal now includes all six account stocks, with its
-old membership retained, no target and no levers. This was appended through
-the shared goal writer with source `claude`, then read back. No rule was
-changed: reach remains Up, profile views and followers remain Ignore, and
-views, saves and shares are deliberately unscored until the user chooses.
-Per-Reel lifetime views, shares, saved and watch time remain separate and
-unimplemented; neither old media age nor a daily account result proves a
-Reel's lifetime total is finished.
+## Watch out
 
-The dashboard adds Best between using the existing shared rule writer:
-explicit lower and upper bounds, finite-number checks, upper above lower,
-review before saving, and the existing latest-rule concurrency check. An
-unscored stock's detail now asks for a direction instead of claiming its
-baseline never moved. No index formula or comparison gate was changed by
-this task. In Chrome at localhost:8794, all six Instagram cards and the new
-views history were verified; the range dialog disables confirmation for
-empty bounds and Cancel returns without writing. No test rule was saved.
-The sales preview on 8792 does not serve you.html; use the existing dashboard
-server on 8794. It serves the working file and the same Wire database.
-
-Shared tree: another builder changed you-reader.js and additional areas of
-you.html while this work was running. Those changes are not this task's
-Instagram work and must not be staged into its commit. The reader started
-at SHA-256 `b013e4b2ff1beec31b0b95b1011cc3345b8d37e20a265c7f2c3e92647fce48f9`.
-A later working-tree checksum changed to
-`6f8b32019a131253b6669f82a99e07b7c5ca3952bd526634ef86d2bcca30f44d` during
-that builder's goal-assignment work. Do not claim the current whole reader
-is byte-identical; this task made no reader edit. Untracked sell files,
-public-read SQL and the-door.html remain outside this task.
-
-Waiting: the user's scoring choices for the newly imported account stocks.
-No numeric Best between bounds have been inferred. Separate per-Reel
-tracking and an independent Insights date comparison remain open.
-
-The older session record below is retained for the other builders. Its
-Git state and live-data statements are historical, not a current status.
-
-## Advisor role, agreed this session
-
-This assistant reads, checks, challenges and keeps the record. Code changes
-belong to the builder sessions in Codex and Claude Code. Maintaining this
-handoff is explicitly requested; it does not authorize code changes.
-
-Check current files or the ledger before answering. Distinguish a partial
-read from a conclusion. Give the sample size with numerical findings; if
-the value or sample cannot be read, say so. Do not invent, estimate, round,
-fill or infer a personal number. Use only read tools for the ledger.
-
-Keep replies short and plain, without headings or em dashes. Use a list
-only for an actual list. Ask for one decision at a time and stop at that
-choice. Challenge a direction with the user's data when it supports the
-other side. State errors and their cause plainly.
-
-The user performs commit, push, publish, send, spend and SQL execution.
-The advisor may prepare a review, but does not press those buttons.
-Rewrite this file at session end with waiting work, blockers, unresolved
-decisions and deliberate non-declarations. The chat is not the record.
-
-## Evidence boundary
-
-Written 17 Sep, late, by the advisor session that watched tonight's work.
-Verified by reading the files and by read-only calls to the wire connector:
-git state, the contents of every file named below, `stocks`, `goals` and
-`health`. Not verified: anything in a running browser, the deployed build,
-or the database. Nothing below was confirmed by use.
-
-Local main is `f03ca7d`, two commits ahead of `origin/main` at `d36bb15`.
-Version is 1.36.0 in the working tree, not yet committed.
-
-## What is waiting and what blocks it
-
-- **`yt_views_live` has no rule, and cannot have one yet.** Writing a rule
-  was refused: `no stock called yt_views_live`. A stock is born by its first
-  reading and this one has none, because the reading is a subtraction: today's
-  lifetime total minus the last one. One total exists, stamped 17 Sep 10:54.
-  The second must land 20 to 28 hours later, so between 06:54 and 14:54 on
-  18 Sep. Set the rule to `up` after that reading exists, not before.
-- **A start row draws readings it cannot honestly score.** `yt_pct_viewed`
-  reads 205.4 on 2025-09-29 and 403.9 on 2025-09-28, from a channel nobody
-  watched, because a start moves only the baseline and leaves every earlier
-  reading scored against it. The fall was the only half considered when that
-  was built; the rise is drawn too and the rise is an artefact of a tiny
-  audience. Decided but not built: a reading before a stock's start day
-  should have no index at all, staying in the ledger as a raw value. The
-  work spans rankSeries and every caller. Not started.
-- **Nothing watches the doors.** `health` measures how old a door's newest
-  row is against its promise. It cannot tell whether anything is scheduled
-  to produce more. `com.wire.social` failed every run from 16 Sep 21:03 and
-  reported `ontime` throughout, because hand-runs kept the data fresh. This
-  is a design gap, not a bug. Nothing built.
-- **`sql/sell_public_readonly.sql` has never been run.** A draft at contract
-  4. Review deliberately. Never run it for a demo.
-- **`sell.*` and `the-door.html` are untracked**, so the CHANGES entry about
-  the public page was pulled back out (`7efba28`) until they exist on GitHub.
-  Whether they join the repo is undecided.
-- **Nothing tonight was verified in a running app.** The hold gesture, the
-  per-stock panel, the refused duplicate call and the public page were
-  checked by reading and by harness only.
-- **Debt from the sweep is unchanged** and listed below.
-
-## Settled tonight, so it is not re-litigated
-
-- `start yt_pct_viewed` has been run. `yt_pct_viewed` reads 85.7, firm, on
-  276 days. The connector-cache diagnosis is spent.
-- `sell.js` could not read at all: its adapter implemented `limit()` while
-  every shared reader had moved to `range()` paging. Fixed at 20:42 tonight,
-  along with start rows, per-door freshness and a `metric_sources` map in
-  the public snapshot. Contract moved 3 to 4.
-- A later read of those same lines found them correct and concluded the
-  original diagnosis had been wrong. It was not wrong; it had been fixed an
-  hour earlier. A source read says what a file holds now, never when it
-  started holding it. Check `git log` before calling a prior finding stale.
-
-### The pullers, found 17 Sep late
-
-- `pull/whoop.mjs` runs from `~/Library/LaunchAgents/com.wire.whoop.plist`
-  at 07:45 Zurich, logging to `~/.wire/pull.log`, config `~/.wire/env`.
-  Documented in README. Exit status 0.
-- `pull/social.mjs` runs from `~/Library/LaunchAgents/com.wire.social.plist`
-  at 07:50 Zurich. Installed 16 Sep 21:03 and failed every run with exit 78:
-  the plist carried the literal text `$HOME` instead of the expanded path,
-  because it was written with a quoted heredoc. launchd is not a shell and
-  does not expand it, so the job could not be set up and node never started.
-  Fixed 17 Sep, kickstarted under launchd, spawned and exited 0. No days
-  were lost: the puller asks for the last 14 days each run, and one hand-run
-  covered the single missed morning. That 14-day window is the exposure if
-  it ever breaks again.
-- Neither puller is a GitHub workflow, so a buyer who clones the repo gets
-  both files and no way to run them. `.github/workflows/pull.yml` schedules
-  only `pull/github.mjs`, at 05:17 UTC.
-
-## Debt, from a full sweep of every caller
-
-Duplication that produces correct output today and drifts later. This is
-exactly how `health` came to print the opposite of the truth:
-
-- `you.html` reimplements `readSources`, `readingOn` and `readFeeds`.
-- `you.html` `span()` repeats `testCommit`'s comparison-window arithmetic
-  with a different clamp for future starts.
-- `pull/github.mjs` and `pull/social.mjs` both implement `momentOn`; social
-  also hand-rolls two pagination loops `readAll` already does.
-- `api/photo.mjs` duplicates `readDay`'s RPC without its date validation.
-- `mcp/server.mjs` duplicates `landRows` insertion logic.
-
-## Deliberately undeclared or left alone
-
-- `yt_per_viewer`, `yt_shares`, `yt_stayed`: previously left without rules
-  because no door fed them. Verify current inputs before revisiting.
-- The previous handoff records the user's decision to leave the day-early
-  CSV series `yt_views` and `yt_duration` ignored. Do not repair or remove
-  those readings. Source-specific voiding remains a known limit, not work
-  requested here.
-
-## Raised, not decided
-
-- Whether `sell.*` joins the repo. Split it: the page (`sell.html`,
-  `sell.css`, `sell.js`) is work that would be lost to a stray `git clean`
-  and cannot be described in CHANGES.md while untracked. The SQL
-  (`sql/sell_public_readonly.sql`) is different in kind: it is the
-  mechanism that makes a private ledger public, and shipping it in the
-  template hands that to people who will not read it. Advice given:
-  commit the page, hold the SQL until the public page has a job.
-- Whether to track a video's retention at a fixed age rather than only
-  channel readings per day.
-- Whether a goal whose baseline has not formed belongs in YOU at full
-  weight. Under goal-averaging `lean` would hold a quarter of YOU on two
-  readings. Raised 17 Sep, not decided.
-
-## Decided 17 Sep: YOU keeps every stock, and goal membership is fixed first
-
-YOU averages stocks, so five Whoop stocks outvote two YouTube ones and the
-weighting is decided by whichever API is chattiest, not by the user.
-
-Averaging goals instead was proposed and rejected as it stands: four stocks
-are in no goal (`whoop_hrv`, `whoop_rhr`, `whoop_sleep_perf`, `ig_reach`),
-so switching today would take YOU from 93.4 to 99.0 by dropping them, and
-three of the four are below 100 — including `whoop_sleep_perf` at 81.9, the
-lowest stock there is. That is the law against quietly dropping a stock,
-broken structurally instead of by accident.
-
-The user chose the other order. Fix membership first, then compare:
-
-1. `body` gains `whoop_hrv`, `whoop_rhr`, `whoop_sleep_perf`, giving it all
-   five Whoop stocks. (`sleep_perf` is currently only a lever on `lean`,
-   which counts toward nothing.)
-2. `ig_reach` gets a goal of its own.
-
-Then YOU as goals would be body 89.2, instagram 89.0, youtube 99.2,
-lean 107.1 = **96.1**, against 93.4 today. Nothing dropped; the whole
-difference is reweighting, which was the actual complaint.
-
-Model confirmed against the live ledger before computing: `body` publishes
-90.6 and (85.2 + 96) / 2 = 90.6 exactly.
-
-No code until the two goal rows are written and both numbers have been
-looked at side by side.
-
-## Where to check next
-
-### Artifact review still open
-
-The advisor reviewed the rendered "Inside The Wire" artifact at
-https://claude.ai/artifact/AZLPmJWkdccKNTieJ1wSze and targeted current source
-functions. This is a separate review from the evening work recorded above.
-No ledger tools, git commands or running Wire app were used for this review.
-The artifact's displayed personal values and its live-data connection were
-not verified. They must not be repeated as independently checked results.
-
-Findings to resolve with the builder, without changing gates or laws here:
-
-- The artifact and CLAUDE.md say missing values are never carried forward.
-  `etfSeries` in you-reader.js retains `last[m]` and uses it on later days
-  while within `staleBy(m)` (lines 769-782). This is an executable-code
-  mismatch, not merely wording. When a required member expires, the whole
-  aggregate day is omitted. Stocks without an index are separately excluded
-  before this calculation. `staleAfter` uses door promise plus slack, not
-  the promise alone. No remedy has been chosen or implemented here.
-- The artifact says the baseline freezes forever and append-only prevents
-  a finding from changing. `liveRows`, `readRules`, `baselineOf` and
-  `rankSeries` apply current rules, corrections, voids and explicit starts;
-  derived history can change while the original events remain. Baseline
-  inputs are eligible daily means, not individual raw events. The artifact's
-  description of start must say it changes the baseline for the whole
-  series, rather than implying earlier readings disappear.
-- `weakPoint` (you-reader.js:1381) picks the lowest latest eligible index.
-  It does not itself align dates, check freshness, assess a goal's target,
-  or establish which action helps. A weak point is not a demonstrated
-  intervention. Goals can include targets and levers, which the artifact's
-  "nothing more than a handful of stocks" account omits.
-- The table is not the only irreplaceable data. `api/photo.mjs:84` uploads
-  image files to private Storage, and the event stores their path. Supabase
-  documents that database backups exclude Storage objects:
-  https://supabase.com/docs/guides/platform/backups . Protecting only events
-  cannot reconstruct the original pictures. No backup state was inspected.
-- The artifact omits the measured-versus-estimated distinction. `estimate`
-  in mcp/server.mjs records source photo, model identity, and `_est` metric
-  names; uploading a photo alone supplies no measurement. Input sources
-  cannot be called freely interchangeable without preserving measurement
-  meaning, units and provenance. The schema's duplicate key includes source,
-  so its protection is not a universal cross-door duplicate guarantee.
-- Further source edge cases, not tested with data: `indexState` labels
-  firmness by total series length even after a new start supplies a shorter
-  baseline. `outgrownBy` returns no refusal for zero current spread. A fully
-  frozen baseline with no spread is not unlocked merely by later varied
-  readings. Keep these open rather than presenting the refusal list as an
-  exhaustive guarantee.
-
-No artifact, source code, SQL, settings or ledger rows changed in this
-review. Only this record changed. Priority is resolving the carry-forward
-contradiction before strengthening the public promise. Other sessions'
-handoff updates were preserved.
-
-### Source map
-
-- `CLAUDE.md`: the sole laws. `CHANGES.md`: recorded changes.
-  `mcp/MCP.md`: connector documentation, not a second authority for laws.
-- `you-reader.js`: shared maths, gates, pagination, starts and `FED` door
-  promises. Read it rather than copying formulas or retaining promise
-  counts in this handoff.
-- `mcp/server.mjs`, `api/mcp.mjs`, `mcp/wire.mjs`: connector implementation.
-  Read the current descriptions; do not assume a remembered tool count.
-- `pull/social.mjs`, `api/photo.mjs`, `api/at.mjs`, `mcp/token.mjs`: input
-  paths and access checks.
-- `you.html`, `import.html`, `test.html`, `scan.html`, `pad.html`,
-  `commit.html`: application pages.
-
-## Shared working tree
-
-Builder sessions share this folder and git state. The previous handoff
-records duplicate commits and CHANGES.md entries from concurrent work,
-and requests fetching before git work. This advisor ran no git commands.
-It also records a past `.git/*.lock` permission problem; inspect current
-state before treating that historical problem as a current diagnosis.
-
-Real YouTube Studio exports in ~/Downloads were designated for importer
-checks in a scratch folder. They contain personal data and must not be
-committed to the public repo.
+- Before any push: grep the diff `origin/main..HEAD` for the user's three account names (not written here on purpose; the session summary and the old notes have them) and the count must be 0. Push with `git -c credential.helper= -c 'credential.helper=!f(){ echo username=RowanThistlebrooke; echo "password=$(gh auth token --user RowanThistlebrooke)"; }; f' push -q origin main`. Commits end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- The user pasted a Whop API key into chat once; told them to rotate it. Never use it, never ask for keys, never write one anywhere.
+- The permission classifier blocks probing the live connector with a key. Test locally with the scratchpad script instead.
+- The user's `localhost:8794` server hands out a fixed list of pages; new files 404 there. Use a second port.
+- Playwright can only save screenshots under `/Users/rowan/wire/.playwright-mcp/` (git-ignored). Delete after reading.
+- Fake-data pages get `<title>STUB</title>` and magenta/violet accents. The landing animations carry no numbers, so they need no mark.
+- Working style: one step at a time, short turns. "sketch" = no harness. Commit and CHANGES once per push, not per step. Say up front if a build needs more than one turn.
+- The old 1,513-line working notes this file replaced are at `/tmp/HANDOFF.local.keep`. They contain account names; never commit that version.
+- Every reply ends with a blank line, `---`, then the credit-saver footer line the hook supplies.
