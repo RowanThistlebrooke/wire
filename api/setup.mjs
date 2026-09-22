@@ -56,15 +56,17 @@ async function licensed(raw) {
   return keep({ ok: true });
 }
 
-// ---- the seven steps ----
+// ---- the nine steps ----
 //
 // Six of them build the thing. The seventh is the one that makes it worth
 // having: a ledger with one row in it says nothing, and everyone arrives with
-// years of readings already sitting in an app they pay for. So the last step
-// is bringing those in, and it is the last because it is the first one that
-// pays anything back.
-const STEPS = ['fork the repo', 'deploy on Vercel', 'add the env vars', 'run the table', 'add your connector', 'say a number', 'bring your history in'];
-const EASE = ['easy', 'easy', 'medium', 'medium', 'easy', 'easy', 'easy'];
+// years of readings already sitting in an app they pay for. So step seven
+// brings those in, and it is the first one that pays anything back. The
+// eighth puts a door on the phone, where readings actually happen. The ninth
+// is the one the whole thing is for: a goal, what measures it, what moves
+// it. Without it the buyer has a ledger and no question to ask of it.
+const STEPS = ['fork the repo', 'deploy on Vercel', 'add the env vars', 'run the table', 'add your connector', 'say a number', 'bring your history in', 'put it on your phone', 'name your first goal'];
+const EASE = ['easy', 'easy', 'medium', 'medium', 'easy', 'easy', 'easy', 'easy', 'easy'];
 
 // MCP.md: during a step sequence show only NOW, its difficulty, and the steps with done marks.
 function now(i, lines, ask) {
@@ -113,18 +115,21 @@ function step(done, site, tz) {
     'Authentication, Users, Add user, Create new user. Use the WIRE_EMAIL and WIRE_PASSWORD from step 3 and tick Auto Confirm User.'
   ], 'Say done when the SQL ran and the user exists.') +
     '\n\n```sql\n' + TABLE_SQL.split("'Europe/Zurich'").join(`'${tz}'`).trim() + '\n```';
+  // The connector is the same for every AI: an HTTP MCP server at /api/mcp with the token in a header. Only
+  // where it is added differs, so the step names each place once and the buyer does the one that is theirs.
+  // The token is typed into a settings page or a terminal, never into the chat.
   if (done === 4) return now(4, [
-    'claude.ai, Settings, Connectors, Add custom connector.',
-    `Name it wire. URL: ${site}/api/mcp`,
-    'Authentication: No sign-in.',
-    'Request headers, Add header. Name: authorization. Value: Bearer, a space, then your WIRE_TOKEN.',
-    'Press Add.'
-  ], 'Say done when wire shows in your connectors.');
+    `Your Wire's connector is ${site}/api/mcp, and it lets an AI in with the header authorization: Bearer, a space, then your WIRE_TOKEN. Add it where your AI lives; one of these.`,
+    `claude.ai and the Claude app: Settings, Connectors, Add custom connector. Name wire, URL ${site}/api/mcp, Authentication No sign-in, Request headers: Add header, name authorization, value Bearer and your token. Press Add.`,
+    `Claude Code, in your own terminal, not in this chat: claude mcp add --transport http wire ${site}/api/mcp --header "authorization: Bearer YOUR_WIRE_TOKEN"`,
+    `Codex: put WIRE_TOKEN in your shell's environment, then in ~/.codex/config.toml add [mcp_servers.wire] with url = "${site}/api/mcp" and bearer_token_env_var = "WIRE_TOKEN".`,
+    'Any other AI that can add an MCP server: an HTTP server named wire at that address, with that header.'
+  ], 'The token goes in a settings page or a terminal, never in this chat. Say done when wire shows in your AI\'s connectors or servers.');
   if (done === 5) return now(5, [
-    'Start a new chat. Press +, Connectors, and turn wire on.',
+    'Start a new chat or session with wire on. On claude.ai: press +, Connectors, and turn wire on. In a terminal: a new session finds it.',
     'Say a reading, like: my weight today is 81.4 kg.',
-    'Claude shows you the row before it writes it. Say yes.'
-  ], 'Say done when Claude says it wrote the row.');
+    'Your AI shows you the row before it writes it. Say yes.'
+  ], 'Say done when it says it wrote the row.');
   if (done === 6) return now(6, [
     `Open ${site}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`,
     'Export from something you already use. Whoop, Apple Health, Strava, a bank, a spreadsheet: anything with an export button gives you a CSV.',
@@ -133,11 +138,30 @@ function step(done, site, tz) {
     'Take the rates and leave the totals. Percentage watched, not views. Minutes a session, not minutes. A total that only climbs leaves its own baseline behind and can never hold an index; a rate has a level to vary around.',
     'Press go.'
   ], 'Say done when the rows have landed.');
-  return `Done. Your history is in.\n\nYour connector is ${site}/api/mcp\nKeep your WIRE_TOKEN safe; it is what lets Claude in.\n\n`
-    + `Two doors are open to you now and they cover most of it.\n`
-    + `  Say it     any reading, to Claude, in a chat with wire on\n`
+  if (done === 7) return now(7, [
+    'The Claude app on your phone has wire already: a connector added on claude.ai is there too. New chat, +, Connectors, wire on, say a reading.',
+    'For a reading you take every day, one tap: Shortcuts app, +, add the action Get Contents of URL.',
+    `URL ${site}/api/at, Method POST. Headers: Authorization, value Bearer and your WIRE_TOKEN. Request Body, JSON: metric (Text) is the stock's name, value (Number), unit (Text).`,
+    'Put an Ask for Input action before it and pass its number as value, so a tap asks for the reading. Add the shortcut to your home screen.',
+    'It lands once per stock per day; a second tap on the same day lands nothing. The token sits in the header and never in the address.'
+  ], 'No iPhone? Say done and move on; the Claude app is a door on any phone. Otherwise say done when a tap has landed a reading.');
+  if (done === 8) return now(8, [
+    'In a chat with wire on, say what you are working toward, what measures it, and what you think moves it. Like: my goal is a leaner body; the outcomes are weight and waist; the levers are steps and sleep hours.',
+    'Name stocks you have already logged. A goal is a question asked of readings, so it can only point at stocks that exist.',
+    'For each outcome, say which way is better: up, down, or a band between two numbers. That is the one thing the maths cannot decide, and you decide it once.',
+    'Your AI shows the rows before it writes them. Say yes.',
+    `Open ${site}/you.html. The goal is in the sidebar; open it and its outcomes and levers are on its page.`
+  ], 'Say done when the goal is on your page.');
+  return `Done. Your Wire is yours.\n\nYour connector is ${site}/api/mcp\nKeep your WIRE_TOKEN safe; it is what lets an AI in.\n\n`
+    + `What happens now. Every reading lands as it arrives. A stock's index starts drawing once its first readings have a spread `
+    + `and freezes at thirty readings; until then, 100 is still moving. A goal's line is the average of its outcomes' indexes. `
+    + `A thing you did, a commit, gets an answer after ten days on each side of it, and only a real one: under that, or an effect `
+    + `too small to tell from noise, it says so instead.\n\n`
+    + `Three doors are open to you now and they cover most of it.\n`
+    + `  Say it     any reading, to your AI, in a chat with wire on\n`
+    + `  Tap it     the shortcut on your phone\n`
     + `  Drop it    any export, any app, onto ${site}/you.html\n\n`
-    + `A third kind of door exists, one that fetches your numbers every morning without you, and it is not open yet: `
+    + `A fourth kind of door exists, one that fetches your numbers every morning without you, and it is not open yet: `
     + `each one needs that service's keys and a schedule on a machine that is always on. `
     + `Until you set one up, every reading arrives because you sent it. That is worth knowing before you plan around it.`;
 }
@@ -166,6 +190,19 @@ function setupServer() {
       return { content: [{ type: 'text', text }] };
     }
   );
+  // /you: the one prompt. An AI that turns a connector's prompts into slash commands gets it as one; any
+  // other is handed the same words to paste. It asks for the key itself, so the buyer types nothing else.
+  server.registerPrompt('you', {
+    title: '/you',
+    description: 'Set up your own Wire, one step at a time.',
+    argsSchema: { license_key: z.string().optional().describe('Your Whop license key, if you have it to hand') }
+  }, ({ license_key }) => ({
+    messages: [{ role: 'user', content: { type: 'text', text:
+      'Set up my Wire. Use the setup tool on this connector. ' +
+      (license_key ? `My license key is ${license_key}; pass it on every call. ` : 'Ask me for my Whop license key first and pass it on every call. ') +
+      'Show me only what setup returns, as it is, one step at a time. When I say done, call it again with done raised by one, ' +
+      'and pass my site address and timezone once I have given them. Never ask me for a password, token or key.' } }]
+  }));
   return server;
 }
 

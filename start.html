@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>/you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap">
+<style>
+  /* The page a buyer lands on from Whop. Their key is on the page they came from; this one has the rest:
+     where to connect, the one thing to say, and what will happen. It reads nothing and holds no data. */
+  :root { --ground:#0e1113; --ink:#e8e4dc; --dim:#9aa3a8; --muted:#5d666b; --edge:#252d33; --teal:#5fc4b4; --amber:#c9a25a; }
+  body { background:var(--ground); color:var(--ink); font:500 16px/1.55 "Manrope",system-ui,sans-serif; margin:0; padding:48px 16px 80px; }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:56px; font-weight:800; letter-spacing:-.03em; margin:0 0 6px; color:var(--teal); }
+  .lede { color:var(--dim); margin:0 0 44px; }
+  h2 { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; padding-top:22px; border-top:1px solid var(--edge); }
+  h3 { font-size:15px; font-weight:800; margin:22px 0 6px; }
+  p { margin:0 0 10px; } p.q { color:var(--dim); }
+  code, pre { font:500 13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  pre { position:relative; margin:8px 0 0; padding:14px 92px 14px 16px; background:#151a1d; border:1px solid var(--edge); border-radius:8px; white-space:pre-wrap; word-break:break-all; }
+  pre button { position:absolute; top:9px; right:9px; font:600 12px/1 "Manrope",system-ui,sans-serif; padding:8px 10px; border:0; border-radius:6px; background:var(--ink); color:var(--ground); cursor:pointer; }
+  pre button:active { background:var(--teal); }
+  .say { font-size:22px; font-weight:800; padding:22px 24px; border-left:3px solid var(--amber); background:#151a1d; border-radius:0 8px 8px 0; }
+  ol { margin:0; padding-left:0; list-style:none; counter-reset:s; }
+  ol li { display:flex; gap:14px; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--edge); }
+  ol li::before { counter-increment:s; content:counter(s); width:22px; flex:none; color:var(--muted); font-weight:800; }
+  ol li span { flex:1; } ol li small { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .safe { margin-top:44px; color:var(--dim); border-top:1px solid var(--edge); padding-top:22px; }
+  .safe b { color:var(--ink); }
+</style>
+
+<main>
+  <h1>/you</h1>
+  <p class="lede">Your license key is on the Whop page you came from. Everything else is here, and it takes three things.</p>
+
+  <h2>1 · Connect</h2>
+  <p class="q">The setup connector lives at <code class="addr">this site</code><code>/api/setup</code>. Add it where your AI lives. One of these.</p>
+
+  <h3>claude.ai, and the Claude app</h3>
+  <p>Settings, Connectors, Add custom connector. Name it <code>you</code>, no sign-in, and the address:</p>
+  <pre><span class="addr">https://this-site</span>/api/setup<button data-copy>Copy</button></pre>
+
+  <h3>Claude Code</h3>
+  <p>In your terminal:</p>
+  <pre>claude mcp add --transport http you <span class="addr">https://this-site</span>/api/setup<button data-copy>Copy</button></pre>
+
+  <h3>Codex</h3>
+  <p>In <code>~/.codex/config.toml</code>:</p>
+  <pre>[mcp_servers.you]
+url = "<span class="addr">https://this-site</span>/api/setup"<button data-copy>Copy</button></pre>
+
+  <h3>Any other AI</h3>
+  <p>If it can add an MCP server, it can do this: an HTTP server named <code>you</code> at that address. No token, no sign-in. The license key is the door.</p>
+
+  <h2>2 · Say it</h2>
+  <p class="q">An AI that turns a connector's prompts into commands, Claude Code among them, now has one. Type <code>/you</code> and pick it. Everywhere else, say this:</p>
+  <p class="say">Set up my Wire.</p>
+  <p class="q" style="margin-top:10px">It asks for your key, then gives you one step at a time. Say <b>done</b> after each. It never asks for a password, token or key, and you never paste one into the chat.</p>
+
+  <h2>3 · What happens</h2>
+  <ol>
+    <li><span>Fork the repo</span><small>easy</small></li>
+    <li><span>Deploy on Vercel</span><small>easy</small></li>
+    <li><span>Add the env vars</span><small>medium</small></li>
+    <li><span>Run the table</span><small>medium</small></li>
+    <li><span>Add your connector</span><small>easy</small></li>
+    <li><span>Say a number</span><small>easy</small></li>
+    <li><span>Bring your history in</span><small>easy</small></li>
+    <li><span>Put it on your phone</span><small>easy</small></li>
+    <li><span>Name your first goal</span><small>easy</small></li>
+  </ol>
+  <p class="q" style="margin-top:14px">The AI relays each step and you do the clicking, so a step costs one short message, not a build.</p>
+
+  <p class="safe"><b>Where your data lives.</b> Your Wire lands on your own GitHub, Vercel and Supabase. This connector sees your license key and nothing else: it has no door to any ledger, yours or anyone's.</p>
+</main>
+
+<script>
+  // The address is this site's own, so the page is right wherever it is served from.
+  for (const el of document.querySelectorAll('.addr')) el.textContent = location.origin;
+  for (const b of document.querySelectorAll('[data-copy]')) b.onclick = () => {
+    const pre = b.parentElement, text = [...pre.childNodes].filter(n => n !== b).map(n => n.textContent).join('').trim();
+    navigator.clipboard?.writeText(text).then(() => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1200); });
+  };
+</script>

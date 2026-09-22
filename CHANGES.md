@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, /you.** The setup walkthrough is nine steps and one
+  prompt. The connector now publishes a prompt called `you`: an AI that
+  turns a connector's prompts into commands shows it as `/you`, and any
+  other is handed the same words. Step five names every place a connector
+  can be added, claude.ai, Claude Code, Codex and any AI that speaks MCP,
+  with the token typed into a settings page or a terminal and never into
+  the chat. Two steps follow the history import: the phone, where the
+  Claude app already has the connector and a Shortcut lands one reading a
+  tap, and the first goal, with what measures it, what moves it, and which
+  way is better. The closing message says what to expect: an index once a
+  stock's readings have a spread, frozen at thirty, and a commit's answer
+  after ten days each side. `start.html` is the page a buyer lands on
+  from Whop: the three connect lines, the one thing to say, the nine
+  steps. It fills in the site's own address and reads nothing.
 - **22 Sep 2026, the setup walkthrough reaches its last word.** When the
   seventh step was added, the `done` count the setup tool accepts stayed
   at six, so a buyer who finished bringing their history in was refused
