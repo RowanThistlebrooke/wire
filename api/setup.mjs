@@ -93,11 +93,14 @@ const FIX = {
     + 'Never pick Pro. Then carry on with the step.'
 };
 
+// A question the tool has to ask on its own is shown under the step it belongs to, so the AI keeps its count:
+// the timezone belongs to the table, which AI to the connector, the site address to whichever step needs it.
 const ASK = {
-  site: 'Before the next step: paste your site address from Vercel, like https://my-wire-xxxx.vercel.app.',
-  timezone: 'Before the table: which timezone do you live in? Say its name, like Europe/London or America/New_York.',
-  ai: 'Before the connector: which AI are you using, the Claude app, Claude Code, Codex, or another?'
+  site: { step: null, say: 'Paste your site address from Vercel, like https://my-wire-xxxx.vercel.app.' },
+  timezone: { step: 1, say: 'Which timezone do you live in? Say its name, like Europe/London or America/New_York.' },
+  ai: { step: 2, say: 'Which AI are you using: the Claude app, Claude Code, Codex, or another?' }
 };
+const HEAD = i => `Step ${i + 1} of ${STEPS.length}, ${STEPS[i]}.`;
 
 // A site address is an https origin and nothing else.
 const origin = s => {
@@ -165,13 +168,13 @@ function steps(site, ai, self) {
         'Check that wire shows in your AI\'s connectors or servers.'
       ],
       ask: 'Say done when wire shows there.' },
-    { lines: [
-        ai && ai !== 'app' ? 'Start a new session. It finds wire by itself.' : 'Start a new chat. Press +, Connectors, and turn wire on.',
+    { need: ['site', 'timezone', 'ai'], lines: [
+        ai && ai !== 'app' ? `Start a new session. It finds wire, the one at ${s}/api/mcp, by itself.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at ${s}/api/mcp.`,
         'Say a reading, like: my weight today is 81.4 kg.',
         'Your AI shows you the row before it writes it. Say yes.'
       ],
       ask: 'Say done when it says it wrote the row.' },
-    { need: ['site'], lines: [
+    { need: ['site', 'timezone', 'ai'], lines: [
         `Open ${s}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`,
         'Export a CSV from something you already use: Whoop, Apple Health, Strava, a bank, a spreadsheet. Anything with an export button.',
         'Drag the CSV onto the page. It reads every row it can and says how many it could not, and why.',
@@ -180,11 +183,11 @@ function steps(site, ai, self) {
         'Press go.'
       ],
       ask: 'Say done when the rows have landed.' },
-    { lines: [
-        'The Claude app on your phone has wire already. New chat, +, Connectors, wire on, say a reading.'
+    { need: ['site', 'timezone', 'ai'], lines: [
+        `The Claude app on your phone has wire already. New chat, +, Connectors, turn on wire, the one at ${s}/api/mcp, and say a reading.`
       ],
       ask: 'Say done when a reading from your phone has landed.' },
-    { need: ['site'], lines: [
+    { need: ['site', 'timezone', 'ai'], lines: [
         'In a chat with wire on, say what you are working toward, what measures it, and what moves it. Like: my goal is a leaner body; the outcomes are weight and waist; the levers are steps and sleep hours.',
         'Name only stocks you have already logged. A goal can only point at stocks that exist.',
         'For each outcome say which way is better: up, down, or a band between two numbers.',
@@ -214,11 +217,11 @@ function step(done, site, timezone, ai, self, confirmed) {
   const i = Math.min(Math.max(0, done), S.length);
   if (i >= S.length) return end(site);
   const st = S[i];
-  for (const n of st.need || []) if (!given[n]) return ASK[n];
-  if ((st.need || []).includes('timezone') && !confirmed) return CONFIRM(timezone);
+  for (const n of st.need || []) if (!given[n]) return `${HEAD(ASK[n].step ?? i)}\n- ${ASK[n].say}`;
+  if ((st.need || []).includes('timezone') && !confirmed) return `${HEAD(1)}\n- ${CONFIRM(timezone)}`;
   const sql = '\n\n```sql\n' + TABLE_SQL.split("'Europe/Zurich'").join(`'${timezone}'`).trim() + '\n```\n';
   const body = st.lines.map(l => typeof l === 'string' ? '- ' + l : '- ' + l.say + (l.sql ? sql : '')).join('\n');
-  const head = (i === 0 ? 'Seven steps, one message each. Say done after each one.\n\n' : '') + `Step ${i + 1} of ${STEPS.length}, ${STEPS[i]}.`;
+  const head = (i === 0 ? 'Seven steps, one message each. Say done after each one.\n\n' : '') + HEAD(i);
   return `${head}\n${body}\n\n${st.ask}`;
 }
 
@@ -226,8 +229,9 @@ function setupServer(self) {
   const server = new McpServer({ name: 'wire-setup', version: '1.0.0' }, {
     instructions: 'Sets up the Wire, one step at a time. Before anything, ask for the Whop license key and call setup with it. ' +
       'Show the user exactly what setup returns and nothing else: no commentary, nothing about what comes later, links left as they are so they can be clicked. ' +
-      'When the user says done, call setup again with done raised by one. ' +
-      'Pass the site address, the timezone and the name of their AI on every call once the user has given them. ' +
+      'done is the number in the last "Step N of 7" message the user has finished: when they say done to step N, call setup with done N. ' +
+      'A question under a step heading is part of that step, not a step: when the user answers it, call setup again with the same done and the answer. ' +
+      'Pass the site address, the timezone and the name of their AI on every call once the user has given them; a later step is not given out until they are. ' +
       'If the user says Supabase wants them to pay, or that Free is unavailable, call setup with stuck set to supabase and the same done, and show its answer as it is. ' +
       'The timezone is only ever what the user typed in this conversation, never filled in from memory or guessed. When setup shows a timezone back and asks, ' +
       'pass timezone_confirmed true only after the user says yes to it. Never ask for a password, token or key.'
@@ -235,7 +239,7 @@ function setupServer(self) {
   server.tool(
     'setup',
     'The next step of setting up the Wire, and only that step. Pass the user\'s Whop license key every time; without a valid one there is no walkthrough. ' +
-    'done is how many steps the user has finished (0 to start); raise it by one when they say done. ' +
+    'done is the number of the last step the user finished, the N in "Step N of 7" they said done to (0 to start). Answering a question is not done: pass the same done and the answer. ' +
     'site is their Vercel site address, timezone their timezone name, ai which AI they are using, each passed on every call once given. ' +
     'stuck is what the user is stuck on, with the same done: supabase when Supabase asks them to pay or Free is unavailable. ' +
     'timezone is only what the user typed here, never from memory. timezone_confirmed is true only once the user has said yes to the timezone setup showed back. ' +
@@ -267,7 +271,7 @@ function setupServer(self) {
     messages: [{ role: 'user', content: { type: 'text', text:
       'Set up my Wire. Use the setup tool on this connector. ' +
       (license_key ? `My license key is ${license_key}; pass it on every call. ` : 'Ask me for my Whop license key first and pass it on every call. ') +
-      'Show me only what setup returns, as it is, with nothing added and links left clickable. When I say done, call it again with done raised by one, ' +
+      'Show me only what setup returns, as it is, with nothing added and links left clickable. When I say done to "Step N of 7", call it again with done N; when I answer a question, call it again with the same done and my answer, ' +
       'and pass my site address, my timezone and which AI I am using on every call once I have given them. ' +
       'If I say Supabase wants me to pay, or Free is unavailable, call it with stuck set to supabase and show me its answer. ' +
       'My timezone is only what I type here; never fill it in from what you know about me. When setup shows a timezone back, pass timezone_confirmed only after I say yes. Never ask me for a password, token or key.' } }]

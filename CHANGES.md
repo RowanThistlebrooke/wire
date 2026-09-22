@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, no step before its answers.** The connector step asked
+  which AI the buyer uses, but nothing held the next step back until it
+  was answered, and the question was not tied to its step, so an AI
+  counted the answer as a done and went from the question to step four:
+  the buyer's own Wire was never added, and their first reading would
+  have landed in whichever Wire they already had connected. Now every
+  step after the connector needs the site address, the confirmed
+  timezone and the AI before it is given out, and any question the tool
+  asks on its own is shown under the step it belongs to, so the count
+  cannot drift past that step. `done` is the N of the "Step N of 7" the
+  buyer said done to, and answering a question is not done. Step four
+  names the buyer's own connector by its address, so a buyer with more
+  than one Wire turns on the right one.
+
 - **22 Sep 2026, an example that cannot be real.** The example site
   address in step one, `my-wire.vercel.app`, became a real site the
   moment someone deployed with the default name, so an AI reading a
