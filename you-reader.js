@@ -30,11 +30,22 @@ async function readAll(make) {
 
 // An append-only ledger changes whenever its exact row count changes, even
 // when a new row belongs to an older day. A HEAD count returns no event rows.
+// A table that is not there yet answers a HEAD with 404 and no body, and
+// postgrest-js reports that as status 204 with no error and no count; a
+// select on it names the table in the error instead. Both mean the same
+// thing on a fresh deploy: the table has not been run, and the page says so.
 async function readLedgerRevision(db) {
-  const { count, error } = await db.from('events').select('id', { count:'exact', head:true });
-  if (error) throw error;
+  const { count, error, status } = await db.from('events').select('id', { count:'exact', head:true });
+  if (error && !tableMissing(error)) throw error;
+  if (tableMissing(error) || (status === 204 && count === null)) throw noTable();
   if (!Number.isSafeInteger(count) || count < 0) throw new Error('The ledger revision could not be read.');
   return count;
+}
+const tableMissing = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /relation .* does not exist|find the table/i.test(e.message || ''));
+function noTable() {
+  const e = new Error('The events table is not there yet. Run the table, step two of the setup, then reload.');
+  e.code = 'no-table';
+  return e;
 }
 
 // ---- the doors: is the ledger being fed? ----

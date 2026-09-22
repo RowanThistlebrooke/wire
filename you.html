@@ -1361,7 +1361,7 @@ let CROSS = null;   // every lever against its goal's outcomes, from crossGrid
 let PHOTOS = [], SIGNED = null, SIGNAT = 0, SHOTKEY = '';   // a photo per goal per day, newest day first; their signed addresses, when those were asked for, and what the strip last drew
 let DAYS = [], LEDGER = null, NOTES = [], LTOKEN = 0, SHOWLEDGER = NAV.has('ledger') || NAV.get('view') === 'ledger';   // the day rows, the ledger's rows and current notes once its tab is open, and which view is up
 let LM = null, LSECTION = '', LG = NAV.get('group') || '', LMODE = NAV.get('mode') === 'sources' ? 'sources' : 'goals', LQUERY = '';   // opened stock, goal filter, and ledger navigation
-let SOURCEINFO = {}, REVISION = null, LAST_CHECK = null, LAST_REFRESH = null, REFRESH_ERROR = '', REFRESH_BUSY = false, LOAD_VERSION = 0, AUTHENTICATED = false;
+let SOURCEINFO = {}, REVISION = null, LAST_CHECK = null, LAST_REFRESH = null, REFRESH_ERROR = '', NO_TABLE = false, REFRESH_BUSY = false, LOAD_VERSION = 0, AUTHENTICATED = false;
 const REFRESH_MS = 30000;
 let RULEPENDING = null, ASSIGNPENDING = null, DRAGSTOCK = null, PEEKGOAL = null;
 // Categories and sections are navigation, not measurements or scoring defaults.
@@ -1942,7 +1942,7 @@ async function load(){
   TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids; STARTS = starts;
   FEEDS = feedOf(feeds);   // legacy ledger feed ages, not import results
   SAVEDMEASUREMENTS = info.latestSavedByMetric || {}; SOURCEINFO = info.bySource; UNITS = info.units; SOURCES = info.sources; REVISION = revision;
-  LAST_REFRESH = LAST_CHECK = new Date().toISOString(); REFRESH_ERROR = '';
+  LAST_REFRESH = LAST_CHECK = new Date().toISOString(); REFRESH_ERROR = ''; NO_TABLE = false;
   ALLCOMMITS = commits; COMMITS = liveCommits(commits, cvoids);
   // each stock's own limit, its door's promise plus the slack, before anything reads a stock as stale:
   // YOU is drawn through it below, and a goal line and the rail draw through it at every draw
@@ -2076,10 +2076,10 @@ function dataState(metrics){
 function drawStatus(g){
   const m = shown(), v = VIEW;
   if (!v) $('latest-plotted').textContent = 'No recorded history';
-  const status = REFRESH_ERROR ? 'Connection failed' : dataState(m ? [m] : g.measures);
+  const status = REFRESH_ERROR ? NO_TABLE ? 'No table yet' : 'Connection failed' : dataState(m ? [m] : g.measures);
   document.body.classList.toggle('connection-error',!!REFRESH_ERROR);
   $('data-state').textContent = status; $('data-state').className = REFRESH_ERROR ? 'failed' : status === 'Waiting for data' ? 'waiting' : '';
-  $('data-state').title = REFRESH_ERROR ? 'The dashboard could not read the ledger. This does not establish an importer failure.' : 'Reading dates checked against each source’s existing delay allowance. This is not an import-success check.';
+  $('data-state').title = REFRESH_ERROR ? NO_TABLE ? REFRESH_ERROR : 'The dashboard could not read the ledger. This does not establish an importer failure.' : 'Reading dates checked against each source’s existing delay allowance. This is not an import-success check.';
   const sources = Object.keys(SOURCEINFO).sort();
   const freshness = feedOf(Object.fromEntries(sources.map(source => [source, SOURCEINFO[source].latestReadingAt])));
   $('source-status').innerHTML = '<p class="status-explanation">Reading freshness does not prove an import succeeded. These are the sources already recorded in this ledger; current connection and schedule health are not recorded. Sources that have never written cannot be identified here.</p>' + sources.map(source => {
@@ -2090,7 +2090,7 @@ function drawStatus(g){
 }
 function drawRefreshStatus(){
   $('refresh-meta').dataset.checked = LAST_CHECK || ''; $('refresh-meta').dataset.loaded = LAST_REFRESH || '';
-  $('refresh-meta').textContent = REFRESH_ERROR ? 'Dashboard connection failed. ' + (LAST_REFRESH ? 'Showing the last loaded data. ' : 'No data has been loaded. ') + REFRESH_ERROR : `Dashboard checked: ${stamp(LAST_CHECK)}. Data loaded: ${stamp(LAST_REFRESH)}. Checks every 30 seconds while visible and when you return. These checks read the ledger; they do not run or verify imports.`;
+  $('refresh-meta').textContent = NO_TABLE ? REFRESH_ERROR : REFRESH_ERROR ? 'Dashboard connection failed. ' + (LAST_REFRESH ? 'Showing the last loaded data. ' : 'No data has been loaded. ') + REFRESH_ERROR : `Dashboard checked: ${stamp(LAST_CHECK)}. Data loaded: ${stamp(LAST_REFRESH)}. Checks every 30 seconds while visible and when you return. These checks read the ledger; they do not run or verify imports.`;
 }
 function measurementReason(m){
   const row = LAST[m], pts = SERIES[m], rule = RULES[m];
@@ -2817,6 +2817,7 @@ function drawChart(anim){
   const gate = available ? !pts.length ? 'none' : pts.some(p => p.included.some(m => indexState(SERIES[m]) === 'moving')) ? 'moving' : 'firm' : indexState(pts);
   const raw = chartReadings(m ? [m] : trackedOf(g));
   clearChartReadout(false);
+  if (!N){ $('c').innerHTML = ''; VIEW = null; return; }   // nothing has loaded: day zero is 1970, not a date on this ledger
   if (m && gate === 'none' && !FC && !FX){ drawRawStock(m, raw); return; }
   $('chart-note').textContent = available ? 'Average of the outcomes scored that day. The count shows how much is known; membership can change. Bottom marks show logged days without a score.' : FC || FX ? 'Comparison uses complete index days. Hover any day to see what was logged.' : 'This stock’s index. Hover any day to see its logged value.';
   $('c').setAttribute('aria-label', m ? m + ' index' : g.name + ' available outcomes');
@@ -2897,7 +2898,8 @@ function drawChart(anim){
     s += `<line x1="${X}" x2="${X}" y1="${T}" y2="${H - B}" stroke="#c9695c" stroke-opacity=".45" stroke-dasharray="2 4"/><text class="tag" x="${W - R}" y="${H - B - 6}" text-anchor="end" style="fill:#c9695c">${Math.max(...stopped.map(x => since(LAST[x].day)))} d</text>`; }
   if (li >= 0 && gate !== 'none'){ const X = x(li).toFixed(1), Y = tagY.toFixed(1);   // the latest index is a number too: under the gate it is not written either
     s += `<circle class="pulse" cx="${X}" cy="${Y}" r="9" fill="${col}"/><circle cx="${X}" cy="${Y}" r="3.2" fill="${col}"/><text class="tag" x="${W - R + 10}" y="${(tagY + 3.5).toFixed(1)}" style="fill:${col}">${line[li]}</text>`; }
-  s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text><g id="hov"></g>`;
+  if (gate !== 'none' || raw.length || fc || fx) s += `<text x="0" y="${H - 6}">${dstr(D0 + i0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${dstr(D0 + i1)}</text>`;   // an empty ledger has no dates to show
+  s += `<g id="hov"></g>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.classList.toggle('still', !anim); svg.innerHTML = s;
   VIEW = { m, pts, line, raw, available, i0, i1, x, y, W, H, T, B, R, col, gate };
   drawLeverTimeline();   // the gate travels with the view, so reading the chart can never show what it did not draw
@@ -3779,11 +3781,11 @@ async function refreshDashboard(force = false){
       return;
     }
     const [revision, today] = await Promise.all([readLedgerRevision(db), readDay(db)]);
-    LAST_CHECK = new Date().toISOString(); REFRESH_ERROR = '';
+    LAST_CHECK = new Date().toISOString(); REFRESH_ERROR = ''; NO_TABLE = false;
     if (force || revision !== REVISION || today !== TODAY){ await load(); render(); }
     else if (!SHOWLEDGER && !AREAVIEW) drawStatus(cur());
   } catch (e) {
-    REFRESH_ERROR = e.message || String(e); if (!SHOWLEDGER && !AREAVIEW) drawStatus(cur());
+    REFRESH_ERROR = e.message || String(e); NO_TABLE = e.code === 'no-table'; if (!SHOWLEDGER && !AREAVIEW) drawStatus(cur());
   } finally { REFRESH_BUSY = false; }
 }
 let returnCheck = null;
@@ -3899,7 +3901,7 @@ db.auth.getSession().then(async ({ data }) => {
     // right after sign in the database can see a fresh token a second early and refuse it. once more, a moment later
     try { await load(); } catch (e) { if (!/jwt/i.test(e.message || '')) throw e; await new Promise(r => setTimeout(r, 1500)); await load(); }
     READY = true; applyView(); render(); lastW = Math.round($('chart').clientWidth);
-  } catch (e) { REFRESH_ERROR = e.message || String(e); say(REFRESH_ERROR); $('data-state').textContent = 'Connection failed'; $('data-state').className = 'failed'; drawRefreshStatus(); }
+  } catch (e) { REFRESH_ERROR = e.message || String(e); NO_TABLE = e.code === 'no-table'; say(REFRESH_ERROR); $('data-state').textContent = NO_TABLE ? 'No table yet' : 'Connection failed'; $('data-state').className = 'failed'; drawRefreshStatus(); }
   finally { REFRESH_BUSY = false; }
 });
 </script>

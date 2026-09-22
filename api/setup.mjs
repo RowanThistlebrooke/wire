@@ -19,17 +19,10 @@ const TABLE_SQL = readFileSync(new URL('../sql/01_the_table.sql', import.meta.ur
 
 // One link does the first three steps of the old walkthrough: Vercel's Deploy Button copies the repo into the
 // buyer's own GitHub (a copy, not a fork, so the owner can walk it too), asks for the three settings in a form,
-// makes their Supabase database through the Marketplace store, and deploys. The store slugs are the ones on
-// vercel.com/marketplace/supabase; the parameters are from vercel.com/docs/deploy-button/source.
-const DEPLOY = 'https://vercel.com/new/clone?' + new URLSearchParams({
-  'repository-url': REPO,
-  'repository-name': 'my-wire',
-  'project-name': 'my-wire',
-  env: 'WIRE_EMAIL,WIRE_PASSWORD,WIRE_TOKEN',
-  envDescription: 'WIRE_EMAIL and WIRE_PASSWORD are the login you will sign in with. WIRE_TOKEN is a long random string you make up; it is what lets your AI in.',
-  envLink: `${REPO}#readme`,
-  stores: JSON.stringify([{ type: 'integration', integrationSlug: 'supabase', productSlug: 'supabase', protocol: 'storage' }])
-});
+// makes their Supabase database through the Marketplace store, and deploys. The full link is long enough to
+// read as spam in a chat, so it lives once, as the /deploy redirect in vercel.json, and the walkthrough hands
+// out the short address on this site. The store slugs are the ones vercel.com/marketplace/supabase uses in its
+// own deploy link; the parameters are from vercel.com/docs/deploy-button/source.
 
 // ---- the gate: a Whop license key, checked against Whop's API ----
 // GET /api/v1/memberships/{id} takes a membership id or a license key. A key
@@ -140,7 +133,8 @@ function lines(site, ai, self) {
   const add = (step, say, more) => L.push({ step, say, ...more });
   add(null, 'Seven steps, one line at a time. Say done after each line.');
 
-  add(0, `Open ${DEPLOY} and sign in with GitHub.`);
+  add(0, 'No GitHub account? Make a free one at github.com/signup first (email, password, a code to your email).');
+  add(0, `Open ${self}/deploy and sign in with GitHub.`);
   add(0, 'Under Add Products: Storage, Supabase, Postgres backend, Add, then Accept and Create. That is your database, and the three fields stay locked until it is added.');
   add(0, 'Pick the region nearest you, leave the prefix as it is, and pick Free. If Free says Unavailable, pause a Supabase project you are not using at supabase.com first. Never pick Pro.');
   add(0, `Open ${self}/token.html in a new tab and press Copy. That is your WIRE_TOKEN, made in your browser. Never paste it here.`);

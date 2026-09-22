@@ -3,6 +3,23 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **22 Sep 2026, a fresh deploy says what it is missing.** Before the
+  table has been run, `you.html` said "Connection failed" and "The
+  ledger revision could not be read". A HEAD count on a table that is
+  not there answers 404 with no body, and postgrest-js reports that as
+  status 204 with no error and no count, so the reader could not tell
+  it from a broken connection. `readLedgerRevision` in `you-reader.js`
+  now recognises that shape, and the error a select gives for a missing
+  table, and says: the events table is not there yet, run the table,
+  step two of the setup. The page shows "No table yet". The chart drew
+  before anything had loaded, with day zero as its first day, so its
+  axis read 1970-01-01 and 1969-12-31; it now draws nothing until the
+  ledger has loaded, and an empty ledger shows no dates. The Deploy link
+  is long enough to read as spam in a chat, so it lives once, as the
+  `/deploy` redirect in `vercel.json`, and the walkthrough and
+  `start.html` hand out the short address. Step one starts with where
+  to make a GitHub account for a buyer who has none.
+
 - **22 Sep 2026, one line at a time.** The `/you` walkthrough is seven
   steps, and every turn is one line: the buyer reads it, does it, says
   done, gets the next. `done` counts lines and has no ceiling in the
