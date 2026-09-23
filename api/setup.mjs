@@ -130,14 +130,15 @@ const which = s => {
 // it is added differs, so each AI gets its own line, and the token is typed into a settings page or a terminal,
 // never into the chat.
 function connect(site) {
+  const mcp = '`' + site + '/api/mcp`';
   return {
     app: [
-      `Settings, Connectors, Add custom connector: name wire, URL ${site}/api/mcp, No sign-in.`,
+      `Settings, Connectors, Add custom connector: name wire, URL ${mcp}, No sign-in.`,
       'Add header: name authorization, value Bearer and your WIRE_TOKEN. Press Add.'
     ],
-    code: [`In your own terminal, not in this chat: claude mcp add --transport http wire ${site}/api/mcp --header "authorization: Bearer YOUR_WIRE_TOKEN"`],
-    codex: [`Put WIRE_TOKEN in your shell's environment, then in ~/.codex/config.toml add [mcp_servers.wire] with url = "${site}/api/mcp" and bearer_token_env_var = "WIRE_TOKEN".`],
-    other: [`Add an MCP server named wire at ${site}/api/mcp, with the header authorization: Bearer, a space, then your WIRE_TOKEN.`]
+    code: ['In your own terminal, not in this chat: `claude mcp add --transport http wire ' + site + '/api/mcp --header "authorization: Bearer YOUR_WIRE_TOKEN"`'],
+    codex: ['Put WIRE_TOKEN in your shell\'s environment, then in `~/.codex/config.toml` add `[mcp_servers.wire]` with `url = "' + site + '/api/mcp"` and `bearer_token_env_var = "WIRE_TOKEN"`.'],
+    other: [`Add an MCP server named wire at ${mcp}, with the header authorization: Bearer, a space, then your WIRE_TOKEN.`]
   };
 }
 
@@ -181,16 +182,18 @@ function steps(site, ai, self) {
         'The token goes in a settings page or a terminal, never into a chat. Bearer, a space, then the token, exactly as it is in Vercel.',
         'If it will not connect, the token in the header is not the one in Vercel: in Vercel, Settings, Environment Variables, WIRE_TOKEN shows the one to use.',
         'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
-        'If you already have another Wire connected, this one is the one at ' + s + '/api/mcp. Keep the two apart by name.'
+        'If you already have another Wire connected, this one is the one at `' + s + '/api/mcp`. Keep the two apart by name.',
+        '`' + s + '/api/mcp` is the address your AI talks to, not a web page: opened in a browser it shows nothing, and that is right. Your page is ' + s + '/you.html.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        ai && ai !== 'app' ? `Start a new session with wire, the one at ${s}/api/mcp.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at ${s}/api/mcp.`,
+        ai && ai !== 'app' ? `Start a new session with wire, the one at \`${s}/api/mcp\`.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at \`${s}/api/mcp\`.`,
         'Say a reading, like: my weight today is 81.4 kg. Say yes to the row it shows you.'
       ],
       ask: 'Say done when it says it wrote the row.',
       more: [
         'Your AI prints the exact row before it writes anything and writes only on your yes. A row is never edited or removed; a wrong number is corrected by a new row.',
-        'Only one Wire should be on in that chat, the one at ' + s + '/api/mcp, or the reading lands in whichever is on.'
+        'Only one Wire should be on in that chat, the one at `' + s + '/api/mcp`, or the reading lands in whichever is on.',
+        '`' + s + '/api/mcp` is not a web page: opened in a browser it shows nothing, and that is right. It is only the address your AI talks to.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
         `Open ${s}/you.html and sign in.`,
@@ -203,7 +206,7 @@ function steps(site, ai, self) {
         'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `On your phone, in the Claude app: new chat, +, Connectors, turn on wire, the one at ${s}/api/mcp, and say a reading.`
+        `On your phone, in the Claude app: new chat, +, Connectors, turn on wire, the one at \`${s}/api/mcp\`, and say a reading.`
       ],
       ask: 'Say done when it has landed.',
       more: [
@@ -225,7 +228,7 @@ function steps(site, ai, self) {
 function end(site) {
   const s = site || 'your site';
   return 'Done. Your Wire is yours.\n'
-    + `Your connector is ${s}/api/mcp. Keep your WIRE_TOKEN safe; it is what lets an AI in.\n`
+    + `Your connector is \`${s}/api/mcp\`, the address your AI talks to, not a web page. Keep your WIRE_TOKEN safe; it is what lets an AI in.\n`
     + `Two doors are open: say a reading to your AI in any chat with wire on, or drop an export onto ${s}/you.html.\n`
     + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.';
 }
@@ -258,7 +261,7 @@ function step(done, site, timezone, ai, self, confirmed) {
 function setupServer(self) {
   const server = new McpServer({ name: 'wire-setup', version: '1.0.0' }, {
     instructions: 'Sets up the Wire, one step at a time. Before anything, ask for the Whop license key and call setup with it. ' +
-      'Show the user exactly what setup returns and nothing else: no commentary, nothing about what comes later, links left as they are so they can be clicked. ' +
+      'Show the user exactly what setup returns and nothing else: no commentary, nothing about what comes later, links left as they are so they can be clicked, and anything in backticks left as code, never made a link. ' +
       'done is the number in the last "Step N of 7" message the user has finished: when they say done to step N, call setup with done N. ' +
       'A question under a step heading is part of that step, not a step: when the user answers it, call setup again with the same done and the answer. ' +
       'Pass the site address, the timezone and the name of their AI on every call once the user has given them; a later step is not given out until they are. ' +

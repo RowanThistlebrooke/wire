@@ -3,6 +3,15 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, the connector address is not a link.** The address a
+  buyer's AI talks to, `<site>/api/mcp`, showed as a link in the chat,
+  and opened in a browser it is a blank page, which reads as broken. It
+  is now written as code everywhere the walkthrough gives it, the whole
+  Claude Code command and the Codex lines too, and the connector is
+  told to leave anything in backticks as code. The help for steps three
+  and four says it is not a web page, and the closing message says so
+  beside it.
+
 - **23 Sep 2026, when the name wire is taken.** A buyer who already has
   an MCP server called wire cannot add a second one under that name;
   Claude Code says "MCP server wire already exists in local config". The
