@@ -84,7 +84,7 @@ const STEPS = ['deploy', 'run the table', 'add your connector', 'say a number', 
 // two ways out, neither of them Pro. `deploy-existing` is /deploy without the Supabase store, asking for the
 // existing project's URL and publishable key as well; the table's SQL stops by itself if that project already
 // holds any of the Wire's three names.
-const stuckOn = s => /supabase|free|pay|paid|pro\b|unavailable|limit/i.test(String(s || '')) ? 'supabase' : null;
+const stuckOn = s => /\bpay|paid|money|cost|charge|\$|\bpro\b|unavailable|limit/i.test(String(s || '')) ? 'supabase' : null;
 const FIX = {
   supabase: self => 'Supabase asks for money when the account already has two active free projects; two is the free limit. Two ways out, and neither is Pro.\n'
     + '1. Pause a project you are not using. At supabase.com open it, Settings, General, Pause project. A paused project does not count. Then go back to the Vercel page and pick Free.\n'
@@ -132,8 +132,8 @@ const which = s => {
 function connect(site) {
   return {
     app: [
-      `Settings, Connectors, Add custom connector. Name wire. URL ${site}/api/mcp. Authentication: No sign-in.`,
-      'Request headers: Add header. Name authorization. Value: Bearer, a space, then your WIRE_TOKEN. Press Add.'
+      `Settings, Connectors, Add custom connector: name wire, URL ${site}/api/mcp, No sign-in.`,
+      'Add header: name authorization, value Bearer and your WIRE_TOKEN. Press Add.'
     ],
     code: [`In your own terminal, not in this chat: claude mcp add --transport http wire ${site}/api/mcp --header "authorization: Bearer YOUR_WIRE_TOKEN"`],
     codex: [`Put WIRE_TOKEN in your shell's environment, then in ~/.codex/config.toml add [mcp_servers.wire] with url = "${site}/api/mcp" and bearer_token_env_var = "WIRE_TOKEN".`],
@@ -144,57 +144,79 @@ function connect(site) {
 // `self` is this connector's own site, the one the buyer came from: it serves /deploy, and token.html, a page
 // that makes a WIRE_TOKEN in the browser, so a buyer with no terminal has one to paste into the form and never
 // into the chat. A line marked `sql` has the table's SQL printed right under it.
+// A step's message holds the doing and nothing else. What each line means, and what to do when it does not go
+// as written, is in its `more`, and the buyer sees it only by asking: their AI passes their words as `help`.
 function steps(site, ai, self) {
   const s = site || 'https://YOUR-SITE';   // never shown: every step that uses it carries need: 'site'
   return [
     { lines: [
-        'No GitHub account? Make a free one at github.com/signup first (email, password, a code to your email).',
         `Open ${self}/deploy and sign in with GitHub.`,
-        'Under Add Products: Storage, Supabase, Postgres backend, Add, then Accept and Create. That is your database, and the three fields stay locked until it is added.',
-        'Pick the region nearest you, leave the prefix as it is, and pick Free.',
-        `Open ${self}/token.html in a new tab and press Copy. That is your WIRE_TOKEN, made in your browser. Never paste it here.`,
-        'Fill the three fields: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, the one you just copied.',
-        'Press Deploy.'
+        `Add the Supabase database when the page asks, then fill the three boxes (the token comes from ${self}/token.html) and press Deploy.`
       ],
-      ask: 'Say done when it is live, with the site address it shows, like https://my-wire-xxxx.vercel.app, and the timezone you live in, like Europe/London.' },
+      ask: 'Say done with your site address and your timezone.',
+      more: [
+        'No GitHub account: make a free one at github.com/signup first (email, password, a code to your email).',
+        'The Supabase screen: Storage, Supabase, Postgres backend, Add, then Accept and Create. Pick the region nearest you, leave the prefix as it is, and pick Free. The three boxes stay locked until it is added.',
+        `The three boxes: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, a long random string. ${self}/token.html makes one in your browser: press Copy, paste it in the box, keep a copy somewhere safe, and never paste it into a chat.`,
+        'Your site address is the one Vercel shows when it is live, like https://my-wire-xxxx.vercel.app. Your timezone is its name, like Europe/London or America/New_York.'
+      ] },
     { need: ['timezone'], lines: [
-        'Open your Supabase project: in Vercel, Storage, Supabase, Open in Supabase. If you used deploy-existing, open it at supabase.com.',
-        { say: 'SQL Editor, New query. Paste the SQL below and press Run.', sql: true },
-        'Authentication, Users, Add user, Create new user. Use your WIRE_EMAIL and WIRE_PASSWORD and tick Auto Confirm User.'
+        'Open your Supabase project: in Vercel, Storage, Supabase, Open in Supabase.',
+        { say: 'SQL Editor, New query, paste the SQL below, Run.', sql: true },
+        'Authentication, Users, Add user: your WIRE_EMAIL and WIRE_PASSWORD, and tick Auto Confirm User.'
       ],
-      ask: 'Say done when the SQL ran and the user exists, and say which AI you are using: the Claude app, Claude Code, Codex, or another.' },
+      ask: 'Say done, and which AI you use: the Claude app, Claude Code, Codex, or another.',
+      more: [
+        'If you deployed with deploy-existing, open that project at supabase.com instead.',
+        'The SQL makes one table called events, a function called day_of and a view called day_metrics, and nothing else. If one of those names is already taken in that project, it stops before making anything and says which; then the Wire needs a different project.',
+        'Your day ends at 6am in your timezone, so a reading before 6am counts as the night before.',
+        'The user is the login for your own page, you.html. Nobody else can read your rows.'
+      ] },
     { need: ['site', 'ai'], lines: [
-        ...connect(s)[ai || 'app'],
-        'Check that wire shows in your AI\'s connectors or servers.'
+        ...connect(s)[ai || 'app']
       ],
-      ask: 'Say done when wire shows there.' },
+      ask: 'Say done when wire shows in your connectors.',
+      more: [
+        'The token goes in a settings page or a terminal, never into a chat. Bearer, a space, then the token, exactly as it is in Vercel.',
+        'If it will not connect, the token in the header is not the one in Vercel: in Vercel, Settings, Environment Variables, WIRE_TOKEN shows the one to use.',
+        'If you already have another Wire connected, this one is wire at ' + s + '/api/mcp. Keep the two apart by name.'
+      ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        ai && ai !== 'app' ? `Start a new session. It finds wire, the one at ${s}/api/mcp, by itself.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at ${s}/api/mcp.`,
-        'Say a reading, like: my weight today is 81.4 kg.',
-        'Your AI shows you the row before it writes it. Say yes.'
+        ai && ai !== 'app' ? `Start a new session with wire, the one at ${s}/api/mcp.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at ${s}/api/mcp.`,
+        'Say a reading, like: my weight today is 81.4 kg. Say yes to the row it shows you.'
       ],
-      ask: 'Say done when it says it wrote the row.' },
+      ask: 'Say done when it says it wrote the row.',
+      more: [
+        'Your AI prints the exact row before it writes anything and writes only on your yes. A row is never edited or removed; a wrong number is corrected by a new row.',
+        'Only one Wire should be on in that chat, the one at ' + s + '/api/mcp, or the reading lands in whichever is on.'
+      ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `Open ${s}/you.html and sign in with your WIRE_EMAIL and WIRE_PASSWORD.`,
-        'Export a CSV from something you already use: Whoop, Apple Health, Strava, a bank, a spreadsheet. Anything with an export button.',
-        'Drag the CSV onto the page. It reads every row it can and says how many it could not, and why.',
-        'Type a name beside each column you want. Leave the rest blank.',
-        'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.',
-        'Press go.'
+        `Open ${s}/you.html and sign in.`,
+        'Drag an export onto the page, name the columns you want, press go.'
       ],
-      ask: 'Say done when the rows have landed.' },
+      ask: 'Say done when the rows have landed.',
+      more: [
+        'An export is the CSV any app with an export button gives you: Whoop, Apple Health, Strava, a bank, a spreadsheet.',
+        'A column you leave blank is left out. The page says how many rows it could not read, and why.',
+        'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.'
+      ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `The Claude app on your phone has wire already. New chat, +, Connectors, turn on wire, the one at ${s}/api/mcp, and say a reading.`
+        `On your phone, in the Claude app: new chat, +, Connectors, turn on wire, the one at ${s}/api/mcp, and say a reading.`
       ],
-      ask: 'Say done when a reading from your phone has landed.' },
+      ask: 'Say done when it has landed.',
+      more: [
+        'A connector added on claude.ai is already in the Claude app on your phone, so there is nothing to set up there.'
+      ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        'In a chat with wire on, say what you are working toward, what measures it, and what moves it. Like: my goal is a leaner body; the outcomes are weight and waist; the levers are steps and sleep hours.',
-        'Name only stocks you have already logged. A goal can only point at stocks that exist.',
-        'For each outcome say which way is better: up, down, or a band between two numbers.',
-        'Your AI shows the rows before it writes them. Say yes.',
-        `Open ${s}/you.html. The goal is in the sidebar; open it and its outcomes and levers are on its page.`
+        'In a chat with wire on, say what you are working toward, what measures it, what moves it, and which way is better for each measure. Say yes to the rows.'
       ],
-      ask: 'Say done when the goal is on your page.' }
+      ask: `Say done when the goal is on ${s}/you.html.`,
+      more: [
+        'Like: my goal is a leaner body; the outcomes are weight and waist, both down; the levers are steps and sleep hours.',
+        'A goal can only point at stocks you have already logged.',
+        'Which way is better is up, down, or a band between two numbers. It is the one thing the maths cannot decide, and you decide it once.',
+        'The goal is in the sidebar of your page; open it and its outcomes and levers are on its page.'
+      ] }
   ];
 }
 
@@ -210,6 +232,12 @@ function end(site) {
 // knows its user is tempted to fill it in from memory. So the tool never uses one it has not shown back: the
 // first time a timezone arrives it is printed with what it means, and the SQL waits for the buyer's yes.
 const CONFIRM = tz => `${tz}: your day will end at 6am there, so a reading before 6am counts as the night before. Say yes if that is where you live, or say the timezone you do live in.`;
+
+// The explaining for the step the buyer is on, only when they ask for it.
+function more(done, site, ai, self) {
+  const S = steps(site, ai, self), i = Math.min(Math.max(0, done), S.length - 1);
+  return `${HEAD(i)}\n${S[i].more.map(l => '- ' + l).join('\n')}\n\n${S[i].ask}`;
+}
 
 function step(done, site, timezone, ai, self, confirmed) {
   const given = { site, timezone, ai };
@@ -232,7 +260,7 @@ function setupServer(self) {
       'done is the number in the last "Step N of 7" message the user has finished: when they say done to step N, call setup with done N. ' +
       'A question under a step heading is part of that step, not a step: when the user answers it, call setup again with the same done and the answer. ' +
       'Pass the site address, the timezone and the name of their AI on every call once the user has given them; a later step is not given out until they are. ' +
-      'If the user says Supabase wants them to pay, or that Free is unavailable, call setup with stuck set to supabase and the same done, and show its answer as it is. ' +
+      'If the user asks anything about the step, or is stuck, call setup with help set to their words and the same done, and show its answer as it is; never answer from your own knowledge. ' +
       'The timezone is only ever what the user typed in this conversation, never filled in from memory or guessed. When setup shows a timezone back and asks, ' +
       'pass timezone_confirmed true only after the user says yes to it. Never ask for a password, token or key.'
   });
@@ -241,7 +269,7 @@ function setupServer(self) {
     'The next step of setting up the Wire, and only that step. Pass the user\'s Whop license key every time; without a valid one there is no walkthrough. ' +
     'done is the number of the last step the user finished, the N in "Step N of 7" they said done to (0 to start). Answering a question is not done: pass the same done and the answer. ' +
     'site is their Vercel site address, timezone their timezone name, ai which AI they are using, each passed on every call once given. ' +
-    'stuck is what the user is stuck on, with the same done: supabase when Supabase asks them to pay or Free is unavailable. ' +
+    'help is the user\'s own words when they ask about the step or are stuck, with the same done; it returns the explaining for that step. ' +
     'timezone is only what the user typed here, never from memory. timezone_confirmed is true only once the user has said yes to the timezone setup showed back. ' +
     'Show the result to the user as it is and wait.',
     {
@@ -250,13 +278,15 @@ function setupServer(self) {
       site: z.string().optional(),
       timezone: z.string().optional(),
       ai: z.string().optional(),
+      help: z.string().optional(),
       stuck: z.string().optional(),
       timezone_confirmed: z.boolean().optional()
     },
-    async ({ license_key, done = 0, site, timezone, ai, stuck, timezone_confirmed = false }) => {
+    async ({ license_key, done = 0, site, timezone, ai, help, stuck, timezone_confirmed = false }) => {
       const gate = await licensed(license_key);
       const text = !gate.ok ? `No walkthrough without a valid Whop license key: ${gate.why}.`
-                 : stuckOn(stuck) ? FIX[stuckOn(stuck)](self)
+                 : stuckOn(help ?? stuck) ? FIX[stuckOn(help ?? stuck)](self)
+                 : (help ?? stuck) !== undefined ? more(done, site === undefined ? null : origin(site), which(ai), self)
                  : step(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self, timezone_confirmed === true);
       return { content: [{ type: 'text', text }] };
     }
@@ -273,7 +303,7 @@ function setupServer(self) {
       (license_key ? `My license key is ${license_key}; pass it on every call. ` : 'Ask me for my Whop license key first and pass it on every call. ') +
       'Show me only what setup returns, as it is, with nothing added and links left clickable. When I say done to "Step N of 7", call it again with done N; when I answer a question, call it again with the same done and my answer, ' +
       'and pass my site address, my timezone and which AI I am using on every call once I have given them. ' +
-      'If I say Supabase wants me to pay, or Free is unavailable, call it with stuck set to supabase and show me its answer. ' +
+      'If I ask about a step or get stuck, call it with help set to my words and the same done, and show me its answer. ' +
       'My timezone is only what I type here; never fill it in from what you know about me. When setup shows a timezone back, pass timezone_confirmed only after I say yes. Never ask me for a password, token or key.' } }]
   }));
   return server;

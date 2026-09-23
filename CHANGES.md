@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, the doing, and the explaining on demand.** Every step
+  of the `/you` walkthrough is cut to what to do. Step one is two lines
+  and a closing one: open the Deploy link and sign in with GitHub; add
+  the Supabase database, fill the three boxes with the token from the
+  token page, press Deploy; say done with the site address and the
+  timezone. What each line means, and what to do when it does not go as
+  written, sits in the step's own help: the buyer's AI passes their
+  question as `help` and gets it for the step they are on, and a
+  question about paying or Free being unavailable gets the Supabase
+  fix. The region, the prefix and Free, what the three boxes are and
+  where the token comes from are also written on the Deploy page itself,
+  beside the boxes.
+
 - **22 Sep 2026, no step before its answers.** The connector step asked
   which AI the buyer uses, but nothing held the next step back until it
   was answered, and the question was not tied to its step, so an AI
