@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, one token, and it lives in Vercel.** `token.html` kept
+  its token for one tab, and the walkthrough says to open it in a new
+  one, so a buyer who came back to it at step three got a new token that
+  Vercel had never seen, and a 401. It now keeps the token in the
+  browser, so it shows the same one in any tab until the buyer asks for
+  another, and asking warns that a new one will not connect until it is
+  in Vercel too. Step three says the token is the WIRE_TOKEN in Vercel,
+  with the reveal icon, and not a new one from the token page. Vercel
+  marks WIRE_TOKEN and WIRE_PASSWORD Needs Attention because they are
+  not Sensitive. The walkthrough relies on reading them back, and a
+  Sensitive value can never be shown again, so the help for steps one
+  and three says to leave them.
+
 - **23 Sep 2026, the connector address is not a link.** The address a
   buyer's AI talks to, `<site>/api/mcp`, showed as a link in the chat,
   and opened in a browser it is a blank page, which reads as broken. It

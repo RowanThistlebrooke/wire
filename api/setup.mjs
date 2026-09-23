@@ -159,6 +159,7 @@ function steps(site, ai, self) {
         'No GitHub account: make a free one at github.com/signup first (email, password, a code to your email).',
         'The Supabase screen: Storage, Supabase, Postgres backend, Add, then Accept and Create. Pick the region nearest you, leave the prefix as it is, and pick Free. The three boxes stay locked until it is added.',
         `The three boxes: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, a long random string. ${self}/token.html makes one in your browser: press Copy, paste it in the box, keep a copy somewhere safe, and never paste it into a chat.`,
+        'Vercel may mark WIRE_TOKEN and WIRE_PASSWORD Needs Attention and suggest Sensitive. Leave them: a Sensitive value can never be shown again, and step three reads the token back from Vercel.',
         'Your site address is the one Vercel shows when it is live, like https://my-wire-xxxx.vercel.app. Your timezone is its name, like Europe/London or America/New_York.'
       ] },
     { need: ['timezone'], lines: [
@@ -174,13 +175,14 @@ function steps(site, ai, self) {
         'The user is the login for your own page, you.html. Nobody else can read your rows.'
       ] },
     { need: ['site', 'ai'], lines: [
-        'Your WIRE_TOKEN: the token tab from step 1 if it is still open, or in Vercel, your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon.',
+        'Your WIRE_TOKEN is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon. Not a new one from the token page.',
         ...connect(s)[ai || 'app']
       ],
       ask: 'Say done when wire shows in your connectors.',
       more: [
         'The token goes in a settings page or a terminal, never into a chat. Bearer, a space, then the token, exactly as it is in Vercel.',
-        'If it will not connect, the token in the header is not the one in Vercel: in Vercel, Settings, Environment Variables, WIRE_TOKEN shows the one to use.',
+        'If it will not connect, or says 401, the token in the header is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the reveal icon, and put it in the header.',
+        'Vercel marks WIRE_TOKEN and WIRE_PASSWORD Needs Attention because they are not Sensitive. Leave them as they are: a Sensitive value can never be shown again, and this step, and signing in to your page, need to read them back. Nobody but you can open your Vercel project.',
         'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
         'If you already have another Wire connected, this one is the one at `' + s + '/api/mcp`. Keep the two apart by name.',
         '`' + s + '/api/mcp` is the address your AI talks to, not a web page: opened in a browser it shows nothing, and that is right. Your page is ' + s + '/you.html.'

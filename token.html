@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap">
 <style>
   /* Makes a WIRE_TOKEN in the browser, for a buyer with no terminal. Nothing here is sent anywhere. The token
-     is kept in this tab only, so a reload shows the same one and closing the tab forgets it. */
+     is kept in this browser, so opening the page again, in any tab, shows the same one until the buyer asks
+     for another. The one that counts is the one in Vercel; this page only makes it. */
   :root { --ground:#0e1113; --ink:#e8e4dc; --dim:#9aa3a8; --muted:#5d666b; --edge:#252d33; --teal:#5fc4b4; }
   body { background:var(--ground); color:var(--ink); font:500 16px/1.55 "Manrope",system-ui,sans-serif; margin:0; padding:48px 16px 80px; }
   main { max-width:640px; margin:0 auto; }
@@ -22,9 +23,9 @@
 
 <main>
   <h1>Your token</h1>
-  <p class="q">Made in your browser. This page sends nothing, and keeps the token only in this tab.</p>
+  <p class="q">Made in your browser. This page sends nothing, and shows this same token every time you open it here, until you ask for another.</p>
   <pre><span id="token"></span><button id="copy">Copy</button></pre>
-  <p>Paste it into the <b>WIRE_TOKEN</b> box, and keep this tab open until step three, which asks for it again. Reloading keeps the same token; closing the tab forgets it, and then Vercel still has it: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon.</p>
+  <p>Paste it into the <b>WIRE_TOKEN</b> box. After that the one that counts is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon. Step three reads it from there.</p>
   <p class="q">Never paste it into a chat. <a href="#" id="again">Make another</a>.</p>
 </main>
 
@@ -32,14 +33,15 @@
   // Thirty-two random bytes as hex, the same shape openssl rand -hex 32 gives.
   const make = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
   const out = document.getElementById('token'), copy = document.getElementById('copy');
-  // Kept for this tab only: step one pastes it into Vercel and step three needs it again, so a reload in
-  // between must not quietly swap it for a new one. Where the browser keeps nothing, it is one per page load.
-  const keep = t => { try { sessionStorage.setItem('wire-token', t); } catch {} return t; };
-  let kept = null; try { kept = sessionStorage.getItem('wire-token'); } catch {}
+  // Kept in this browser: step one pastes it into Vercel and a buyer who opens the page again later, in a new
+  // tab, must see that same token and not a new one that would be refused. Where the browser keeps nothing,
+  // it is one per page load, and the page says Vercel holds the one that counts either way.
+  const keep = t => { try { localStorage.setItem('wire-token', t); } catch {} return t; };
+  let kept = null; try { kept = localStorage.getItem('wire-token'); } catch {}
   out.textContent = /^[0-9a-f]{64}$/.test(kept || '') ? kept : keep(make());
   document.getElementById('again').onclick = e => {
     e.preventDefault();
-    if (!confirm('A new token replaces this one. If you already pasted this one into Vercel, keep it instead.')) return;
+    if (!confirm('A new token replaces this one here. If this one is already in Vercel, a new one will not connect until you put it in Vercel too and redeploy. Make a new one?')) return;
     out.textContent = keep(make()); copy.textContent = 'Copy';
   };
   copy.onclick = () => {
