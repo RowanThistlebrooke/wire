@@ -25,8 +25,12 @@ const MAIN = 'https://raw.githubusercontent.com/RowanThistlebrooke/wire/main/pac
 // .github/workflows/update.yml, which brings the newest files every morning; an older copy gets that file once,
 // by hand, in GitHub's own editor, and from then on updates itself. Both need no terminal and no key.
 const UPDATER = [1, 57, 0];
-const UPDATE = 'it updates itself every morning and Vercel redeploys; to update now, on GitHub open your repository, Actions, update, Run workflow';
-const FIRST = 'this copy is older than the one that updates itself, so add that once: on GitHub open your repository, Add file, Create new file, '
+// Updates are also how a security fix reaches a copy, so a copy that is behind is told plainly. GitHub switches
+// off a scheduled workflow in a repository with no activity for sixty days, and a quiet spell upstream is exactly
+// that, so the answer also says how to switch it back on.
+const UPDATE = 'this copy is behind, and an update can carry a security fix. It updates itself every morning and Vercel redeploys; '
+  + 'to update now, on GitHub open your repository, Actions, update, Run workflow. If Actions says the workflow is disabled, press Enable workflow first';
+const FIRST = 'this copy is behind and cannot update itself, and an update can carry a security fix, so add the updater once: on GitHub open your repository, Add file, Create new file, '
   + 'name it .github/workflows/update.yml, paste in everything at https://raw.githubusercontent.com/RowanThistlebrooke/wire/main/.github/workflows/update.yml, '
   + 'and Commit changes. Then Actions, update, Run workflow. From then on it updates itself every morning';
 

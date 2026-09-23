@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, WIRE_TOKEN is a key.** Whoever holds it can read the
+  whole ledger and add rows to it, and a row can never be removed, so
+  setup now says so where the token is made, where it is used and at
+  the end: never into a chat, a screenshot or a Discord. The walkthrough
+  answers "my token leaked" from any step with the replacement: a new
+  one on `token.html`, WIRE_TOKEN replaced in Vercel, a redeploy, and
+  the connector and any phone shortcut updated, with the note that the
+  old token works until the redeploy and that a row it added is voided,
+  never deleted. An AI that sees a token pasted into the chat is told
+  not to repeat it and to give that answer. `token.html` says the same
+  beside the token. `health` now says that a copy that is behind may be
+  missing a security fix, and how to switch the update workflow back on
+  if GitHub has switched it off after a quiet spell.
+
 - **23 Sep 2026, a Chrome door.** An AI that can read the pages the user
   is signed into, through Chrome or any browser tool, now writes through
   `record_page`. Every row it writes is signed `chrome`, which the AI

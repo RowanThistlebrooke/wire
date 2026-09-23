@@ -84,8 +84,17 @@ const STEPS = ['deploy', 'run the table', 'add your connector', 'say a number', 
 // two ways out, neither of them Pro. `deploy-existing` is /deploy without the Supabase store, asking for the
 // existing project's URL and publishable key as well; the table's SQL stops by itself if that project already
 // holds any of the Wire's three names.
-const stuckOn = s => /\bpay|paid|money|cost|charge|\$|\bpro\b|unavailable|limit/i.test(String(s || '')) ? 'supabase' : null;
+const stuckOn = s => /leak|leaked|shared|posted|exposed|stolen|pasted|screenshot|discord|someone (has|saw|got)/i.test(String(s || '')) && /token|key/i.test(String(s || '')) ? 'leak'
+  : /\bpay|paid|money|cost|charge|\$|\bpro\b|unavailable|limit/i.test(String(s || '')) ? 'supabase' : null;
+// WIRE_TOKEN is a key: with it anyone can read the whole ledger and add rows to it, and a row can never be
+// removed. So a token that has been anywhere but the buyer's own settings is replaced, not hoped about.
 const FIX = {
+  leak: (self, site) => 'Your WIRE_TOKEN is a key: whoever has it can read your whole ledger and add rows to it, and a row can never be removed. Replace it now; the old one stops working once your site has redeployed with the new one.\n'
+    + `1. Open ${self}/token.html, press Make another, and Copy.\n`
+    + '2. In Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, Edit, paste the new one, Save.\n'
+    + '3. Deployments, the newest one, the three dots, Redeploy. Until it has redeployed the old token still works.\n'
+    + '4. Update every place that holds the old one: the connector header in your AI (claude.ai: Settings, Connectors, wire; Claude Code: `claude mcp remove wire`, then the add command again with the new token), and your phone shortcut if you made one.\n'
+    + 'Rows added with the old token stay in the ledger. If one is not yours, void it; nothing is ever deleted. Never paste the new one into a chat, a screenshot or a Discord.',
   supabase: self => 'Supabase asks for money when the account already has two active free projects; two is the free limit. Two ways out, and neither is Pro.\n'
     + '1. Pause a project you are not using. At supabase.com open it, Settings, General, Pause project. A paused project does not count. Then go back to the Vercel page and pick Free.\n'
     + `2. If you use them all, put the Wire in a Supabase project you already have: open ${self}/deploy-existing instead of /deploy. It is the same link without the Supabase store, and it asks for two more fields, SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY: in that project at supabase.com, under Project Settings, the Project URL and the publishable key, which starts sb_publishable_. Never the secret key. `
@@ -152,12 +161,14 @@ function steps(site, ai, self) {
   return [
     { lines: [
         `Open ${self}/deploy and sign in with GitHub.`,
-        `Add the Supabase database when the page asks, then fill the three boxes (the token comes from ${self}/token.html) and press Deploy.`
+        `Add the Supabase database when the page asks, then fill the three boxes (the token comes from ${self}/token.html) and press Deploy.`,
+        'WIRE_TOKEN is a key to your ledger. Never paste it into a chat, a screenshot or a Discord.'
       ],
       ask: 'Say done with your site address and your timezone.',
       more: [
         'No GitHub account: make a free one at github.com/signup first (email, password, a code to your email).',
         'The Supabase screen: Storage, Supabase, Postgres backend, Add, then Accept and Create. Pick the region nearest you, leave the prefix as it is, and pick Free. The three boxes stay locked until it is added.',
+        'WIRE_TOKEN is a key: anyone who has it can read your whole ledger and add rows to it, and a row can never be removed. It lives in Vercel and in your AI\'s connector settings and nowhere else. If it ever leaks, say so and you get the steps to replace it.',
         `The three boxes: WIRE_EMAIL, the email you will sign in with; WIRE_PASSWORD, its password; WIRE_TOKEN, a long random string. ${self}/token.html makes one in your browser: press Copy, paste it in the box, keep a copy somewhere safe, and never paste it into a chat.`,
         'Vercel may mark WIRE_TOKEN and WIRE_PASSWORD Needs Attention and suggest Sensitive. Leave them: a Sensitive value can never be shown again, and step three reads the token back from Vercel.',
         'Your site address is the one Vercel shows when it is live, like https://my-wire-xxxx.vercel.app. Your timezone is its name, like Europe/London or America/New_York.'
@@ -175,12 +186,13 @@ function steps(site, ai, self) {
         'The user is the login for your own page, you.html. Nobody else can read your rows.'
       ] },
     { need: ['site', 'ai'], lines: [
-        'Your WIRE_TOKEN is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon. Not a new one from the token page.',
+        'Your WIRE_TOKEN is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon. Not a new one from the token page. It goes into the form or the terminal below, never into this chat.',
         ...connect(s)[ai || 'app']
       ],
       ask: 'Say done when wire shows in your connectors.',
       more: [
-        'The token goes in a settings page or a terminal, never into a chat. Bearer, a space, then the token, exactly as it is in Vercel.',
+        'The token goes in a settings page or a terminal, never into a chat, a screenshot or a Discord: it is a key, and whoever has it can read your ledger and add rows. Bearer, a space, then the token, exactly as it is in Vercel.',
+        'If it has leaked, say so and you get the steps to replace it.',
         'If it will not connect, or says 401, the token in the header is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the reveal icon, and put it in the header.',
         'Vercel marks WIRE_TOKEN and WIRE_PASSWORD Needs Attention because they are not Sensitive. Leave them as they are: a Sensitive value can never be shown again, and this step, and signing in to your page, need to read them back. Nobody but you can open your Vercel project.',
         'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
@@ -232,7 +244,7 @@ function steps(site, ai, self) {
 function end(site) {
   const s = site || 'your site';
   return 'Done. Your Wire is yours.\n'
-    + `Your connector is \`${s}/api/mcp\`, the address your AI talks to, not a web page. Keep your WIRE_TOKEN safe; it is what lets an AI in.\n`
+    + `Your connector is \`${s}/api/mcp\`, the address your AI talks to, not a web page. Your WIRE_TOKEN is a key: whoever has it can read your ledger and add rows. Never paste it into a chat, a screenshot or a Discord; if it leaks, ask for help and replace it.\n`
     + `Two doors are open: say a reading to your AI in any chat with wire on, or drop an export onto ${s}/you.html.\n`
     + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.\n'
     + 'Your copy updates itself every morning from the original and Vercel redeploys; ask your AI for health to see which version you are on.';
@@ -271,6 +283,7 @@ function setupServer(self) {
       'A question under a step heading is part of that step, not a step: when the user answers it, call setup again with the same done and the answer. ' +
       'Pass the site address, the timezone and the name of their AI on every call once the user has given them; a later step is not given out until they are. ' +
       'If the user asks anything about the step, or is stuck, call setup with help set to their words and the same done, and show its answer as it is; never answer from your own knowledge. ' +
+      'If the user pastes anything that looks like their WIRE_TOKEN into this chat, do not repeat it; tell them it has leaked and call setup with help set to my token leaked. ' +
       'The timezone is only ever what the user typed in this conversation, never filled in from memory or guessed. When setup shows a timezone back and asks, ' +
       'pass timezone_confirmed true only after the user says yes to it. Never ask for a password, token or key.'
   });
@@ -295,7 +308,7 @@ function setupServer(self) {
     async ({ license_key, done = 0, site, timezone, ai, help, stuck, timezone_confirmed = false }) => {
       const gate = await licensed(license_key);
       const text = !gate.ok ? `No walkthrough without a valid Whop license key: ${gate.why}.`
-                 : stuckOn(help ?? stuck) ? FIX[stuckOn(help ?? stuck)](self)
+                 : stuckOn(help ?? stuck) ? FIX[stuckOn(help ?? stuck)](self, site === undefined ? null : origin(site))
                  : (help ?? stuck) !== undefined ? more(done, site === undefined ? null : origin(site), which(ai), self)
                  : step(done, site === undefined ? null : origin(site), timezone === undefined ? null : zone(timezone), which(ai), self, timezone_confirmed === true);
       return { content: [{ type: 'text', text }] };
