@@ -232,7 +232,8 @@ function end(site) {
   return 'Done. Your Wire is yours.\n'
     + `Your connector is \`${s}/api/mcp\`, the address your AI talks to, not a web page. Keep your WIRE_TOKEN safe; it is what lets an AI in.\n`
     + `Two doors are open: say a reading to your AI in any chat with wire on, or drop an export onto ${s}/you.html.\n`
-    + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.';
+    + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.\n'
+    + 'Your copy updates itself every morning from the original and Vercel redeploys; ask your AI for health to see which version you are on.';
 }
 
 // The timezone goes into the table's SQL, where it decides which day every reading belongs to, and an AI that

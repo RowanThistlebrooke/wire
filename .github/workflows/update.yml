@@ -1,0 +1,48 @@
+# Keeps a copy of the Wire up to date with the one it was made from.
+#
+# A copy made with the Deploy button is a new repository, not a fork: it has
+# no Sync button and no history in common with the original, so it cannot be
+# merged. Instead, every morning this copies the original's newest files over
+# this repository's, commits them as the repository's owner, and pushes, and
+# Vercel redeploys on the push. It needs no key and no terminal: it reads the
+# original, which is public, and writes with the token GitHub gives every run.
+#
+# To update now: on GitHub, this repository, Actions, update, Run workflow.
+#
+# What it does not bring: changes to the files in .github/workflows, which
+# GitHub does not let a run's own token write, and changes to your table,
+# which live in Supabase and which health names when there are any. A file
+# you added yourself is removed by the next update and stays in the history.
+
+name: update
+
+on:
+  schedule:
+    - cron: '41 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.repository != 'RowanThistlebrooke/wire'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy the newest files from the original
+        run: |
+          git clone --depth 1 https://github.com/RowanThistlebrooke/wire.git "$RUNNER_TEMP/original"
+          here=$(node -p "require('./package.json').version" 2>/dev/null || echo none)
+          there=$(node -p "require('$RUNNER_TEMP/original/package.json').version")
+          if [ "$here" = "$there" ]; then echo "Already on $there."; exit 0; fi
+          rsync -a --delete --exclude .git --exclude .github/workflows "$RUNNER_TEMP/original/" ./
+          git add -A
+          if git diff --cached --quiet; then echo "Nothing changed."; exit 0; fi
+          # Committed as the owner, so Vercel deploys it: a Hobby project with a private repository
+          # does not deploy a commit whose author is not on the project.
+          git config user.name "${{ github.repository_owner }}"
+          git config user.email "${{ github.repository_owner_id }}+${{ github.repository_owner }}@users.noreply.github.com"
+          git commit -q -m "Update to $there"
+          git push -q
+          echo "Updated from $here to $there."

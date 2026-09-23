@@ -21,7 +21,14 @@ import { readFileSync } from 'node:fs';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
 
 const MAIN = 'https://raw.githubusercontent.com/RowanThistlebrooke/wire/main/package.json';
-const SYNC = 'sync your fork on GitHub, Vercel redeploys';
+// A copy made with the Deploy button is not a fork and has no Sync button. From 1.57.0 it carries
+// .github/workflows/update.yml, which brings the newest files every morning; an older copy gets that file once,
+// by hand, in GitHub's own editor, and from then on updates itself. Both need no terminal and no key.
+const UPDATER = [1, 57, 0];
+const UPDATE = 'it updates itself every morning and Vercel redeploys; to update now, on GitHub open your repository, Actions, update, Run workflow';
+const FIRST = 'this copy is older than the one that updates itself, so add that once: on GitHub open your repository, Add file, Create new file, '
+  + 'name it .github/workflows/update.yml, paste in everything at https://raw.githubusercontent.com/RowanThistlebrooke/wire/main/.github/workflows/update.yml, '
+  + 'and Commit changes. Then Actions, update, Run workflow. From then on it updates itself every morning';
 
 // Read when asked, so a file that did not ship breaks this check and not the server.
 const repoFile = name => { try { return readFileSync(new URL('../' + name, import.meta.url), 'utf8'); } catch { return null; } };
@@ -43,7 +50,8 @@ export async function code() {
   if (!a) return { ok: null, version: here, main, say: 'package.json did not ship with this server, so its version is unknown' };
   if (!b) return { ok: null, version: here, main, say: 'could not read the version on GitHub; try again later' };
   const behind = a[0] !== b[0] ? a[0] < b[0] : a[1] !== b[1] ? a[1] < b[1] : a[2] < b[2];
-  return behind ? { ok: false, version: here, main, say: SYNC } : { ok: true, version: here, main };
+  const before = (x, y) => x[0] !== y[0] ? x[0] < y[0] : x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2];
+  return behind ? { ok: false, version: here, main, say: before(a, UPDATER) ? FIRST : UPDATE } : { ok: true, version: here, main };
 }
 
 export function keys() {

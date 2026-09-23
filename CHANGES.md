@@ -3,6 +3,20 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, a copy updates itself.** A copy made with the Deploy
+  button is a new repository, not a fork: it has no Sync button and no
+  history in common with this one, so a buyer's copy stayed on the
+  version it was made from, and `health` told them to sync a fork they
+  do not have. The new `.github/workflows/update.yml` copies the newest
+  files from this repository over theirs every morning, commits them as
+  the repository's owner so Vercel deploys it, and pushes; Run workflow
+  under Actions updates at once. It reads this repository, which is
+  public, and writes with the token GitHub gives each run, so there is
+  no terminal and no key. `health` now says it updates itself and how to
+  run it now, and a copy older than this one is told to add the file
+  once in GitHub's own editor. The closing message of the walkthrough
+  says the copy updates itself.
+
 - **23 Sep 2026, one token, and it lives in Vercel.** `token.html` kept
   its token for one tab, and the walkthrough says to open it in a new
   one, so a buyer who came back to it at step three got a new token that

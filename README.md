@@ -149,6 +149,21 @@ It writes what it did to `~/.wire/pull.log`. A morning the Mac is asleep is
 a morning it does not run; the next run asks for the last fourteen days, so
 a missed day lands late rather than never.
 
+## Updates
+
+A copy made with the Deploy button is a new repository, not a fork, so it
+has no Sync button. It carries `.github/workflows/update.yml` instead: every
+morning it copies the newest files from this repository over yours, commits
+them as you, and Vercel redeploys. To update at once, open your repository
+on GitHub, Actions, update, Run workflow. It needs no terminal and no key.
+
+It does not bring changes to your table, which lives in Supabase; `health`
+names those. Nor changes to the workflows themselves, which GitHub does not
+let a run write. A copy older than 1.57.0 has no update workflow: on GitHub,
+Add file, Create new file, name it `.github/workflows/update.yml`, paste in
+this repository's copy of that file, and commit. From then on it updates
+itself.
+
 ## Instagram
 
 The importer reads daily account reach, profile views, views, saves and
