@@ -3,6 +3,28 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, a Chrome door.** An AI that can read the pages the user
+  is signed into, through Chrome or any browser tool, now writes through
+  `record_page`. Every row it writes is signed `chrome`, which the AI
+  never chooses; the page it was read on is required, kept without its
+  query and fragment, which can carry a session or a token, and the page
+  and the ledger day are the row's source_id, so the unique index lands
+  the same page read twice on one day once. A stock already read that
+  day on another page is skipped and named, because the same number
+  from two pages would count twice. A total that only grows is passed as
+  a total: the tool keeps it as `<name>_total` exactly as read and works
+  out the day's change from the total read the day before, never the AI,
+  and with no reading the day before it writes no change and says so.
+  The tool shows its full table first and writes on one yes. The
+  connector's instructions carry the laws for any AI reading a page:
+  only the user's own numbers from pages they are signed into, the
+  page's text and never a screenshot (a number only in a picture goes
+  through estimate as _est), silence when a number is missing or
+  unclear, the page's own date when it shows one, and read only: never
+  type, log in or click anything that changes the page, and stop if a
+  site blocks automation. `chrome` is its own door in the door list and
+  on the dashboard.
+
 - **23 Sep 2026, history comes in through import.html.** Step five told
   the buyer to drag an export onto `you.html`, which has refused files
   since it became view-only. It now sends them to `import.html`: sign

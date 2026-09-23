@@ -82,13 +82,15 @@ const FED = {
   pad: null,
   you: null,
   csv: null,
-  shortcut: null
+  shortcut: null,
+  // an AI reading a page the user is signed into, when the user asks: a door opened by hand
+  chrome: null
 };
 
 // Provenance labels describe the recorded source, not its connection status.
 // An unfamiliar source must not acquire an API claim just by being unfamiliar.
 function sourceLane(source) {
-  if (source === 'claude' || source === 'photo') return 'mcp';
+  if (source === 'claude' || source === 'photo' || source === 'chrome') return 'mcp';
   if (source === 'pad' || source === 'you' || source === 'shortcut') return 'pad';
   if (source === 'csv') return 'import';
   if (['whoop', 'youtube', 'youtube_live', 'instagram', 'github', 'tiktok'].includes(source)) return 'api';

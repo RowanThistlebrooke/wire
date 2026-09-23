@@ -159,6 +159,13 @@ export const WRITERS = {
   shortcut: {
     source: 'shortcut',
     name: m => /_est$/.test(m) ? 'a name ending _est is an estimate\'s, and a shortcut sends what was measured' : null
+  },
+  // A number an AI read in the text of a page the user is signed into. The page is part of the key, so the
+  // same page read twice on one day lands once; context keeps the page it was read on.
+  chrome: {
+    source: 'chrome',
+    name: m => /_est$/.test(m) ? 'a name ending _est is an estimate\'s; a number seen only in a picture goes through estimate, not record_page' : null,
+    key: (metric, day, context) => context.page + '|' + day
   }
 };
 
@@ -199,7 +206,7 @@ async function readingsOf(rows, writer, context = null) {
   const days = read.map(x => x.date || dayAt.get(x.stamp));
   const out = read.map((x, i) => ({
     occurred_at: x.date ? moment.get(x.date) : x.stamp, metric: x.metric, value: x.value, unit: x.unit,
-    source: writer.source, source_id: R.readingKey(x.metric, days[i]), event_type: 'measurement',
+    source: writer.source, source_id: writer.key ? writer.key(x.metric, days[i], context) : R.readingKey(x.metric, days[i]), event_type: 'measurement',
     ...(context ? { context } : {})
   }));
   return { out, days };
@@ -322,7 +329,13 @@ export function wireServer() {
       'Connecting a source: a total that grows keeps no index, because it leaves the unit its baseline was ' +
       'drawn in behind, so track the rate the total hides and never the total. And never declare a rule for a ' +
       'stock no door feeds: a stale stock means YOU has no value that day at all, so a number that arrives only ' +
-      'when the user remembers to fetch it stays undeclared, still in the ledger and still history.'
+      'when the user remembers to fetch it stays undeclared, still in the ledger and still history. ' +
+      'Reading a web page through Chrome or any browser tool: only the user\'s own numbers, from pages they are already signed into. ' +
+      'Read the page\'s text, never a screenshot; a number you can only see in a picture or a chart goes through estimate as _est. ' +
+      'A number missing or unclear on the page is not written; say so. Use the date the page shows for a number when it shows one. ' +
+      'A total that only grows goes through record_page with total true, which keeps the total and scores its daily change; never subtract yourself. ' +
+      'Write only through record_page, which signs every row chrome: show its full table and write on one yes. ' +
+      'Read only: never type, log in, accept, or click anything that changes the page, and stop and say so if a site blocks automation.'
   });
 
   server.tool(
@@ -568,6 +581,97 @@ export function wireServer() {
       return text(out.skipped && out.skipped.length ? { ...out,
         say: 'skipped rows were not written: that stock already holds a reading from record on that ledger day, ' +
              'voided or not. To put another number on that day, use correct.' } : out);
+    }
+  );
+
+  // ---- the Chrome door: a number read in the text of a page the user is signed into ----
+  //
+  // The AI picks nothing about where the row came from: the source is always chrome and the page is the one
+  // it read. A page's address is kept without its query and fragment, which can carry a session or a token,
+  // and never anything but http or https. The day is the page's own date when it shows one, else today.
+  //
+  // A total that only climbs is never scored: it is kept as <metric>_total, exactly as read, and what is
+  // scored is its daily change, worked out here and never by the AI, from the total read on the day before.
+  // A total whose day before holds no reading writes its change nowhere and says so, because a climb over
+  // two days wearing one day's name is a day that never happened. Silence over a guess.
+  //
+  // One stock, one day, one page: a stock already read today on another page is skipped and said, because
+  // two pages giving one number twice would be counted twice, and picking one would be a guess.
+  const pageOf = u => {
+    try { const x = new URL(String(u).trim()); return /^https?:$/.test(x.protocol) && !x.username && !x.password ? x.origin + (x.pathname.replace(/\/+$/, '') || '') : null; }
+    catch { return null; }
+  };
+  const dayBefore = d => new Date(Date.parse(d + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
+  async function pagePlan(page, rows) {
+    const context = { page, read: 'text' };
+    const plain = rows.filter(r => !r.total).map(({ total, ...r }) => r);
+    const totals = rows.filter(r => r.total).map(({ total, ...r }) => ({ ...r, metric: slug(r.metric) + '_total' }));
+    const bad = rows.filter(r => r.total && /_total$/.test(slug(r.metric)));
+    if (bad.length) return { error: 'nothing written', why: 'for a total, name the daily change, like ig_followers: the total itself is kept as <name>_total', refused: bad };
+    const got = await readingsOf([...plain, ...totals], WRITERS.chrome, context);
+    if (got.error) return got;
+    const skipped = [], changes = [];
+    if (totals.length) {
+      const names = totals.map(t => t.metric);
+      const [dayRows, voids] = await Promise.all([R.readDays(db, names), R.readVoids(db, ledgerDay)]);
+      const live = R.liveRows(dayRows, voids);
+      got.out.forEach((r, i) => {
+        if (!names.includes(r.metric)) return;
+        const day = got.days[i], before = live.find(x => x.metric === r.metric && x.day === dayBefore(day));
+        const change = r.metric.replace(/_total$/, '');
+        if (!before) skipped.push({ metric: change, day, why: `no reading of ${r.metric} on ${dayBefore(day)}, so there is no day's change to count` });
+        else changes.push({ metric: change, value: +(r.value - before.mean).toFixed(10), unit: r.unit, occurred_at: r.occurred_at, from: `${r.value} on ${day} less ${before.mean} on ${dayBefore(day)}` });
+      });
+    }
+    const input = [...plain, ...totals, ...changes.map(({ from, ...c }) => c)];
+    const plan = input.length ? await readingsOf(input, WRITERS.chrome, context) : { out: [], days: [] };
+    if (plan.error) return plan;
+    // one stock, one day, one page
+    const { data: have, error } = await db.from('events').select('metric, source_id').eq('source', 'chrome')
+      .in('metric', [...new Set(plan.out.map(r => r.metric))]).limit(20000);
+    if (error) return { error: error.message };
+    const rowsOut = [];
+    plan.out.forEach((r, i) => {
+      const other = have.find(h => h.metric === r.metric && h.source_id.endsWith('|' + plan.days[i]) && h.source_id !== r.source_id);
+      if (other) skipped.push({ metric: r.metric, day: plan.days[i], why: `already read on ${other.source_id.slice(0, other.source_id.lastIndexOf('|'))} that day` });
+      else rowsOut.push({ row: r, input: input[i] });
+    });
+    return { page, rows: rowsOut.map(x => x.row), input: rowsOut.map(x => x.input), changes: changes.map(c => ({ metric: c.metric, value: c.value, from: c.from })), skipped };
+  }
+
+  server.tool(
+    'record_page',
+    'Write numbers read in the text of a web page the user is signed into, through Chrome or any browser tool. ' +
+    'Every row is signed source chrome; you never choose the source. page is the address of the page they were read on; ' +
+    'its query and fragment are dropped. source_id is the page and the ledger day, so the same page read twice on one day lands once. ' +
+    'occurred_at is the date the page shows for the number when it shows one, else today. value is exactly as the page shows it. ' +
+    'A total that only grows (followers, views ever, lifetime sales) is passed with total true under the name of its daily change, ' +
+    'like ig_followers: the tool keeps the total as ig_followers_total and works out the day\'s change from the day before; never subtract yourself. ' +
+    'Call it first without yes: it returns the exact rows it would write, every change with what it was worked out from, and what it skips and why. ' +
+    'Print all of it to the user as one table and call again with the same page and rows and yes true only after the user says yes.',
+    {
+      page: z.string().describe('the address of the page the numbers were read on'),
+      rows: z.array(z.object({
+        metric: z.string(),
+        value: z.number(),
+        unit: z.string().nullable(),
+        occurred_at: z.string(),
+        total: z.boolean().optional().describe('true when the page shows a running total, named for its daily change')
+      })).min(1),
+      yes: z.boolean().optional().describe('true only after the user said yes to the table this tool returned')
+    },
+    async ({ page, rows, yes }) => {
+      const at = pageOf(page);
+      if (!at) return text({ error: 'nothing written', why: 'page must be the http or https address of the page the numbers were read on' });
+      await signIn();
+      const plan = await pagePlan(at, rows);
+      if (plan.error) return text(plan);
+      if (!yes) return text({ would_write: plan.rows, changes: plan.changes, skipped: plan.skipped,
+        say: 'Nothing written yet. Print these rows, the changes and what was skipped as one table, and call again with yes true only after the user says yes.' });
+      if (!plan.input.length) return text({ written: [], skipped: plan.skipped });
+      const out = await writeReadings(plan.input, WRITERS.chrome, { page: at, read: 'text' });
+      const again = (out.skipped || []).map(r => ({ metric: r.metric, day: r.source_id.slice(r.source_id.lastIndexOf('|') + 1), why: 'already read on this page that day' }));
+      return text({ ...out, skipped: [...again, ...plan.skipped] });
     }
   );
 
