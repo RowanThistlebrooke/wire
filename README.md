@@ -48,7 +48,7 @@ and will stay that way.
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
 | `api/setup.mjs` | the `/you` walkthrough, seven steps one at a time, for Whop license holders, in any AI that speaks MCP; it has no door to any ledger |
 | `start.html` | the page a buyer lands on: where to add the walkthrough, the one thing to say, the seven steps, the Deploy link |
-| `token.html` | makes a WIRE_TOKEN in the browser for a buyer with no terminal; keeps nothing, sends nothing |
+| `token.html` | makes a WIRE_TOKEN in the browser for a buyer with no terminal; sends nothing, keeps it only in that tab |
 
 ## Set it up
 

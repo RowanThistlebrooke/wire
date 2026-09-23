@@ -3,6 +3,16 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, the token is still there at step three.** Step three
+  asks for the WIRE_TOKEN made in step one, by which time the buyer had
+  typed it into Vercel and closed the page that made it. Step three now
+  says where it is: the token tab if it is still open, or Vercel, the
+  project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon.
+  `token.html` keeps its token for the tab, so a reload shows the same
+  one instead of a new one, says to keep the tab open until step three,
+  and asks before making another. It is still made and kept in the
+  browser only, and never goes near the chat.
+
 - **23 Sep 2026, the doing, and the explaining on demand.** Every step
   of the `/you` walkthrough is cut to what to do. Step one is two lines
   and a closing one: open the Deploy link and sign in with GitHub; add

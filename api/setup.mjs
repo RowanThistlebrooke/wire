@@ -173,6 +173,7 @@ function steps(site, ai, self) {
         'The user is the login for your own page, you.html. Nobody else can read your rows.'
       ] },
     { need: ['site', 'ai'], lines: [
+        'Your WIRE_TOKEN: the token tab from step 1 if it is still open, or in Vercel, your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon.',
         ...connect(s)[ai || 'app']
       ],
       ask: 'Say done when wire shows in your connectors.',

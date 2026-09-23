@@ -6,8 +6,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap">
 <style>
-  /* Makes a WIRE_TOKEN in the browser, for a buyer with no terminal. Nothing here is sent anywhere and
-     nothing is kept: reload the page and it is a different token. */
+  /* Makes a WIRE_TOKEN in the browser, for a buyer with no terminal. Nothing here is sent anywhere. The token
+     is kept in this tab only, so a reload shows the same one and closing the tab forgets it. */
   :root { --ground:#0e1113; --ink:#e8e4dc; --dim:#9aa3a8; --muted:#5d666b; --edge:#252d33; --teal:#5fc4b4; }
   body { background:var(--ground); color:var(--ink); font:500 16px/1.55 "Manrope",system-ui,sans-serif; margin:0; padding:48px 16px 80px; }
   main { max-width:640px; margin:0 auto; }
@@ -22,9 +22,9 @@
 
 <main>
   <h1>Your token</h1>
-  <p class="q">Made in your browser just now. This page keeps nothing and sends nothing.</p>
+  <p class="q">Made in your browser. This page sends nothing, and keeps the token only in this tab.</p>
   <pre><span id="token"></span><button id="copy">Copy</button></pre>
-  <p>Paste it into the <b>WIRE_TOKEN</b> field, and keep a copy somewhere safe: it is what lets your AI in, and step three asks for it.</p>
+  <p>Paste it into the <b>WIRE_TOKEN</b> box, and keep this tab open until step three, which asks for it again. Reloading keeps the same token; closing the tab forgets it, and then Vercel still has it: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon.</p>
   <p class="q">Never paste it into a chat. <a href="#" id="again">Make another</a>.</p>
 </main>
 
@@ -32,8 +32,16 @@
   // Thirty-two random bytes as hex, the same shape openssl rand -hex 32 gives.
   const make = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
   const out = document.getElementById('token'), copy = document.getElementById('copy');
-  out.textContent = make();
-  document.getElementById('again').onclick = e => { e.preventDefault(); out.textContent = make(); copy.textContent = 'Copy'; };
+  // Kept for this tab only: step one pastes it into Vercel and step three needs it again, so a reload in
+  // between must not quietly swap it for a new one. Where the browser keeps nothing, it is one per page load.
+  const keep = t => { try { sessionStorage.setItem('wire-token', t); } catch {} return t; };
+  let kept = null; try { kept = sessionStorage.getItem('wire-token'); } catch {}
+  out.textContent = /^[0-9a-f]{64}$/.test(kept || '') ? kept : keep(make());
+  document.getElementById('again').onclick = e => {
+    e.preventDefault();
+    if (!confirm('A new token replaces this one. If you already pasted this one into Vercel, keep it instead.')) return;
+    out.textContent = keep(make()); copy.textContent = 'Copy';
+  };
   copy.onclick = () => {
     const said = t => { copy.textContent = t; setTimeout(() => copy.textContent = 'Copy', 1500); };
     navigator.clipboard?.writeText(out.textContent).then(() => said('Copied'), () => { getSelection().selectAllChildren(out); said('Select and copy'); });
