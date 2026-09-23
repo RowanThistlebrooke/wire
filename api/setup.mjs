@@ -180,7 +180,8 @@ function steps(site, ai, self) {
       more: [
         'The token goes in a settings page or a terminal, never into a chat. Bearer, a space, then the token, exactly as it is in Vercel.',
         'If it will not connect, the token in the header is not the one in Vercel: in Vercel, Settings, Environment Variables, WIRE_TOKEN shows the one to use.',
-        'If you already have another Wire connected, this one is wire at ' + s + '/api/mcp. Keep the two apart by name.'
+        'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
+        'If you already have another Wire connected, this one is the one at ' + s + '/api/mcp. Keep the two apart by name.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
         ai && ai !== 'app' ? `Start a new session with wire, the one at ${s}/api/mcp.` : `Start a new chat. Press +, Connectors, and turn on wire, the one at ${s}/api/mcp.`,

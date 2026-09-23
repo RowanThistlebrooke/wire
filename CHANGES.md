@@ -3,6 +3,12 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, when the name wire is taken.** A buyer who already has
+  an MCP server called wire cannot add a second one under that name;
+  Claude Code says "MCP server wire already exists in local config". The
+  help for step three now says so, and to pick another name, like
+  mywire, and use it everywhere after.
+
 - **23 Sep 2026, the token is still there at step three.** Step three
   asks for the WIRE_TOKEN made in step one, by which time the buyer had
   typed it into Vercel and closed the page that made it. Step three now
