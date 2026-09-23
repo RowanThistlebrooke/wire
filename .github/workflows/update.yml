@@ -29,7 +29,7 @@ jobs:
     if: github.repository != 'RowanThistlebrooke/wire'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Copy the newest files from the original
         run: |
           git clone --depth 1 https://github.com/RowanThistlebrooke/wire.git "$RUNNER_TEMP/original"

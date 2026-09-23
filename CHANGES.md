@@ -3,6 +3,14 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, the workflows run on Node 24.** `update.yml` and
+  `pull.yml` used `actions/checkout@v4` and `actions/setup-node@v4`,
+  which run on Node 20, and GitHub has deprecated it. Both now use v7,
+  which runs on Node 24. The updater cannot change a workflow file,
+  its own included, so a copy made before this keeps the old versions
+  until the file is replaced by hand; a copy made from here on has the
+  new ones.
+
 - **23 Sep 2026, WIRE_TOKEN is a key.** Whoever holds it can read the
   whole ledger and add rows to it, and a row can never be removed, so
   setup now says so where the token is made, where it is used and at
