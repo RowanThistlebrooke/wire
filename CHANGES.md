@@ -3,6 +3,14 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, which login.** Step five said sign in and never with
+  what. Every step that uses the login, making the user in step two,
+  `import.html` in step five and `you.html` in step seven, now says:
+  the email and password you put in the Deploy form, and where to read
+  them back if they are forgotten, Vercel, the project, Settings,
+  Environment Variables, the eye icon on WIRE_EMAIL and WIRE_PASSWORD.
+  The token lines call the same button the eye icon.
+
 - **23 Sep 2026, the workflows run on Node 24.** `update.yml` and
   `pull.yml` used `actions/checkout@v4` and `actions/setup-node@v4`,
   which run on Node 20, and GitHub has deprecated it. Both now use v7,

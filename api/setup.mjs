@@ -154,6 +154,11 @@ function connect(site) {
 // `self` is this connector's own site, the one the buyer came from: it serves /deploy, and token.html, a page
 // that makes a WIRE_TOKEN in the browser, so a buyer with no terminal has one to paste into the form and never
 // into the chat. A line marked `sql` has the table's SQL printed right under it.
+// The login is the email and password typed into the Deploy form, and every step that asks for it says so and
+// where to read it back, in the same words, so a buyer never has to guess which login is meant.
+const LOGIN = 'the email and password you put in the Deploy form';
+const FORGOT = 'Forgot them? Vercel, your project, Settings, Environment Variables, the eye icon on WIRE_EMAIL and WIRE_PASSWORD.';
+
 // A step's message holds the doing and nothing else. What each line means, and what to do when it does not go
 // as written, is in its `more`, and the buyer sees it only by asking: their AI passes their words as `help`.
 function steps(site, ai, self) {
@@ -176,7 +181,7 @@ function steps(site, ai, self) {
     { need: ['timezone'], lines: [
         'Open your Supabase project: in Vercel, Storage, Supabase, Open in Supabase.',
         { say: 'SQL Editor, New query, paste the SQL below, Run.', sql: true },
-        'Authentication, Users, Add user: your WIRE_EMAIL and WIRE_PASSWORD, and tick Auto Confirm User.'
+        `Authentication, Users, Add user: ${LOGIN}, and tick Auto Confirm User. ${FORGOT}`
       ],
       ask: 'Say done, and which AI you use: the Claude app, Claude Code, Codex, or another.',
       more: [
@@ -186,14 +191,14 @@ function steps(site, ai, self) {
         'The user is the login for your own page, you.html. Nobody else can read your rows.'
       ] },
     { need: ['site', 'ai'], lines: [
-        'Your WIRE_TOKEN is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the reveal icon. Not a new one from the token page. It goes into the form or the terminal below, never into this chat.',
+        'Your WIRE_TOKEN is the one in Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, the eye icon. Not a new one from the token page. It goes into the form or the terminal below, never into this chat.',
         ...connect(s)[ai || 'app']
       ],
       ask: 'Say done when wire shows in your connectors.',
       more: [
         'The token goes in a settings page or a terminal, never into a chat, a screenshot or a Discord: it is a key, and whoever has it can read your ledger and add rows. Bearer, a space, then the token, exactly as it is in Vercel.',
         'If it has leaked, say so and you get the steps to replace it.',
-        'If it will not connect, or says 401, the token in the header is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the reveal icon, and put it in the header.',
+        'If it will not connect, or says 401, the token in the header is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the eye icon, and put it in the header.',
         'Vercel marks WIRE_TOKEN and WIRE_PASSWORD Needs Attention because they are not Sensitive. Leave them as they are: a Sensitive value can never be shown again, and this step, and signing in to your page, need to read them back. Nobody but you can open your Vercel project.',
         'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
         'If you already have another Wire connected, this one is the one at `' + s + '/api/mcp`. Keep the two apart by name.',
@@ -210,7 +215,7 @@ function steps(site, ai, self) {
         '`' + s + '/api/mcp` is not a web page: opened in a browser it shows nothing, and that is right. It is only the address your AI talks to.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `Open ${s}/import.html and sign in.`,
+        `Open ${s}/import.html and sign in with ${LOGIN}. ${FORGOT}`,
         'Drop an export on it, set the prefix to one short word for where it came from, like yt, and press import.'
       ],
       ask: 'Say done when the rows have landed.',
@@ -231,7 +236,7 @@ function steps(site, ai, self) {
     { need: ['site', 'timezone', 'ai'], lines: [
         'In a chat with wire on, say what you are working toward, what measures it, what moves it, and which way is better for each measure. Say yes to the rows.'
       ],
-      ask: `Say done when the goal is on ${s}/you.html.`,
+      ask: `Say done when the goal is on ${s}/you.html, signed in with ${LOGIN}. ${FORGOT}`,
       more: [
         'Like: my goal is a leaner body; the outcomes are weight and waist, both down; the levers are steps and sleep hours.',
         'A goal can only point at stocks you have already logged.',
