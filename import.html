@@ -193,5 +193,5 @@ go.onclick = async () => {
 };
 
 document.getElementById('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };
-db.auth.getSession().then(({ data }) => { if (!data.session) location.href = 'index.html'; });
+db.auth.getSession().then(({ data }) => { if (!data.session) location.href = 'index.html?next=import.html'; });
 </script>

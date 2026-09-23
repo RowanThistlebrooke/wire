@@ -3,6 +3,19 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **23 Sep 2026, history comes in through import.html.** Step five told
+  the buyer to drag an export onto `you.html`, which has refused files
+  since it became view-only. It now sends them to `import.html`: sign
+  in, drop the export, set the prefix to one short word like yt, press
+  import. The prefix is guessed from the file name, and a YouTube
+  export is called Table data, so the help says to change it, and what
+  the ticked columns, the skipped Total row and a second import mean.
+  Signing in always went to `you.html`, which has no link to the
+  importer, so a buyer sent to `import.html` before signing in could not
+  get back to it; the sign-in page now returns to the page that sent
+  it, and only ever to one of the Wire's own pages. The view-only
+  message on `you.html` names `import.html`.
+
 - **23 Sep 2026, a copy updates itself.** A copy made with the Deploy
   button is a new repository, not a fork: it has no Sync button and no
   history in common with this one, so a buyer's copy stayed on the

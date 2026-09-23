@@ -3550,7 +3550,7 @@ for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, e => {
 document.addEventListener('drop', e => {
   if (!carriesFile(e)) return;
   e.preventDefault();
-  say('This dashboard is view-only. Use your connected Wire to review and record a file.');
+  say('This dashboard is view-only. Bring a file in at import.html.');
 });
 document.addEventListener('keydown', e => { if (!$('rule-dialog').open && !$('assignment-dialog').open && !$('flow-peek').open && !($('area-dialog').open || $('area-content-dialog').open) && e.key === 'Escape' && BIGA >= 0){ BIGA = BIGB = -1; drawBig(); } });
 document.addEventListener('input', e => {

@@ -28,9 +28,12 @@
 <script src="/api/config.js"></script>
 <script>
 const db = supabase.createClient(WIRE.url, WIRE.key);
+// Back to the page that sent you here, and only ever to one of the Wire's own pages.
+const PAGES = ['you.html', 'pad.html', 'import.html', 'commit.html', 'test.html', 'scan.html'];
+const next = PAGES.includes(new URLSearchParams(location.search).get('next')) ? new URLSearchParams(location.search).get('next') : 'you.html';
 
 db.auth.getSession().then(({ data }) => {
-  if (data.session) location.href = 'you.html';
+  if (data.session) location.href = next;
 });
 
 f.onsubmit = async (e) => {
@@ -41,6 +44,6 @@ f.onsubmit = async (e) => {
     password: pw.value
   });
   if (error) msg.textContent = error.message;
-  else location.href = 'you.html';
+  else location.href = next;
 };
 </script>

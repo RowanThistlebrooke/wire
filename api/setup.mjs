@@ -198,13 +198,15 @@ function steps(site, ai, self) {
         '`' + s + '/api/mcp` is not a web page: opened in a browser it shows nothing, and that is right. It is only the address your AI talks to.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `Open ${s}/you.html and sign in.`,
-        'Drag an export onto the page, name the columns you want, press go.'
+        `Open ${s}/import.html and sign in.`,
+        'Drop an export on it, set the prefix to one short word for where it came from, like yt, and press import.'
       ],
       ask: 'Say done when the rows have landed.',
       more: [
         'An export is the CSV any app with an export button gives you: Whoop, Apple Health, Strava, a bank, a spreadsheet.',
-        'A column you leave blank is left out. The page says how many rows it could not read, and why.',
+        'The prefix starts every stock\'s name, so yt gives yt_engaged_views. It is guessed from the file name, which for a YouTube export is just table, so change it.',
+        'Columns filled on most rows start ticked. Untick any you do not want; an unticked column is left out. The page says how many rows it could not read, and why: an export\'s Total row is one of them.',
+        'The same file brought again lands nothing twice.',
         'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
