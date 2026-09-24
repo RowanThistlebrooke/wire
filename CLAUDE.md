@@ -61,8 +61,12 @@ out loud. Keep it that way.
 7. **No AI writes a number it was not given.** Claude may write
    measurements, commits, rules and goals through the MCP. It must print
    the exact rows first and write only after the user says yes. Every row
-   it writes carries `source = 'claude'`. It may only transcribe a value
-   the user gave it in a message, a file or an image. It never estimates,
+   it writes is signed by what produced the number: `source = 'claude'`
+   for a number the user gave it, `photo` for a number it read off a
+   picture (law 8), and `chrome` for a number it read in the text of a web
+   page the user is signed into. It may only transcribe a value the user
+   gave it in a message, a file or an image, or that such a page shows as
+   text. It never estimates,
    rounds, fills a gap or infers a value. If it cannot read a number it
    says so. Notes keep their existing rule. The friction follows what a
    write does. Supplying a number, a correction or an estimate read again

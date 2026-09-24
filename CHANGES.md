@@ -3,6 +3,59 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, /youscan.** The Wire's connector has a prompt called
+  youscan, with one optional argument, a site name or a link. Claude
+  Code shows it as /mcp__wire__youscan; a typed /youscan is refused
+  there before the model sees it. The server's instructions describe the
+  same scan for the Claude app, where prompts are not commands, so typing
+  /youscan there is meant to run it; that route is not yet tested, and
+  Claude Code keeps only the first 2048 characters of a server's
+  instructions, so the prompt carries every rule the scan needs. Given
+  nothing, it asks three things in one message: who you are in one line,
+  what you want better, which accounts you have. Given a site or a link,
+  it opens that exact page, or your own page on a named site and never
+  someone else's, with the chat's own browser tool; with none it says so
+  and offers YouTube Studio's export instead; on a site you are not
+  signed into it stops and names the site, and never signs in or clicks
+  anything that changes a page. It reads the page's text only and sorts
+  every number into goes in and can't go in, each with its reason:
+  rounded (4.7K), a window (last 7 days), a relative date (4d ago), a day
+  not over yet, not one plain number (2:41), only in a chart. It reuses
+  the names of stocks already in the ledger, calls record_page without
+  yes, shows its full table and the can't-go-in list, then one line on
+  the biggest issue, which stays in the chat and never in the ledger,
+  and writes on one yes. It ends with how to make that site automatic,
+  naming only what a buyer can set up today: GitHub's puller, YouTube
+  Studio's export, or scanning again. The scan lives once, in
+  `mcp/youscan.mjs`, and /youscan is the fourth line of the "Start your
+  data flow" block in `mcp/flow.mjs`. record_page's preview now names a
+  row the yes would skip, the same page read again on a day it already
+  gave, instead of offering it. The /youscan text carries the Chrome
+  door's own rules too, page text only and never a screenshot, never
+  signing in, stopping when a site blocks automation, exact numbers
+  only, writing on one yes, so any client that runs it gets them however
+  much of the instructions it keeps. CLAUDE.md law 7 now says what the
+  code already does: a row Claude writes is signed claude for a number
+  the user gave, photo for one read off a picture, and chrome for one
+  read in the text of a page the user is signed into. A number that is
+  only in a chart or a picture on a web page is never written, not even
+  as _est, because reading it would need a screenshot; _est is only for
+  photos the user sends, and the general Chrome rule now says so too.
+  record_page read the chrome readings it checks against in one request
+  of up to 20,000 rows, past the database's page size, so once the
+  ledger held more than a page of them a second page's number for the
+  same stock and day could be written; it now reads them a page at a
+  time through readAll (law 10). A total read again on a day it already
+  gave takes its daily change with it, instead of working the change out
+  from a total that is not written, and the preview lists only the
+  changes it would write. Not yet, after 27 Sep 2026: the code guard
+  that makes record_page itself refuse a rounded number like 4.7K, a
+  date like "4d ago", a day not over yet or a converted 2:41, which
+  until then are kept out by the scan's words only; and a gate on a
+  total's daily change read partway through a day. Known limit: a client
+  that leaves prompts/get's arguments out is refused by the MCP library;
+  Claude Code always sends them.
+
 - **24 Sep 2026, the Claude app takes the token in the address.** Tested
   on a fresh copy: a Claude app custom connector with No sign-in and the
   Authorization header set got 401 on every request, with the token

@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
 import { code, feed, index, keys, table, version } from './health.mjs';
 import { flow } from './flow.mjs';
+import { youscan } from './youscan.mjs';
 
 const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
@@ -165,7 +166,7 @@ export const WRITERS = {
   // same page read twice on one day lands once; context keeps the page it was read on.
   chrome: {
     source: 'chrome',
-    name: m => /_est$/.test(m) ? 'a name ending _est is an estimate\'s; a number seen only in a picture goes through estimate, not record_page' : null,
+    name: m => /_est$/.test(m) ? 'a name ending _est is an estimate\'s, and _est is only for photos the user sends; a number only in a picture or a chart on a page is never written' : null,
     key: (metric, day, context) => context.page + '|' + day
   }
 };
@@ -333,11 +334,12 @@ export function wireServer({ site = null } = {}) {
       'stock no door feeds: a stale stock means YOU has no value that day at all, so a number that arrives only ' +
       'when the user remembers to fetch it stays undeclared, still in the ledger and still history. ' +
       'Reading a web page through Chrome or any browser tool: only the user\'s own numbers, from pages they are already signed into. ' +
-      'Read the page\'s text, never a screenshot; a number you can only see in a picture or a chart goes through estimate as _est. ' +
+      'Read the page\'s text, never a screenshot; a number you can only see in a picture or a chart on the page is never written, not even as _est, because reading it would need a screenshot. _est is only for photos the user sends. ' +
       'A number missing or unclear on the page is not written; say so. Use the date the page shows for a number when it shows one. ' +
       'A total that only grows goes through record_page with total true, which keeps the total and scores its daily change; never subtract yourself. ' +
       'Write only through record_page, which signs every row chrome: show its full table and write on one yes. ' +
       'Read only: never type, log in, accept, or click anything that changes the page, and stop and say so if a site blocks automation. ' +
+      'When the user types /youscan in any chat, with or without a site name or a link after it, run the scan. ' + youscan(undefined, site) + ' ' +
       'When the user asks what they can do, how to add data, or what now, answer with exactly this and nothing else:\n' + flow(site)
   });
 
@@ -629,17 +631,32 @@ export function wireServer({ site = null } = {}) {
     const input = [...plain, ...totals, ...changes.map(({ from, ...c }) => c)];
     const plan = input.length ? await readingsOf(input, WRITERS.chrome, context) : { out: [], days: [] };
     if (plan.error) return plan;
-    // one stock, one day, one page
-    const { data: have, error } = await db.from('events').select('metric, source_id').eq('source', 'chrome')
-      .in('metric', [...new Set(plan.out.map(r => r.metric))]).limit(20000);
-    if (error) return { error: error.message };
-    const rowsOut = [];
+    // one stock, one day, one page. Every chrome reading of these stocks, a page at a time (law 10): a read cut
+    // short by the database's page size would miss one, and a second page's number would be written
+    let have;
+    try {
+      have = await R.readAll(() => db.from('events').select('id, metric, source_id, value').eq('source', 'chrome')
+        .in('metric', [...new Set(plan.out.map(r => r.metric))]).order('id', { ascending: true }));
+    } catch (e) { return { error: (e && e.message) || String(e) }; }
+    const rowsOut = [], keptTotal = new Set();
     plan.out.forEach((r, i) => {
+      // the same page read again on a day it already gave keeps its first reading, and the preview says so
+      // instead of offering a row the yes would then skip
+      const mine = have.find(h => h.metric === r.metric && h.source_id === r.source_id);
       const other = have.find(h => h.metric === r.metric && h.source_id.endsWith('|' + plan.days[i]) && h.source_id !== r.source_id);
-      if (other) skipped.push({ metric: r.metric, day: plan.days[i], why: `already read on ${other.source_id.slice(0, other.source_id.lastIndexOf('|'))} that day` });
-      else rowsOut.push({ row: r, input: input[i] });
+      if (mine || other) { if (/_total$/.test(r.metric)) keptTotal.add(r.metric + '|' + plan.days[i]); }
+      if (mine) skipped.push({ metric: r.metric, day: plan.days[i], why: `already read on this page that day, as ${mine.value}, voided or not; to put another number on that day, use correct` });
+      else if (other) skipped.push({ metric: r.metric, day: plan.days[i], why: `already read on ${other.source_id.slice(0, other.source_id.lastIndexOf('|'))} that day` });
+      else rowsOut.push({ row: r, input: input[i], day: plan.days[i] });
     });
-    return { page, rows: rowsOut.map(x => x.row), input: rowsOut.map(x => x.input), changes: changes.map(c => ({ metric: c.metric, value: c.value, from: c.from })), skipped };
+    // a day's change is worked out from the total this read would write; when that total is not written, neither is its change
+    const offered = rowsOut.filter(x => {
+      if (/_total$/.test(x.row.metric) || !keptTotal.has(x.row.metric + '_total|' + x.day)) return true;
+      skipped.push({ metric: x.row.metric, day: x.day, why: `${x.row.metric}_total was already read that day, so this read's change is not that day's` });
+      return false;
+    });
+    const shown = changes.filter(c => offered.some(x => x.input.metric === c.metric && x.input.occurred_at === c.occurred_at));
+    return { page, rows: offered.map(x => x.row), input: offered.map(x => x.input), changes: shown.map(c => ({ metric: c.metric, value: c.value, from: c.from })), skipped };
   }
 
   server.tool(
@@ -647,7 +664,7 @@ export function wireServer({ site = null } = {}) {
     'Write numbers read in the text of a web page the user is signed into, through Chrome or any browser tool. ' +
     'Every row is signed source chrome; you never choose the source. page is the address of the page they were read on; ' +
     'its query and fragment are dropped. source_id is the page and the ledger day, so the same page read twice on one day lands once. ' +
-    'occurred_at is the date the page shows for the number when it shows one, else today. value is exactly as the page shows it. ' +
+    'occurred_at is the date the page shows for the number when it shows one, else today; a number for a day not over yet is not written, even when the page puts a date on it, because the site\'s today can be the user\'s yesterday. value is exactly as the page shows it. ' +
     'A total that only grows (followers, views ever, lifetime sales) is passed with total true under the name of its daily change, ' +
     'like ig_followers: the tool keeps the total as ig_followers_total and works out the day\'s change from the day before; never subtract yourself. ' +
     'Call it first without yes: it returns the exact rows it would write, every change with what it was worked out from, and what it skips and why. ' +
@@ -1050,5 +1067,15 @@ export function wireServer({ site = null } = {}) {
     }
   );
 
+  // /youscan: the same scan the instructions describe, as a prompt. Claude Code shows it as /mcp__wire__youscan
+  // (a typed /youscan is refused there before the model sees it); in the Claude app, where prompts are not
+  // commands, the instructions carry it instead, which is not yet tested there.
+  server.registerPrompt('youscan', {
+    title: '/youscan',
+    description: 'Read your own numbers off a page you are signed into, and see which can go in.',
+    argsSchema: { site: z.string().optional().describe('A site name or a URL, like studio.youtube.com') }
+  }, ({ site: target }) => ({
+    messages: [{ role: 'user', content: { type: 'text', text: youscan(target && target.trim() ? target.trim() : null, site) } }]
+  }));
   return server;
 }
