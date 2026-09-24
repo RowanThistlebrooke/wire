@@ -15,6 +15,7 @@ export function fromHeader(req) {
 // Compared in constant time, so how long the answer takes says nothing about
 // how close a guess was.
 function same(token, want) {
+  want = String(want || '').trim();   // a value saved in Vercel with a stray space or newline is still the token
   if (!want || !token) return false;
   const a = Buffer.from(token), b = Buffer.from(want);
   return a.length === b.length && timingSafeEqual(a, b);

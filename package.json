@@ -1,11 +1,12 @@
 {
   "name": "wire",
-  "version": "1.63.0",
+  "version": "1.64.0",
   "private": true,
   "description": "Only for the MCP function in api/. The pages have no dependencies and no build step.",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "@supabase/supabase-js": "2.116.0",
+    "postgres": "3.4.9",
     "zod": "4.6.4"
   }
 }

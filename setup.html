@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>set up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap">
+<style>
+  /* Step two in one press: makes the table and the login through /api/init. The timezone is the browser's,
+     shown to be checked, never assumed. The WIRE_TOKEN goes to this site's own function in a header and
+     nowhere else, and this page keeps nothing. */
+  :root { --ground:#0e1113; --ink:#e8e4dc; --dim:#9aa3a8; --muted:#5d666b; --edge:#252d33; --teal:#5fc4b4; --leak:#c9695c; }
+  body { background:var(--ground); color:var(--ink); font:500 16px/1.55 "Manrope",system-ui,sans-serif; margin:0; padding:48px 16px 80px; }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:40px; font-weight:800; letter-spacing:-.03em; margin:0 0 6px; color:var(--teal); }
+  p { margin:0 0 10px; } p.q { color:var(--dim); }
+  label { display:block; margin:26px 0 6px; font-weight:800; font-size:14px; }
+  input { width:100%; box-sizing:border-box; font:600 17px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink); background:#151a1d; border:1px solid var(--edge); border-radius:8px; padding:12px 14px; }
+  input:focus { outline:1px solid var(--teal); border-color:var(--teal); }
+  button { margin-top:26px; width:100%; font:800 15px/1 "Manrope",system-ui,sans-serif; padding:15px 0; border:0; border-radius:8px; background:var(--teal); color:var(--ground); cursor:pointer; }
+  button[disabled] { opacity:.4; cursor:default; }
+  #msg { margin-top:18px; min-height:1.5em; }
+  #msg.bad { color:var(--leak); } #msg.good { color:var(--teal); font-weight:800; }
+</style>
+
+<main>
+  <h1>Set up</h1>
+  <p class="q">Makes your table and your login in one press. Run it once.</p>
+
+  <label for="tz">Your timezone</label>
+  <input id="tz" autocomplete="off" spellcheck="false">
+  <p class="q">Your day ends at 6am here. This is what your browser says; change it if it is not where you live.</p>
+
+  <label for="pw">Your WIRE_TOKEN</label>
+  <input id="pw" type="password" autocomplete="off" spellcheck="false">
+  <p class="q">The one you put in the Deploy form. It is in Vercel, your project, Settings, Environment Variables, the eye icon on WIRE_TOKEN. It is a key: never paste it into a chat.</p>
+
+  <button id="go">Set up</button>
+  <p id="msg"></p>
+</main>
+
+<script>
+  const tz = document.getElementById('tz'), pw = document.getElementById('pw'), go = document.getElementById('go'), msg = document.getElementById('msg');
+  try { tz.value = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch {}
+  const say = (t, kind) => { msg.textContent = t; msg.className = kind || ''; };
+  go.onclick = async () => {
+    if (!tz.value.trim() || !pw.value) return say('Fill in both.', 'bad');
+    if (/[^\x00-\xff]/.test(pw.value.trim())) return say('That is not your WIRE_TOKEN. It is in Vercel, your project, Settings, Environment Variables, the eye icon on WIRE_TOKEN.', 'bad');
+    go.disabled = true; say('Setting up…');
+    try {
+      const res = await fetch('/api/init', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + pw.value.trim() }, body: JSON.stringify({ timezone: tz.value.trim() }) });
+      const out = await res.json().catch(() => ({ say: 'The site did not answer. Try again in a minute.' }));
+      say(out.say || 'Something went wrong. Try again.', out.done ? 'good' : 'bad');
+      if (out.done) { pw.value = ''; return; }
+    } catch { say('The site did not answer. Try again in a minute.', 'bad'); }
+    go.disabled = false;
+  };
+</script>

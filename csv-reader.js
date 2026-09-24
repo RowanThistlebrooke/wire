@@ -37,9 +37,11 @@ const slugMetric = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0
 function readCSV(text) {
   if (text.startsWith('PK\u0003\u0004')) return { error: 'A zip file. Open it and drop a CSV from inside.' };
   const rows = parseCSV(text);
+  if (rows.length && /^sep=.?$/i.test(rows[0].join(',').trim())) rows.shift();   // Excel's delimiter hint, not a header
   if (!rows.length) return { error: 'No rows found.' };
   const head = rows[0].map(h => h.trim());
   const body = rows.slice(1);
+  if (head.length === 1 && body.some(r => r.length > 1)) return { error: 'The header is not on the first line: this file has a title row above it.' };
 
   let dateCol = -1, best = 0;
   head.forEach((_, c) => {

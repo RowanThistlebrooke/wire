@@ -88,11 +88,29 @@ const slug = s => slugMetric(s) || 'metric';   // the rule lives in csv-reader.j
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // --- work out what this file is: csv-reader.js reads it, the names are guessed here ---
+// Where a file came from is read off its own columns first, because an export's name says nothing: every YouTube
+// Studio export is called Table data, Chart data or Totals. Each mark is a column name that export always carries,
+// taken from real exports. A file that carries none is named from its file name, unless that name is one of the
+// ones an export gives every file, and then the box is left empty for the buyer to fill, never filled with a guess.
+const FROM = [
+  { prefix: 'yt', any: ['Engaged views', 'Watch time (hours)', 'Average view duration', 'Average percentage viewed (%)', 'Thumbnail impressions', 'Stayed to watch (%)', 'Views from playlist', 'End screen elements shown'] },
+  { prefix: 'whoop', all: ['Cycle start time', 'Cycle timezone'] }
+];
+const PLAIN = /^(table|chart|totals?|data|export|download|report)(_data)?(_\d+)*$/;
+const STUDIO = /^(table data|chart data|totals)( ?\(\d+\)| copy( \d+)?| - copy( \(\d+\))?|[ -]\d+)*\.csv$/i;   // YouTube Studio names every file one of these
+function prefixOf(head, filename) {
+  if (STUDIO.test(filename.trim())) return 'yt';
+  const has = new Set(head.map(h => h.trim()));
+  for (const f of FROM) if ((f.any && f.any.some(c => has.has(c))) || (f.all && f.all.every(c => has.has(c)))) return f.prefix;
+  const name = slugMetric(filename.replace(/\.csv$/i, ''));
+  const first = name.split('_')[0];   // a copy's own word or number can follow an export word, and is never where a file came from
+  return PLAIN.test(name) || /^(table|chart|totals?|data|export|download|report|copy|csv|\d+)$/.test(first) ? '' : first;
+}
 function plan(text, filename) {
   const p = readCSV(text);
   if (p.error) return p;
   const metrics = p.columns.map(c => ({ col: c.col, name: slug(c.label), label: c.label, n: c.n }));
-  const guess = slug(filename.replace(/\.csv$/i, '')).split('_')[0];
+  const guess = prefixOf(p.head, filename);
   return { head: p.head, body: p.body, dateCol: p.dateCol, metrics, filename, guess };
 }
 
@@ -100,7 +118,7 @@ function draw(p) {
   found.innerHTML = `
     <p class="n">${esc(p.filename)} &#183; dates from <b>${esc(p.head[p.dateCol])}</b> &#183; <b>${p.body.length}</b> rows</p>
     <label class="pre"><span class="lab">prefix</span>
-      <input type="text" id="src" value="${esc(p.guess)}" placeholder="yt" autocomplete="off" spellcheck="false">
+      <input type="text" id="src" value="${esc(p.guess)}" placeholder="one word, like yt" autocomplete="off" spellcheck="false">
     </label>
     <div id="names"></div>`;
   src.oninput = names;
@@ -110,7 +128,8 @@ function draw(p) {
 
 // One word. Every metric in the file gets it as a prefix.
 function names() {
-  const pre = slug(src.value);
+  const pre = slugMetric(src.value);   // not slug(): an empty box would read metric, and that name would be written
+  go.disabled = !pre;
   document.getElementById('names').innerHTML = PLAN.metrics.map((m, i) =>
     `<label class="row">
       <input type="checkbox" data-i="${i}"${m.n >= PLAN.body.length * 0.6 ? ' checked' : ''}>
@@ -142,7 +161,8 @@ go.onclick = async () => {
   go.disabled = true;
   msg.className = 'msg'; msg.textContent = 'reading';
 
-  const pre = slug(src.value);
+  const pre = slugMetric(src.value);
+  if (!pre) { go.disabled = true; msg.className = 'msg bad'; msg.textContent = 'type a prefix first, one word, like yt'; src.focus(); return; }
   const chosen = [...found.querySelectorAll('input[type=checkbox]')]
     .filter(c => c.checked)
     .map(c => {
@@ -171,7 +191,7 @@ go.onclick = async () => {
     }
   }
   const note = () => Object.entries(off).map(([why, n]) => ` · ${n} skipped, ${why}`).join('');
-  if (!rows.length && Object.keys(off).length) { msg.className = 'msg bad'; msg.textContent = 'nothing written' + note(); go.disabled = false; return; }
+  if (!rows.length && Object.keys(off).length) { msg.className = 'msg bad'; msg.textContent = 'nothing written' + note(); go.disabled = !slugMetric(src.value); return; }
 
   // each date at a moment day_of puts on it; a date that cannot be placed skips its own readings and no others
   const { at, why } = await momentsOn(db, [...new Set(rows.filter(x => x.when.date).map(x => x.when.date))]);
@@ -189,7 +209,7 @@ go.onclick = async () => {
   else if (!got.landed && !placed.length) msg.textContent = `nothing written${note()}`;
   else if (!got.landed) msg.textContent = `nothing new · all ${got.there} readings are already in${note()}`;
   else msg.textContent = `${got.landed} added · ${got.there} already there${note()}`;
-  go.disabled = false;
+  go.disabled = !slugMetric(src.value);
 };
 
 document.getElementById('out').onclick = async () => { await db.auth.signOut(); location.href = 'index.html'; };

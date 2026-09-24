@@ -3,6 +3,44 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, step two in one press.** Step two was the hardest one:
+  open Supabase, paste the table's SQL, run it, then make a login by
+  hand. A copy whose Supabase came with the Deploy button now does it
+  itself. The new `setup.html` shows the timezone the browser reports
+  for the buyer to check, takes their WIRE_TOKEN, and presses once; the
+  new `api/init.mjs` runs the same `sql/01_the_table.sql` and makes the
+  login from the Deploy form's email and password, confirmed, then signs
+  in with it before it says it works. It is the one door that holds the
+  database address and secret key the Supabase store puts in Vercel:
+  neither is ever sent back, logged or given to the browser, and the
+  database is not touched until the token matches. It asks for the token
+  and not the password because the password opens the whole ledger and
+  a door that tests guesses against it would be a way in. Once the
+  Wire's three names and a confirmed login exist it answers already set
+  up and makes nothing; a table called events that is not the Wire's is
+  left for the SQL's own guard to name. A copy made with deploy-existing
+  has neither setting and is told so, and its buyer gets step two by
+  hand from the walkthrough, timezone confirmed and SQL printed, as
+  before. The walkthrough no longer asks for the timezone at step one.
+  Step three hands out the connector address, the Claude Code command
+  and the Codex lines as code blocks filled with the buyer's own
+  address, which a chat shows with a copy button; the token is never
+  filled in. Step six gives a Claude Code or Codex buyer step three's
+  Claude app lines. `import.html` reads where a file came from off its
+  own columns and names, so every YouTube Studio export suggests yt; a
+  Whoop export suggests whoop, though its times carry no zone and land
+  nothing yet, which step five's help now says; a file it does not know
+  leaves the box empty,
+  and import stays off until it holds a word, where before an empty box
+  wrote names starting metric_. Also: a leak is a token put somewhere
+  public, not one pasted into the header where step three says; the
+  Supabase money answer is given at step one only; another AI named in
+  the buyer's words is another AI; a site pasted without https:// is
+  taken, a bare word or the platform's own address is not, and a
+  refused answer says why. `csv-reader.js` skips Excel's sep= line
+  instead of reading it as the header, and the token check trims a
+  WIRE_TOKEN saved in Vercel with a stray space or newline.
+
 - **24 Sep 2026, the phone step for a terminal buyer.** Step six said the
   Claude app on the phone already has the connector, which is true only
   for a buyer who added it in the Claude app or on claude.ai. A buyer

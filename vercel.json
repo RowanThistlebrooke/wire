@@ -11,6 +11,9 @@
     },
     "api/setup.mjs": {
       "includeFiles": "sql/01_the_table.sql"
+    },
+    "api/init.mjs": {
+      "includeFiles": "sql/01_the_table.sql"
     }
   },
   "rewrites": [

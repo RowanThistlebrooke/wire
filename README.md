@@ -48,6 +48,8 @@ and will stay that way.
 | `mcp/health.mjs` | the `health` tool: is your copy behind, is your table the right shape, which settings are missing |
 | `api/setup.mjs` | the `/you` walkthrough, seven steps one at a time, for Whop license holders, in any AI that speaks MCP; it has no door to any ledger |
 | `start.html` | the page a buyer lands on: where to add the walkthrough, the one thing to say, the seven steps, the Deploy link |
+| `setup.html` | step two in one press: makes the table and your login, through `api/init.mjs`, for a copy whose Supabase came with the Deploy button |
+| `api/init.mjs` | the one door that holds the database address and secret key the Supabase store puts in Vercel; runs `sql/01_the_table.sql` once and makes the login, then only says already set up |
 | `token.html` | makes a WIRE_TOKEN in the browser for a buyer with no terminal; sends nothing, and shows the same one in that browser until asked for another |
 
 ## Set it up

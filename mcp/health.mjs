@@ -64,7 +64,7 @@ export function keys() {
   if (!publishableKey()) missing.push('WIRE_KEY (or SUPABASE_PUBLISHABLE_KEY)');
   else if (!isPublishable(publishableKey())) wrong.push(`${process.env.WIRE_KEY ? 'WIRE_KEY' : 'SUPABASE_PUBLISHABLE_KEY'} is not the publishable key`);
   for (const k of ['WIRE_EMAIL', 'WIRE_PASSWORD']) if (!process.env[k]) missing.push(k);
-  if (process.env.VERCEL && !process.env.WIRE_TOKEN) missing.push('WIRE_TOKEN');   // the web door; Claude Desktop does not need it
+  if (process.env.VERCEL && !String(process.env.WIRE_TOKEN || '').trim()) missing.push('WIRE_TOKEN');   // the web door; Claude Desktop does not need it
   return { ok: !missing.length && !wrong.length, missing, ...(wrong.length ? { wrong } : {}) };
 }
 
