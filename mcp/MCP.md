@@ -2,11 +2,17 @@
 
 The MCP is the main door into the ledger. These are its laws.
 
-Law 4, the writing laws 12 to 15, and 17 and 18 are not only written here. They ship:
-the server sends them as its instructions at the start of every session, so
-any copy of the Wire carries them whether or not anyone ever opens this file. They live
-in exactly two places, here and in `wireServer()` in `mcp/server.mjs`. Change
-one and change the other.
+The server's connection instructions (`wireServer()` in `mcp/server.mjs`)
+carry take, the three kinds of number, the mentor and the "what now" answer,
+laws 12 to 15, inside the 2,048 characters Claude Code keeps; the /youscan
+scan follows past them, and the `youscan` prompt carries it where the cut
+applies. The profile and logging note guidance lives in `remember`'s
+description, laws 17 and 18 in `rule`'s, and `take`, `record_page`,
+`estimate`, `correct` and `void` hold the writing laws in code. Laws 1 to
+11, 16, 19 and 20 and the reply footer live in this file only: they reach
+whoever opens it and nothing the connected AI is sent. Change a law here and
+change the code or the description that carries it, or say here that
+nothing does.
 
 ## Before anything
 
@@ -18,13 +24,14 @@ one and change the other.
 3. Do not ask what is working. Ask for the screenshot, the export or
    the file. What the user believes is a bias. What the numbers say
    is the data.
-4. When the user asks to track something new, read the ledger first
-   and say whether a stock already carries that fact. Name it and say
-   why in one line. A new metric is a cost, not a free addition.
+4. Before a new name, read stocks. Reuse a stock's name for the same
+   fact in the same unit; a new name only for a fact no stock carries.
 
 ## While working
 
-5. One subject at a time. The user names it. Work only that.
+5. One subject at a time. The user names it. Work only that. Numbers
+   the user gives are taken whatever the subject; only the work stays
+   on it.
 6. Everything noticed outside that subject goes in LATER. Name it
    once, do not work it.
 7. Doors, cheapest first: existing puller, export, screenshot, by
@@ -35,21 +42,30 @@ one and change the other.
    Never list ten.
 10. Pick the grain that answers the question. Per post, not per day,
     when the question is which post worked.
-11. Cut a metric that carries no information another already has.
-    Say why in one line.
+11. A number another stock already carries is still taken; cut it only
+    from scoring, by giving it no rule, never from the ledger.
 
 ## Writing
 
-12. Print every row before writing it. Wait for a yes.
-13. Transcribe only. Never estimate, round, fill or infer. If a
-    number cannot be read, say so.
-14. An estimate is not a measurement. A number the user gave you is
-    transcribed under `record`. A number you read out of a photo or a
-    screenshot goes under `estimate`, which signs it `photo`, keeps the
-    model that read it in context, and takes only names ending `_est`.
-    Never the other way round. A wrong estimate is read again through
-    `estimate`, never corrected by a typed number.
-15. Silence over a guess. Everywhere.
+12. One table, one yes. `take` shows every row it would write, and
+    every row it would skip with why, and writes nothing without the
+    code its table came with.
+13. Transcribe: the value exactly as given or shown, never rounded,
+    filled or inferred. A rate, change, average or total over time
+    comes from `figures`, never your own arithmetic. If a number cannot
+    be read, say so.
+14. Take every number of the user's worth keeping through `take`, each
+    as a reading (exact, one day), a snapshot (a window or rounded,
+    kept as shown, never scored) or an estimate. A number printed in a
+    photo, like a scale's screen, is a reading. Only a number judged
+    by eye from a photo is an estimate: signed `photo`, with its model,
+    named `_est`, from a photo or a screenshot. A wrong estimate is read
+    again through `estimate`,
+    never corrected by a typed number.
+15. Silence over a guessed number, everywhere. Opinion, prediction and
+    advice are marked as such, in *italics*, never bold; when the
+    ledger has nothing the answer needs, say so in one line and never
+    fill it.
 
 ## Connecting a source
 
@@ -109,8 +125,8 @@ an older note. Profile metadata changes no metric, rule or goal membership.
 there take precedence, including an empty field. Those overrides belong
 to the signed-in user, project and browser; MCP cannot inspect or change
 them. Report the note write separately from whether a browser override
-may still hide it. The same concise onboarding guidance ships in the
-MCP's connection instructions.
+may still hide it. The same guidance ships in the `remember` tool's
+description.
 
 ## Daily logging promises
 

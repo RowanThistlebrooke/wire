@@ -58,24 +58,41 @@ out loud. Keep it that way.
 6. **The maths lives in one file.** `you-reader.js` is loaded by the
    website and read by the MCP server. Do not copy a formula into a second
    place. If a number needs changing, change it there.
-7. **No AI writes a number it was not given.** Claude may write
-   measurements, commits, rules and goals through the MCP. It must print
-   the exact rows first and write only after the user says yes. Every row
-   it writes is signed by what produced the number: `source = 'claude'`
-   for a number the user gave it, `photo` for a number it read off a
-   picture (law 8), and `chrome` for a number it read in the text of a web
-   page the user is signed into. It may only transcribe a value the user
-   gave it in a message, a file or an image, or that such a page shows as
-   text. It never estimates,
-   rounds, fills a gap or infers a value. If it cannot read a number it
-   says so. Notes keep their existing rule. The friction follows what a
+7. **No AI writes a number it was not given, and none is left out.**
+   Claude takes every number of the user's worth keeping from whatever
+   they give it, a message, a photo, a page, a file or another
+   connector's data, and never refuses a true number because of a rule.
+   Only three things stay out: what is not a number, what is not the
+   user's, and what it does not have, a number only in a chart or a
+   picture on a page (law 8) or one missing or unclear, each said in one
+   line. Each goes in as one of three kinds: a reading, an exact number
+   for one day, which is scored; a snapshot, a true number that is a
+   window or rounded (last 28 days, 38.1K), kept exactly as shown and
+   never scored; or an estimate (law 8). A number printed in a photo, a
+   scale's screen, is a reading. It shows one table, what, value, unit,
+   date, area and kind, and one yes writes every row, through `take`,
+   which refuses the write unless the table is the one the user saw.
+   Every row it writes is signed by what produced the number:
+   `source = 'claude'` for a number the user gave it in a message, a file,
+   another connector's data or printed in a photo, `photo` for an
+   estimate (law 8), and `chrome` for a number it read in the text of a
+   web page the user is signed into. It transcribes: the value exactly as
+   given or shown, never rounded, filled or inferred. A rate, a change,
+   an average or a total over time is worked out by the server from
+   `you-reader.js` (`figures`), never by the AI. If it cannot read a
+   number it says so. Notes keep their existing rule. The friction follows what a
    write does. Supplying a number, a correction or an estimate read again
    included, costs a yes: a wrong one is supplied again, latest wins. A
    typed phrase belongs on taking a reading out of the count or putting
    it back, a void or an unvoid, and never on supplying a number.
-8. **An estimate is not a measurement.** A number Claude read out of a
-   photo or a screenshot is written under source `photo`, with the model
-   that read it in context, and its metric name ends `_est`. It never
+8. **An estimate is not a measurement.** A number Claude judged by eye
+   from a photo or a screenshot the user sent (body fat, muscle, tan) is
+   written under source `photo`, with the model that read it in context,
+   and its metric name ends `_est`; it is always shown as an estimate. A
+   number printed in the picture is not an estimate: it is a reading
+   (law 7). A number that is only in a chart on a web page is never
+   written, not even as `_est`, because reading it would need a
+   screenshot. It never
    shares a name or a source with something that was measured. The
    instrument drifts between models and does not reproduce, so the row
    must say what produced it, or the series can never be untangled later.
@@ -178,7 +195,28 @@ out loud. Keep it that way.
 - **Notes** are rows with event_type 'note'. They never appear on a goal's
   page and never enter the maths; the signed-in ledger lists the current
   note per subject, the same ones the MCP reads. A note you wrote on the pad (source 'you') always
-  beats one the AI wrote (source 'claude'), whatever the date.
+  beats one the AI wrote (source 'claude'), whatever the date. A note
+  `area_<metric>`, JSON `{"area":"body"}` (body, business, social, work or
+  finances), places a stock in that area on the dashboard; `take` writes
+  it on the same yes as the stock's numbers, and the browser's own
+  organization still wins.
+- A **snapshot** is a row with event_type 'snapshot': a true number that
+  is a window or rounded, value null, the number exactly as shown in
+  `context.shown` with its `window` and the day it was read. It is insert
+  only like every row, shown on the dashboard, and never scored:
+  `day_metrics` counts only measurements, so no series, index, YOU, goal
+  or scan sees it. Its source_id is `snap:<day>:<window>:<shown>`, so the
+  same snapshot read twice lands once, and another window, or a later true
+  value for the same window on the same day (today so far, read again), is
+  another row.
+- **The mentor.** When the user asks anything, the connector reads the
+  ledger and notes first and answers with a recommendation. Every number
+  from the ledger is in **bold** with its date or period; anything over
+  time comes from `figures` and is bold too; common sense, opinion,
+  prediction and advice are in *italics*, never bold. When the ledger has
+  nothing the answer needs, it says so in one line and never fills it.
+  It says what the data shows, even when it is hard to hear. The laws
+  are enforced in code and never recited to the user.
 - **YOU** is not a row. Its complete index is the average of every index
   you own on days where every active stock has a usable index. The signed-in
   dashboard shows the available-outcome average with explicit coverage;

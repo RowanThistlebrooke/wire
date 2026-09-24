@@ -1,10 +1,12 @@
 // The wire. Your AI reads your ledger, and writes only what you gave it.
 //
-// Law 7: no AI writes a number it was not given. Through record, did, rule
-// and goal Claude may write measurements, commits, rules and goals, and
-// remember writes a note. It prints the exact rows and writes only after
-// you say yes. Every row it writes carries source 'claude'. There is no
-// update and no delete. It signs in as you with the publishable key, so
+// Law 7: no AI writes a number it was not given, and none is left out. take
+// puts every number of yours worth keeping in one table and writes it on one
+// yes; did, rule and goal write commits, rules and goals, and remember a
+// note. Every row is signed by what produced the number: claude for a number
+// you gave or one printed in a photo, photo for an estimate judged by eye,
+// chrome for a number read in a page's text. There is no update and no
+// delete. It signs in as you with the publishable key, so
 // the same row level security that protects the website protects this.
 //
 // The maths is not copied. It loads you-reader.js, the same file the
@@ -14,6 +16,7 @@
 // it over stdio for Claude Desktop; api/mcp.mjs runs it over HTTP on Vercel.
 
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -35,7 +38,8 @@ const R = new Function(src + `
            readCommitVoids, writeCommitVoid, commitVoided, liveCommits,
            indexState, indexOn, noIndexWhy, outgrownBy, offScaleBy, OUTGROWN, BASELINE, LAGS,
            FED, readFeeds, feedOf,
-           scanLead, scanCommit, crossTest, crossGrid };`)();
+           scanLead, scanCommit, crossTest, crossGrid,
+           snapshotKey, readSnapshots, figures, readMeasurementInfo };`)();
 
 // The client is made on the first question, not on import, so a server
 // whose settings are missing still starts and answers with why.
@@ -138,8 +142,9 @@ async function few(tasks, n = 8) {
 }
 
 // The ways one number reaches the ledger, and the whole of the difference
-// between them. A number the user gave is a measurement, signed claude. A
-// number Claude read off a picture is an estimate: signed photo, never claude,
+// between them. A number the user gave, or one printed in a photo like a
+// scale's screen, is a measurement, signed claude. A number Claude judged by
+// eye from a photo is an estimate: signed photo, never claude,
 // its name ending _est, and carrying the model that read it. A number an iOS
 // Shortcut sends through /api/at is a measurement too, signed shortcut. Neither
 // measurement ever takes an estimate's _est name.
@@ -303,44 +308,27 @@ async function readAgain(rows, days, model) {
 // process; HTTP makes one per request, as a stateless server must.
 // site is the address the server is reached at, when there is one, so its answer names the buyer's own pages.
 export function wireServer({ site = null } = {}) {
-  // mcp/MCP.md holds these laws, and a file in a repo is read by nobody. The ones that govern
-  // writing travel with the server instead, so every session opens with them, a buyer's as much
-  // as this one. Kept short on purpose: it is sent every time.
+  // mcp/MCP.md holds the laws. The first 2048 characters, which Claude Code keeps, carry take, the three
+  // kinds, the mentor and the "what now" answer; the code and the tools' own descriptions carry the rest.
+  // The /youscan text follows past that cut, for chats that keep it all, and the youscan prompt carries it
+  // where the cut applies. It is sent every time.
   const server = new McpServer({ name: 'wire', version: version() || '0.0.0' }, {
     instructions:
-      'The Wire is a personal ledger, and it is append only: a row can be added, never edited and ' +
-      'never removed. Print every row before you write it and wait for a yes. Transcribe only: ' +
-      'never estimate, round, fill or infer a number, and say so plainly when one cannot be read. ' +
-      'Silence over a guess, everywhere. Read the ledger before asking for anything already in it. ' +
-      'Notes are what the ledger knows that is not a number; read them before advising, as you read the ledger before asking for a number. ' +
-      'Write a note only through remember, only what the user said in this conversation, never a conclusion, and only on a yes. ' +
-      'Profile-link onboarding is display metadata, not scoring: collect exact public URLs the user gives or confirms, never guess handles. ' +
-      'Read notes first and preserve approved url/picture fields. After approval, use remember with JSON text containing url and picture, ' +
-      'under profile_<account> or profile_<account>_<platform>, using the page\'s exact IDs in lowercase; ask if unknown. ' +
-      'The dashboard reads these notes automatically; browser profile overrides still win. Never include credentials in a profile URL. ' +
-      'Daily logging reminders are display metadata too: only when the user explicitly chooses a daily promise or turns it off, ' +
-      'read notes, preview the exact note and get a yes, then remember logging_<metric-slug> with JSON text {"cadence":"daily"} or {"cadence":"off"}. ' +
-      'Use the existing metric\'s lowercase slug. Never infer a promise from reading patterns or source delays; this creates no reading, rule or scheduled job. ' +
-      'When the user asks to track something new, read the ledger first and say whether a stock ' +
-      'already carries that fact, naming it and why in one line: a new metric is a cost, not a free ' +
-      'addition. ' +
-      'Voiding costs more than a yes: print the phrase the tool gives you, exactly as it is, and ' +
-      'write only once the user sends that phrase back. A number the user gave you goes through ' +
-      'record. A number you read off a picture goes through estimate, which signs it photo and needs ' +
-      'a name ending _est. Never the other way round. A wrong estimate is read again through estimate, never ' +
-      'corrected by a typed number. ' +
-      'Connecting a source: a total that grows keeps no index, because it leaves the unit its baseline was ' +
-      'drawn in behind, so track the rate the total hides and never the total. And never declare a rule for a ' +
-      'stock no door feeds: a stale stock means YOU has no value that day at all, so a number that arrives only ' +
-      'when the user remembers to fetch it stays undeclared, still in the ledger and still history. ' +
-      'Reading a web page through Chrome or any browser tool: only the user\'s own numbers, from pages they are already signed into. ' +
-      'Read the page\'s text, never a screenshot; a number you can only see in a picture or a chart on the page is never written, not even as _est, because reading it would need a screenshot. _est is only for photos the user sends. ' +
-      'A number missing or unclear on the page is not written; say so. Use the date the page shows for a number when it shows one. ' +
-      'A total that only grows goes through record_page with total true, which keeps the total and scores its daily change; never subtract yourself. ' +
-      'Write only through record_page, which signs every row chrome: show its full table and write on one yes. ' +
-      'Read only: never type, log in, accept, or click anything that changes the page, and stop and say so if a site blocks automation. ' +
-      'When the user types /youscan in any chat, with or without a site name or a link after it, run the scan. ' + youscan(undefined, site) + ' ' +
-      'When the user asks what they can do, how to add data, or what now, answer with exactly this and nothing else:\n' + flow(site)
+      'You are the user\'s mentor; you know them through their Wire, their own ledger. ' +
+      'TAKE: from anything they give you (message, photo, page, file, another connector), take every number of theirs ' +
+      'worth keeping. Leave out only what is not a number or not theirs; never refuse a true number. Each goes in as a reading (an exact ' +
+      'number for one day), a snapshot (true but a window or rounded: last 28 days, 38.1K; kept as shown) or an estimate ' +
+      '(judged by eye from a photo, ending _est). A number printed in a photo (a scale\'s screen) is a reading. Reuse a stock\'s name ' +
+      'for the same fact in the same unit (see stocks); give each an area (body, business, social, work, finances). ' +
+      'ONE BOX: call take without confirm; show its table and each skipped line with its why; no rules or refusals of your own. On their yes, ' +
+      'call it again with the code: one yes writes every row. ' +
+      'MENTOR: when they ask anything (can I afford this, should I go out tonight, what next), read the ledger and notes first, ' +
+      'then answer straight with a recommendation. Every number from the ledger is in **bold** ' +
+      'with its date or period. Any change, average, rate or total comes from figures, never your own arithmetic; bold too. Common ' +
+      'sense, opinion, predictions and advice are in *italics*, never bold; a ledger number inside them stays bold. If the ledger has nothing the answer needs, say so in one line; ' +
+      'never fill it. Say what the data shows, even when hard to hear. ' +
+      'Asked what they can do, how to add data or what now, answer with exactly:\n' + flow(site) + '\n' +
+      'When the user types /youscan, with or without a site or link: ' + youscan(undefined, site)
   });
 
   server.tool(
@@ -389,12 +377,14 @@ export function wireServer({ site = null } = {}) {
     {},
     async () => {
       const { all, rules, series, rows, voids, staleBy, today } = await load({ day: true });
+      const [{ units }, snaps] = await Promise.all([R.readMeasurementInfo(db), R.readSnapshots(db)]);
       const out = Object.keys(series).map(m => {
         const p = series[m];
         const last = p[p.length - 1];
         const current = R.indexOn(p, today), reading = p.find(r => r.day === today);
         return {
           metric: m,
+          unit: units[m] ?? null,
           rule: rules[m],
           days: p.length,
           latest_reading: last.value,
@@ -413,8 +403,15 @@ export function wireServer({ site = null } = {}) {
       });
       const undeclared = all.filter(m => !(m in rules));
       const uncounted = all.filter(m => m in rules && !series[m]).map(m => uncountedOf(m, rules, rows, voids));
+      const snapped = [...new Set(snaps.map(x => x.metric))];
       return text({ day: today, you: R.indexOn(R.etfSeries(series, Object.keys(series), staleBy), today),
-                    stocks: out, ...(uncounted.length ? { uncounted } : {}), undeclared });
+                    stocks: out, ...(uncounted.length ? { uncounted } : {}),
+                    undeclared: undeclared.map(m => {
+                      const live = R.liveRows(rows.filter(r => r.metric === m), voids), last = live[live.length - 1];
+                      return { metric: m, unit: units[m] ?? null, days: live.length,
+                               latest_reading: last ? Number(last.mean) : null, latest_reading_day: last ? last.day : null };
+                    }),
+                    ...(snapped.length ? { snapshots: snapped } : {}) });
     }
   );
 
@@ -424,14 +421,23 @@ export function wireServer({ site = null } = {}) {
     'Readings before a stock\'s start remain raw history with a null rank and a reason. A stock the gate gives no index, ' +
     'its baseline never moved or it has outgrown it, returns its readings without an index and says why. ' +
     'A stock with a rule whose readings do not count, ' +
-    'each voided or ignored, answers with no points and why, and is still a stock correct can reach.',
+    'each voided or ignored, answers with no points and why, and is still a stock correct can reach. ' +
+    'A stock with no rule yet returns its counted readings with no index, and the days not counted.',
     { metric: z.string(), days: z.number().optional() },
     async ({ metric, days = 60 }) => {
       const { all, rules, series, rows, voids } = await load();
       const p = series[metric];
       if (!p && all.includes(metric) && metric in rules) return text({ ...uncountedOf(metric, rules, rows, voids), points: [],
         say: 'it is a stock with a rule and no series, for the reason in why: correct reaches its days' });
-      if (!p) return text({ error: `no stock called ${metric}, or it has no rule yet` });
+      // a stock with no rule has no series and no index, but its readings are still its history
+      if (!p && all.includes(metric) && !(metric in rules)) {
+        const mine = rows.filter(r => r.metric === metric), live = R.liveRows(mine, voids), on = new Set(live.map(r => r.day));
+        const notCounted = [...new Set(mine.map(r => r.day))].filter(d => !on.has(d));
+        return text({ metric, rule: null, index_state: 'none', note: 'no index: no rule yet',
+          points: live.slice(-days).map(r => ({ day: r.day, value: Number(r.mean), rank: null })),
+          ...(notCounted.length ? { not_counted: notCounted } : {}) });
+      }
+      if (!p) return text({ error: `no stock called ${metric}` });
       // The shared reader keeps raw history and puts its refusal beside each rank it cannot supply.
       return text({ metric, start: p.start, baseline_readings: p.baselineCount, index_state: R.indexState(p),
         ...(R.indexState(p) === 'none' ? { note: 'no index: ' + R.noIndexWhy(p) } : {}),
@@ -506,7 +512,8 @@ export function wireServer({ site = null } = {}) {
   server.tool(
     'notes',
     'What has been noted, latest per subject. A note you wrote yourself beats ' +
-    'one Claude wrote, whatever the date. Pass a subject for its full history.',
+    'one Claude wrote, whatever the date. Pass a subject for its full history. ' +
+    'Read notes before advising. A number in a note, used in an answer, is bold with the note\'s date.',
     { subject: z.string().optional() },
     async ({ subject }) => {
       await signIn();
@@ -521,7 +528,11 @@ export function wireServer({ site = null } = {}) {
   server.tool(
     'remember',
     'Write one note under a subject. Only remember what the user said in this ' +
-    'conversation, never a conclusion. The user approves each call.',
+    'conversation, never a conclusion. The user approves each call. ' +
+    'Read notes first. Notes the dashboard reads: profile_<account> or profile_<account>_<platform>, using the page\'s exact account and platform IDs (ask if unknown, never guess one), JSON with url and picture, ' +
+    'exact public URLs the user gave or confirmed, never a guessed handle and never credentials, keeping fields already approved; a profile saved in the browser still wins over the note, so say the note was written, not that the link shows; ' +
+    'logging_<metric>, JSON {"cadence":"daily"} or {"cadence":"off"}, only when the user chooses a daily promise or turns it off. ' +
+    'A stock\'s area is placed by take, as area_<metric>, on the same yes as its numbers.',
     { subject: z.string(), text: z.string() },
     async ({ subject, text: body }) => {
       await signIn();
@@ -565,13 +576,14 @@ export function wireServer({ site = null } = {}) {
 
   server.tool(
     'record',
+    'Prefer take, which shows one table and writes every row on one yes. ' +
     'Write readings the user gave: one events row each, event_type measurement, ' +
     'source claude, source_id the metric and the ledger day joined by a colon, so ' +
     'the same reading twice lands once. occurred_at is a timestamp with its zone, or ' +
     'a date, which is written at noon UTC as commits are, or at the hour of that date ' +
     'day_of puts on it where noon UTC is on another ledger day. If any row cannot be read, ' +
     'nothing is written; print every row to the user and get a yes before calling this. ' +
-    'Never call it with a value you were not given. A row whose stock and day already hold a reading from ' +
+    'Never call it with a value you were not given. A number printed in a photo, like a scale\'s screen, is a reading. A row whose stock and day already hold a reading from ' +
     'this door, voided or not, is skipped: to put another number on that day, use correct.',
     {
       rows: z.array(z.object({
@@ -659,12 +671,242 @@ export function wireServer({ site = null } = {}) {
     return { page, rows: offered.map(x => x.row), input: offered.map(x => x.input), changes: shown.map(c => ({ metric: c.metric, value: c.value, from: c.from })), skipped };
   }
 
+  // ---- the box: every true number the user gives, organized, written on one yes ----
+  //
+  // Whatever the user gives, a message, a photo, a page, a file or another connector's data, every number of
+  // theirs worth keeping comes here as one table. A reading is an exact number for one day, and is scored. A
+  // snapshot is true but a window or rounded (last 28 days, 38.1K): kept exactly as shown, in context, value
+  // null, never scored, because day_metrics counts only measurements. An estimate is judged by eye from a photo
+  // and ends _est. A row may name its area, and the same yes places its stock there with an area_<metric> note
+  // the dashboard reads; the user's own note, and the browser's settings, still win.
+  //
+  // Without confirm it writes nothing and returns the table and a code. With the code it plans again and writes
+  // only if the plan is still the one the table showed, every row in one insert. The laws stay in the code it
+  // calls: readingsOf refuses a value that is not a number and a date still to come, the keys land a row once,
+  // and the table is append only.
+  const AREAS = ['body', 'business', 'social', 'work', 'finances'];
+  const boxCode = x => createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 10);
+  const kindOf = r => r.event_type === 'snapshot' ? 'snapshot' : /_est$/.test(r.metric) ? 'estimate' : 'reading';
+  const dayOfRow = r => r.event_type === 'snapshot' ? r.context.as_of
+    : r.source === 'chrome' ? r.source_id.slice(r.source_id.lastIndexOf('|') + 1)
+    : r.source_id.slice(r.metric.length + 1);
+
+  async function boxPlan({ from, page, connector, model, read, rows }) {
+    const at = from === 'page' ? pageOf(page || '') : null;
+    if (from === 'page' && !at) return { error: 'nothing written', why: 'from page needs page: the http or https address of the page the numbers were read on' };
+    if (from === 'photo' && !String(model || '').trim()) return { error: 'nothing written', why: 'from photo needs model: the model that read the photo, as exactly as you can name it' };
+    if (from === 'connector' && !String(connector || '').trim()) return { error: 'nothing written', why: 'from connector needs connector: the name of the connector the numbers came from' };
+    const wrongEst = rows.filter(r => r.as === 'estimate' && from !== 'photo');
+    if (wrongEst.length) return { error: 'nothing written', why: 'an estimate is judged by eye from a photo, so from must be photo', refused: wrongEst };
+    if (rows.some(r => r.as === 'estimate') && !read) return { error: 'nothing written', why: 'an estimate needs read: photo or screenshot, what the number was judged from' };
+    const origin = { from, ...(connector ? { connector: String(connector).trim() } : {}), ...(from === 'photo' ? { model: String(model).trim() } : {}) };
+    const toIn = r => ({ metric: r.what, value: r.value, unit: r.unit ?? null, occurred_at: r.date, ...(r.total ? { total: true } : {}) });
+    const reads = rows.filter(r => r.as === 'reading'), snaps = rows.filter(r => r.as === 'snapshot'), ests = rows.filter(r => r.as === 'estimate');
+    const out = [], skipped = [];
+
+    if (reads.length && from === 'page') {
+      const p = await pagePlan(at, reads.map(toIn));
+      if (p.error) return p;
+      out.push(...p.rows);
+      skipped.push(...p.skipped.map(k => ({ what: k.metric, day: k.day, why: k.why })));
+    } else if (reads.length) {
+      const totals = reads.filter(r => r.total);
+      if (totals.length) return { error: 'nothing written', why: 'the daily change of a running total is worked out only from a page; from here give the total itself as a reading named '
+        + totals.map(r => slug(r.what) + '_total').join(', ') + ', never under its daily change\'s name, or keep it as a snapshot', refused: totals };
+      const g = await readingsOf(reads.map(toIn), WRITERS.record, origin);
+      if (g.error) return g;
+      out.push(...g.out);
+    }
+    if (ests.length) {
+      const g = await readingsOf(ests.map(toIn), WRITERS.estimate, { model: String(model).trim(), read });
+      if (g.error) return g;
+      out.push(...g.out);
+    }
+    if (snaps.length) {
+      const blank = snaps.filter(r => !String(r.shown ?? '').trim());
+      if (blank.length) return { error: 'nothing written', why: 'a snapshot needs shown: the number exactly as given or shown, like 38.1K', refused: blank };
+      // the day it was read, placed as a reading's day is; value only stands in for readingsOf and is never written
+      const g = await readingsOf(snaps.map(r => ({ metric: r.what, value: 0, unit: r.unit ?? null, occurred_at: r.date })), { source: at ? 'chrome' : 'claude', name: WRITERS.record.name });
+      if (g.error) return g;
+      g.out.forEach((row, i) => {
+        const r = snaps[i], window = String(r.window || 'now').trim() || 'now';
+        out.push({ ...row, value: null, event_type: 'snapshot', source_id: R.snapshotKey(g.days[i], window, r.shown),
+                   context: { shown: String(r.shown).trim(), window, as_of: g.days[i], ...origin, ...(at ? { page: at } : {}) } });
+      });
+    }
+
+    // a row already in the ledger, or twice in this table, lands once; page readings were checked by pagePlan
+    const check = out.filter(r => !(r.source === 'chrome' && r.event_type === 'measurement'));
+    let have = [];
+    if (check.length) {
+      try {
+        have = await R.readAll(() => db.from('events').select('id, metric, source, source_id, event_type, value, context')
+          .in('source_id', [...new Set(check.map(r => r.source_id))]).order('id', { ascending: true }));
+      } catch (e) { return { error: (e && e.message) || String(e) }; }
+    }
+    const held = new Map(have.map(h => [h.source + '|' + h.source_id + '|' + h.metric, h]));
+    // two different values for one stock and day cannot both be right, and picking one would be a guess
+    const vals = new Map();
+    for (const r of out) {
+      const k = r.source + '|' + r.source_id + '|' + r.metric, v = r.event_type === 'snapshot' ? r.context.shown : r.value;
+      if (!vals.has(k)) vals.set(k, { what: r.metric, day: dayOfRow(r), values: new Set() });
+      vals.get(k).values.add(v);
+    }
+    const conflicts = [...vals.values()].filter(x => x.values.size > 1).map(x => ({ what: x.what, day: x.day, values: [...x.values] }));
+    if (conflicts.length) return { error: 'nothing written', why: 'two different values for one stock and day: ask the user which is right', conflicts };
+    const keep = [], seen = new Set();
+    for (const r of out) {
+      const k = r.source + '|' + r.source_id + '|' + r.metric, h = held.get(k), kind = kindOf(r), day = dayOfRow(r);
+      if (h) skipped.push({ what: r.metric, day, why: kind === 'snapshot' ? `this snapshot is already in, as ${(h.context || {}).shown}`
+        : kind === 'estimate' ? `already estimated that day as ${h.value}; to read the photo again, use estimate`
+        : `already in that day as ${h.value}; to put another number on that day, use correct` });
+      else if (!seen.has(k)) { seen.add(k); keep.push(r); }   // the same value twice in one table lands once
+    }
+
+    // areas: the same yes places each stock, unless its area note already says so or the user's own note says otherwise
+    const areaOf = new Map();
+    for (const r of rows) if (r.area) {
+      const m = slug(r.what);
+      if (areaOf.has(m) && areaOf.get(m) !== r.area) return { error: 'nothing written', why: 'one stock, one area: this table gives ' + m + ' two', refused: rows.filter(x => slug(x.what) === m) };
+      areaOf.set(m, r.area);
+      if (r.total) areaOf.set(m + '_total', r.area);
+    }
+    const notes = [];
+    if (areaOf.size) {
+      const current = new Map((await R.readNotes(db)).map(n => [n.metric, n]));
+      for (const [metric, area] of areaOf) {
+        const subject = R.slugCommit('area_' + metric), cur = current.get(subject);
+        let was = null;
+        try { was = cur && JSON.parse(cur.text).area; } catch {}
+        if (was === area) continue;
+        if (cur && cur.source === 'you') { areaOf.set(metric, was || null); skipped.push({ what: metric, why: `your own note places it in ${was || 'another area'}, and yours wins` }); continue; }
+        notes.push({ metric: subject, event_type: 'note', value: null, source: 'claude', context: { text: JSON.stringify({ area }) } });
+      }
+    }
+
+    const table = keep.map(r => ({
+      what: r.metric,
+      value: r.event_type === 'snapshot' ? r.context.shown : r.value,
+      unit: r.unit ?? null,
+      date: dayOfRow(r),
+      area: areaOf.get(r.metric) || null,
+      as: kindOf(r) + (r.event_type === 'snapshot' ? ', ' + r.context.window : '')
+    }));
+    const placed = notes.map(n => ({ what: n.metric.replace(/^area_/, ''), area: JSON.parse(n.context.text).area }));
+    return { rows: keep, notes, placed, table, skipped, code: boxCode({ table, rows: keep, notes: notes.map(n => [n.metric, n.context.text]) }) };
+  }
+
+  server.tool(
+    'take',
+    'The box: every number of the user\'s worth keeping, from what they gave you, as one table, written on one yes. ' +
+    'from is where the numbers came from: message (they typed or said it), photo (a picture they sent), page (a web page they are signed into, ' +
+    'read through a browser tool), file, or connector (another connector\'s data; name it in connector). ' +
+    'Each row: what (reuse the name of a stock that carries the same fact in the same unit: call stocks first), value exactly as given or shown, ' +
+    'unit, date (the day it belongs to; for a snapshot, the day it was read), area (body, business, social, work, finances), and as: ' +
+    'reading, an exact number for one day, scored; snapshot, a true number that is a window or rounded (last 28 days, 38.1K), with shown ' +
+    'exactly as shown and window as named, kept and never scored; or estimate, judged by eye from a photo or a screenshot they sent, what ending _est, from photo with model and read. ' +
+    'A number printed in a photo, like a scale\'s screen, is a reading. A running total read off a page is a reading with total true, named for ' +
+    'its daily change: the tool keeps the total and works out the day\'s change from the day before; never subtract yourself. A count still ' +
+    'climbing for a day not over yet (views today so far, even when the page puts a date on it) is a snapshot, never a reading; a number ' +
+    'measured today (a weight this morning) is a reading. Leave out only what is not a number ' +
+    'or not the user\'s; a number only in a chart or a picture on a page, or one missing or unclear, is not one you have: leave it out and say so ' +
+    'in one line. From a page: only pages they are signed into, read the text and ' +
+    'never a screenshot, never sign in, type or click anything that changes the page, and stop if it blocks automation. ' +
+    'Call it without confirm: it writes nothing and returns the table and a code. Show the table as it is, what it places, and every skipped line with its why; no rules and no refusals of your own. ' +
+    'Only when the user says yes, call it again with the same arguments and confirm set to that code: one yes writes every row and places ' +
+    'each stock in its area.',
+    {
+      from: z.enum(['message', 'photo', 'page', 'file', 'connector']),
+      page: z.string().optional().describe('from page: the address of the page'),
+      connector: z.string().optional().describe('from connector: which connector the numbers came from'),
+      model: z.string().optional().describe('from photo: the model that read the photo'),
+      read: z.enum(['photo', 'screenshot']).optional().describe('an estimate: what it was judged from, a photo or a screenshot'),
+      rows: z.array(z.object({
+        what: z.string(),
+        value: z.number().nullable().optional().describe('a reading or an estimate: the number exactly as given or shown'),
+        shown: z.string().optional().describe('a snapshot: the number exactly as shown, like 38.1K'),
+        unit: z.string().nullable().optional(),
+        date: z.string().describe('YYYY-MM-DD, or a timestamp with its zone'),
+        area: z.enum(AREAS).optional(),
+        as: z.enum(['reading', 'snapshot', 'estimate']),
+        window: z.string().optional().describe('a snapshot: its window as named, like last 28 days; now when it is a rounded number for today'),
+        total: z.boolean().optional().describe('from page: a running total, named for its daily change')
+      })).min(1),
+      confirm: z.string().optional().describe('the code the table came with, only after the user said yes to it')
+    },
+    async ({ from, page, connector, model, read, rows, confirm }) => {
+      await signIn();
+      const plan = await boxPlan({ from, page, connector, model, read, rows });
+      if (plan.error) return text(plan);
+      const skipped = plan.skipped.length ? { skipped: plan.skipped } : {}, placing = plan.placed.length ? { placed: plan.placed } : {};
+      if (!confirm) return text({ table: plan.table, ...placing, ...skipped, code: plan.code,
+        say: 'Nothing written yet. Show this table as it is' + (plan.skipped.length ? ', and under it every skipped line with its why: those will not be written' : '')
+          + '. When the user says yes, call take again with the same arguments and confirm: ' + plan.code + '.' });
+      if (confirm !== plan.code) return text({ error: 'nothing written', why: 'the table changed since it was shown; show this one and ask again', table: plan.table, ...placing, ...skipped, code: plan.code });
+      if (!plan.rows.length && !plan.notes.length) return text({ written: [], ...skipped });
+      const now = new Date().toISOString();
+      const all = [...plan.rows, ...plan.notes.map(n => ({ ...n, occurred_at: now }))];
+      const written = [], late = [];
+      const { error } = await db.from('events').insert(all);
+      if (!error) written.push(...all);
+      else if (error.code !== '23505') return text({ error: error.message, written: [] });
+      else for (const r of all) {
+        // a row that landed between the table and the yes, from another door or another call, lands once
+        const { error: e } = await db.from('events').insert(r);
+        if (!e) written.push(r);
+        else if (e.code === '23505') { const t = plan.table[plan.rows.indexOf(r)]; late.push({ what: r.metric, ...(t ? { day: t.date, as: t.as } : {}), why: 'it landed in the meantime' }); }
+        else return text({ error: e.message, written: written.map(w => w.metric) });
+      }
+      const shown = plan.table.filter((t, i) => written.includes(plan.rows[i]));
+      const placed = written.filter(w => w.event_type === 'note').map(w => ({ what: w.metric.replace(/^area_/, ''), area: JSON.parse(w.context.text).area }));
+      return text({ written: shown, ...(placed.length ? { placed } : {}), ...((plan.skipped.length || late.length) ? { skipped: [...plan.skipped, ...late] } : {}) });
+    }
+  );
+
+  // ---- figures: anything over time, worked out on the server from you-reader.js ----
+  server.tool(
+    'figures',
+    'What one stock did over a period, worked out here from the counted readings, never by you: first and latest with their days, ' +
+    'change, change per day, mean, low, high, total, and how many days had a reading. Voided days are out and corrected days read their ' +
+    'correction. A day with no reading is missing, never zero. total adds each day\'s value: use it only for a stock whose days add up ' +
+    '(steps, spend), not a level (weight); change and change per day compare the first day with the latest: use them for a level, not a stock ' +
+    'whose days add up. missing lists every day with no counted reading and missing_days counts them; not_counted names the ones among them ' +
+    'that held readings which count for nothing, voided or corrected before another reading landed, so it is part of missing, never added to it; ' +
+    'today, while it has no reading, is open, not missed. Use this for every change, average, rate or total you state. A difference between two periods is not an effect: whether something ' +
+    'worked is did_it_work, which keeps the gates. It also returns the stock\'s latest snapshots.',
+    { metric: z.string(), from: z.string().optional().describe('YYYY-MM-DD'), to: z.string().optional().describe('YYYY-MM-DD'),
+      days: z.number().int().min(1).optional().describe('instead of from: the last this many days up to to, or today') },
+    async ({ metric, from, to, days }) => {
+      await signIn();
+      const m = slug(metric);
+      if ((from && !R.isDate(from)) || (to && !R.isDate(to))) return text({ error: 'from and to are dates, YYYY-MM-DD' });
+      if (from && days) return text({ error: 'days is instead of from: give from or days, not both' });
+      const today = await ledgerDay();
+      let f = from, t = to;
+      if (days) {
+        t = t || today;
+        f = new Date(Date.parse(t + 'T12:00:00Z') - (days - 1) * 864e5).toISOString().slice(0, 10);
+      }
+      if (f && t && f > t) return text({ error: 'from ' + f + ' is after to ' + t });
+      const [rows, voids, snaps, unitRow] = await Promise.all([
+        R.readDays(db, [m]), R.readVoids(db, ledgerDay), R.readSnapshots(db, m),
+        db.from('events').select('unit').eq('metric', m).eq('event_type', 'measurement').not('unit', 'is', null)
+          .order('occurred_at', { ascending: false }).limit(1)
+      ]);
+      if (!rows.length && !snaps.length) return text({ error: 'no stock called ' + m });
+      return text({ ...R.figures(rows, voids, m, f, t, today), unit: (unitRow.data && unitRow.data[0] && unitRow.data[0].unit) || null,
+                    ...(snaps.length ? { snapshots: snaps } : {}) });
+    }
+  );
+
   server.tool(
     'record_page',
+    'Prefer take with from page, which also keeps windows and rounded numbers as snapshots. ' +
     'Write numbers read in the text of a web page the user is signed into, through Chrome or any browser tool. ' +
+    'Read the page\'s text, never a screenshot; never sign in, type, accept or click anything that changes the page; stop and say so if a site blocks automation. ' +
     'Every row is signed source chrome; you never choose the source. page is the address of the page they were read on; ' +
     'its query and fragment are dropped. source_id is the page and the ledger day, so the same page read twice on one day lands once. ' +
-    'occurred_at is the date the page shows for the number when it shows one, else today; a number for a day not over yet is not written, even when the page puts a date on it, because the site\'s today can be the user\'s yesterday. value is exactly as the page shows it. ' +
+    'occurred_at is the date the page shows for the number when it shows one, else today; do not pass a number for a day not over yet, even when the page puts a date on it, because the site\'s today can be the user\'s yesterday; the tool does not yet refuse it. value is exactly as the page shows it. ' +
     'A total that only grows (followers, views ever, lifetime sales) is passed with total true under the name of its daily change, ' +
     'like ig_followers: the tool keeps the total as ig_followers_total and works out the day\'s change from the day before; never subtract yourself. ' +
     'Call it first without yes: it returns the exact rows it would write, every change with what it was worked out from, and what it skips and why. ' +
@@ -697,15 +939,16 @@ export function wireServer({ site = null } = {}) {
 
   server.tool(
     'estimate',
-    'Write numbers you read off a picture yourself: one events row each, event_type measurement, ' +
+    'Prefer take for new estimates; use this to read a photo again. ' +
+    'Write numbers you judged by eye from a photo the user sent: one events row each, event_type measurement, ' +
     'source photo and never claude, and context naming the model that read them and what it read. ' +
     'Every metric name must end _est, and a row whose name does not is refused along with the rest of ' +
     'the call. source_id is the metric and the ledger day joined by a colon, so the same estimate twice ' +
     'lands once; an estimate never lands on top of a measurement, because the source is part of that ' +
     'question. occurred_at is a timestamp with its zone, or a date, handled exactly as record handles it. ' +
     'If any row cannot be read, nothing is written; print every row to the user and get a yes before ' +
-    'calling this. An estimate is not a measurement: a number the user gave you goes through record, a ' +
-    'number you read goes through this, and never the other way round. A wrong estimate is fixed by reading the ' +
+    'calling this. An estimate is not a measurement: a number the user gave you, or one printed in a photo, is a reading and goes through take; a ' +
+    'number you judged by eye goes through this, and never the other way round. A wrong estimate is fixed by reading the ' +
     'picture again, never by a typed number. When a day already holds an estimate and you read it again with ' +
     'another value, or that day is voided or stale, nothing is written for that row: the answer lists it under ' +
     'read_again, each with the row and the new value to print. Print them to the user and wait for a yes; then call ' +
@@ -819,7 +1062,10 @@ export function wireServer({ site = null } = {}) {
     'Write which way is better for one stock the user named: up, down, band with lo ' +
     'and hi, or ignore. The latest rule wins and the old ones stay on the record. ' +
     'Written through writeRule, signed claude; print the rule to the user and get a ' +
-    'yes before calling this.',
+    'yes before calling this. A rule scores a stock, so give one only to a stock a door feeds every day: ' +
+    'a stale stock leaves YOU with no value that day, and a number that arrives only when the user remembers ' +
+    'stays undeclared, still in the ledger. Rule the rate a running total hides, never the total itself: a total ' +
+    'that grows leaves its baseline behind and keeps no index.',
     {
       metric: z.string(),
       rule: z.object({
@@ -1002,13 +1248,13 @@ export function wireServer({ site = null } = {}) {
     'with the row and the new value, or, when that stock has no reading on that day, with every reading the day holds, ' +
     'so the right stock can be named. Print the row and the new value to the user, wait for a yes, then call it again ' +
     'with yes true. A wrong correction is corrected again, latest wins, so a yes is enough. Only a number the user ' +
-    'gave you, and never on an estimate: an _est reading was read off a picture, and a typed number is not that ' +
+    'gave you, and never on an estimate: an _est reading was judged by eye from a photo, and a typed number is not that ' +
     'instrument; estimate reads the picture again instead. Signed claude.',
     { metric: z.string(), day: z.string(), value: z.number(), yes: z.boolean().optional() },
     async ({ metric, day, value, yes }) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return text({ error: `a day is a date like 2026-09-15, not ${day}` });
       if (!Number.isFinite(value)) return text({ error: 'the value is not a number' });
-      if (/_est$/.test(metric)) return text({ error: `${metric} is an estimate, read off a picture; a typed number does not correct it. Read the picture again through estimate` });
+      if (/_est$/.test(metric)) return text({ error: `${metric} is an estimate, judged by eye from a photo; a typed number does not correct it. Read the picture again through estimate` });
       // every day row the ledger holds, voided or not: a void never removes the row it stops counting
       const { rows, voids } = await load();
       const r = R.readingOn(rows, metric, day);
@@ -1072,7 +1318,7 @@ export function wireServer({ site = null } = {}) {
   // commands, the instructions carry it instead, which is not yet tested there.
   server.registerPrompt('youscan', {
     title: '/youscan',
-    description: 'Read your own numbers off a page you are signed into, and see which can go in.',
+    description: 'Read your own numbers off a page you are signed into, and put every one worth keeping in, on one yes.',
     argsSchema: { site: z.string().optional().describe('A site name or a URL, like studio.youtube.com') }
   }, ({ site: target }) => ({
     messages: [{ role: 'user', content: { type: 'text', text: youscan(target && target.trim() ? target.trim() : null, site) } }]

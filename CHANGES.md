@@ -3,6 +3,45 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, the sponge, the box and the mentor.** The Wire takes
+  every true number the user gives it and organizes it, and the
+  connector answers from the ledger. The new `take` tool is the box:
+  from a message, a photo, a page, a file or another connector's data,
+  every number of the user's worth keeping goes into one table, what,
+  value, unit, date, area and kind, and one yes writes every row. A
+  reading is an exact number for one day and is scored. A snapshot is a
+  true number that is a window or rounded, last 28 days or 38.1K: a new
+  event_type, 'snapshot', insert only, value null, the number kept
+  exactly as shown in context with its window, never scored, because
+  day_metrics counts only measurements, so no buyer's table needs any
+  SQL. An estimate is judged by eye from a photo and ends _est; a number
+  printed in a photo, a scale's screen, is a reading. Only what is not a
+  number or not the user's stays out. take writes nothing without the
+  code its table came with, so the yes is for the table the user saw,
+  and it writes every row in one insert. The same yes writes an
+  area_<metric> note for each stock (body, business, social, work,
+  finances), which the dashboard now reads to place the stock under its
+  area; the browser's own organization still wins, and snapshots show
+  there as shown, with their window, and in the ledger's Entries. The
+  new `figures` tool works out what a stock did over a period, change,
+  per day, mean, low, high and total, from you-reader.js, with voided
+  days out, corrected days at their correction and missing days never
+  zero, so the AI never does arithmetic in its head; `stocks` now names
+  each stock's unit and which stocks have snapshots. The server's
+  instructions are rewritten around taking, the one box and the mentor:
+  ledger numbers in bold with their date, anything over time from
+  figures, opinion and advice in italics, and one line when the ledger
+  has nothing. The core and the "what now" answer fit inside the 2,048
+  characters Claude Code keeps, and the /youscan text past them is
+  carried there by the prompt; the rules they used to carry live
+  in the code and in the tools' own descriptions (remember's note
+  formats, record_page's read-only page rules, rule's no-door and
+  rate-not-total rules). /youscan feeds the same box: no can't-go-in
+  list, windows and rounded numbers go in as snapshots. CLAUDE.md laws
+  7 and 8 and the shape of the data say the same. Not yet in code, after
+  27 Sep 2026: take and record_page do not refuse a count for a day not
+  over yet; until that guard lands it is kept out by their words.
+
 - **24 Sep 2026, /youscan.** The Wire's connector has a prompt called
   youscan, with one optional argument, a site name or a link. Claude
   Code shows it as /mcp__wire__youscan; a typed /youscan is refused

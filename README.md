@@ -216,8 +216,10 @@ both bounds and a confirmation. Imports do not assign scoring rules.
 - The service_role key never appears in this repo, in a page, or in a
   chat. Secrets live in GitHub Settings, in Vercel's environment
   variables, or in a config file on your own machine.
-- When it cannot know, it says nothing. Silence is a feature and it is
-  the reason any of the numbers are worth reading.
+- When it cannot know a number, it says so and never fills it. Opinion
+  and advice are marked as opinion, in italics, never as a reading.
+  Silence over a guessed number is the reason any of the numbers are
+  worth reading.
 
 ## The course
 

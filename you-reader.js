@@ -292,6 +292,91 @@ async function readNotes(db, subject) {
   return Object.values(latest);
 }
 
+// ---- snapshots: a true number that is a window or rounded ----
+//
+// "38.1K views, last 28 days" is true, and it is not a day's reading: rounding
+// hides the exact number and a window spans many days. So it is kept exactly as
+// shown, event_type 'snapshot', value null, the number as text in context.shown
+// with its window, and it is never scored: day_metrics counts only measurements.
+// Its key names the day it was read, the window and what it showed, so the same
+// snapshot read twice lands once, and another window, or a later true value for
+// the same window on the same day (today so far, read again), is another row.
+const snapKeyPart = (x, blank) => String(x || blank).trim().toLowerCase().replace(/[^a-z0-9.]+/g, '_').replace(/^_|_$/g, '') || blank;
+const snapshotKey = (day, window, shown) => 'snap:' + day + ':' + snapKeyPart(window, 'now') + ':' + snapKeyPart(shown, 'blank');
+
+// The latest snapshot per stock and window, newest first, each with what it
+// showed, its window, the day it was read and where it came from. A window
+// spelled with other capitals or spaces is the same window.
+async function readSnapshots(db, metric) {
+  const data = await readAll(() => { let b = db.from('events')
+    .select('id, metric, unit, source, source_id, occurred_at, context')
+    .eq('event_type', 'snapshot')
+    .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false });
+    return metric === undefined ? b : b.eq('metric', metric); });
+  const seen = new Set(), out = [];
+  for (const r of data) {
+    const c = r.context || {}, k = r.metric + '|' + snapKeyPart(c.window, 'now');
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ metric: r.metric, shown: c.shown ?? null, unit: r.unit, window: c.window || 'now', day: c.as_of || null, source: r.source, from: c.from || null });
+  }
+  return out;
+}
+
+// ---- figures: what a stock did over a period, worked out here and never in a head ----
+//
+// From the day rows of one stock between two days, read as every series reads
+// them: voided days out, corrected days at their corrected value. A day with no
+// reading is missing, never zero (law 3): the mean and the total are over the
+// days that have one, and the answer lists which days are missing and which of
+// those held readings that were not counted. The period is the bounds it reports, the first and latest
+// reading standing in for a bound not given. Today, while it has no reading, is
+// open, not missed, and a day still to come is neither. The total adds each
+// day's value, so it means something for a stock whose days add up (steps,
+// spend), not a level (weight); change compares the first day with the latest,
+// which means something for a level and not for a flow. Numbers keep the
+// precision of the readings they come from, so nothing is rounded afterwards.
+function figures(dayRows, voids, metric, from, to, today) {
+  const held = dayRows.filter(r => r.metric === metric && (!from || r.day >= from) && (!to || r.day <= to));
+  const days = liveRows(held, voids).sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
+  const on = new Set(days.map(r => r.day));
+  // days that held readings which count for nothing, voided or corrected and then stale: they are among the missing
+  const notCounted = [...new Set(held.map(r => r.day))].filter(d => !on.has(d)).sort();
+  // the period is known when both bounds are: given, or stood in for by the first and latest reading
+  const f = from || (days.length ? days[0].day : null), t = to || (days.length ? days[days.length - 1].day : null);
+  // the days that could have been missed: none after the ledger's day, and not the ledger's day while it is still open
+  const open = !!today && !!f && !!t && f <= today && t >= today && !on.has(today);
+  const end = today && t > today ? today : t;
+  const missing = [];
+  if (f && t) for (let d = dayNum(f); d <= dayNum(end); d++) {
+    const iso = new Date(d * 864e5).toISOString().slice(0, 10);
+    if (!on.has(iso) && !(open && iso === today)) missing.push(iso);
+  }
+  const period = f && t ? { days_in_period: dayNum(t) - dayNum(f) + 1, missing_days: missing.length, ...(missing.length ? { missing } : {}) } : {};
+  const rest = { ...period, ...(notCounted.length ? { not_counted: notCounted } : {}), ...(open ? { today_open: true } : {}) };
+  if (!days.length) return { metric, from: f, to: t, days_with_readings: 0, ...rest, say: 'no counted reading of ' + metric + (from || to ? ' in this period' : '') };
+  const first = days[0], last = days[days.length - 1], values = days.map(r => Number(r.mean));
+  // sums and differences are exact at the readings' own places; a quotient keeps two more, so 7 and 8 mean 7.5
+  const places = v => { let p = 0; while (p < 6 && Math.round(v * 10 ** p) / 10 ** p !== v) p++; return p; };
+  const dp = Math.max(...values.map(places)), round = (x, p = dp) => Math.round(x * 10 ** p) / 10 ** p, fine = Math.min(6, dp + 2);
+  const span = dayNum(last.day) - dayNum(first.day);
+  const lo = Math.min(...values), hi = Math.max(...values);
+  return {
+    metric, from: f, to: t,
+    first: { day: first.day, value: values[0] },
+    latest: { day: last.day, value: values[values.length - 1] },
+    change: round(values[values.length - 1] - values[0]),
+    change_per_day: span > 0 ? round((values[values.length - 1] - values[0]) / span, fine) : null,
+    mean: round(mean(values), fine),
+    low: { day: days[values.indexOf(lo)].day, value: lo },
+    high: { day: days[values.indexOf(hi)].day, value: hi },
+    total: round(values.reduce((a, b) => a + b, 0)),
+    days_with_readings: days.length,
+    ...rest
+  };
+}
+
 // The ledger's day for a moment, now unless another is given. The day is
 // defined once, by day_of in the database: your timezone, ending at 6am.
 // The pages and the MCP ask for it here and never work it out themselves.

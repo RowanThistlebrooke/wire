@@ -10,5 +10,5 @@ export function flow(site) {
     + '- "my weight today is 81.4 kg" (any number you measured)\n'
     + '- "how am I doing?" (reads everything you have)\n'
     + `Or drop a file: open ${page} and drop an export. YouTube Studio works, WHOOP does not yet.\n`
-    + 'Or scan a site: type /youscan and a site or a link (in Claude Code: /mcp__wire__youscan), in a chat whose AI has a browser. It reads your numbers off a page you are signed into and shows what can go in.';
+    + 'Or scan a site: type /youscan and a site or a link (in Claude Code: /mcp__wire__youscan), in a chat whose AI has a browser. It reads your numbers off a page you are signed into and puts every one worth keeping in, on one yes.';
 }

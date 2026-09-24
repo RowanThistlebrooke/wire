@@ -607,6 +607,7 @@ body.holding{user-select:none;-webkit-user-select:none;-webkit-touch-callout:non
 .nav-dead{position:absolute;left:-12px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--leak);text-decoration:none}
 #area-rail .nav-loose>.area-button{color:#91a4af;font-size:13px}#area-rail .nav-loose .nav-stock{padding-left:22px}
 @media(max-width:1100px){.nav-val small{display:none}}
+.nav-val small.nav-snap{display:block}.nav-stock[disabled] .nav-val{flex-direction:column;align-items:flex-end;gap:2px}
 #area-rail [data-other-areas]{display:flex;align-items:center;justify-content:space-between;gap:10px}
 /* two levels: a small heading, then one number a row; the rest in one line at the foot */
 #area-rail .nav-head{display:block;width:100%;margin:0;padding:22px 11px 7px;border:0;background:none;box-shadow:none;text-align:left;cursor:pointer;color:var(--muted);font:500 10.5px/1.4 var(--ui);letter-spacing:.14em;text-transform:uppercase;min-height:0;white-space:normal}
@@ -1387,6 +1388,9 @@ let ACCOUNT = NAV.get('account') || '', PLATFORM = NAV.get('platform') || '', SA
 let EXPANDED_ACCOUNT = ACCOUNT, EXPANDED_GOAL = '', PAGE_SECTION = ['path','graph','outcomes','levers','videos','compare','context','overview'].includes(NAV.get('panel')) ? NAV.get('panel') : !NAV.size ? 'path' : 'overview';
 const LANE_META = {api:{label:'API',color:'#75badb'},mcp:{label:'MCP',color:'#bc9ce0'},pad:{label:'Manual',color:'#d1b37b'},import:{label:'Import',color:'#899cda'},other:{label:'Other',color:'#929a9e'}};
 let PROFILEKEY = '', PROFILES = {}, RECORDEDPROFILES = {}, PROFILENOTES = {}, PROFILEEDIT = '', PROFILEFILE = {}, PROFILEDIRTY = false;
+// area_<metric> notes place a stock in an area; SNAPSHOTS are the latest true numbers kept as shown, never scored
+let RECORDEDAREAS = {}, SNAPSHOTS = [];
+const AREA_NOTE_IDS = {body:'area-body',business:'area-business',social:'area-social',work:'area-work',finances:'area-finances'};
 const profileKey = (account,platform='') => account + (platform ? ':' + platform : '');
 const profileSubject = (account,platform='') => 'profile_' + account + (platform ? '_' + platform.toLowerCase() : '');
 function safeProfileURL(value, image = false){
@@ -1415,6 +1419,18 @@ function readProfileNotes(notes){
     PROFILENOTES[key] = {source:note.source,at:note.occurred_at,valid:!!safe};
   }
 }
+// A note names an area by its default id, never its name, which the user can rename; an area deleted in this
+// browser is ignored, so the browser's organization wins. Nothing here writes to HOMES or to storage.
+function readAreaNotes(notes){
+  RECORDEDAREAS = {};
+  for (const note of notes){
+    if (!/^area_./.test(note.metric || '')) continue;
+    let text; try { text = JSON.parse(note.text); } catch { continue; }
+    const id = AREA_NOTE_IDS[String(text && text.area || '').toLowerCase()];
+    if (id && areaOf(id)) RECORDEDAREAS[note.metric.slice(5)] = id;
+  }
+}
+const snapshotOf = m => SNAPSHOTS.find(x => x.metric === m) || null;
 function profileValue(key,field){
   const local = PROFILES[key], recorded = RECORDEDPROFILES[key];
   return local && Object.hasOwn(local,field) ? local[field] : recorded && Object.hasOwn(recorded,field) ? recorded[field] : undefined;
@@ -1799,10 +1815,10 @@ function drawAreas(){
   const head = (attr, label, pressed) => `<button type="button" class="nav-head" ${attr} aria-pressed="${pressed}">${label}</button>`;
   const empty = [];
   const areas = AREAS.map(a => {
-    const open = AREA === a.id && !ACCOUNT, goals = GOALS.filter(g => HOMES[g.id]?.area === a.id);
+    const open = AREA === a.id && !ACCOUNT, goals = GOALS.filter(g => HOMES[g.id]?.area === a.id), stocks = notedIn(a.id);
     if (a.id !== 'area-social'){
-      if (!goals.length && !open){ empty.push(a); return ''; }
-      return `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${goals.map(navGoal).join('') || '<p class="nav-empty">Nothing placed yet</p>'}</div></div>`;
+      if (!goals.length && !stocks.length && !open){ empty.push(a); return ''; }
+      return `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${goals.map(navGoal).join('') + stocks.map(navStock).join('') || '<p class="nav-empty">Nothing placed yet</p>'}</div></div>`;
     }
     // Social media: a heading for each account that holds a goal, its platforms under it; a goal placed in the
     // area but under no account keeps the area's own heading, so none is ever left off the rail
@@ -1815,16 +1831,21 @@ function drawAreas(){
         return `<button type="button" class="nav-platform" data-platform="${esc(platform)}" data-platform-account="${account.id}" aria-pressed="${expanded && PLATFORM === platform}"${navTip(scope, pp)}><span class="nav-identity"><span class="social-logo">${platformMark(platform)}</span><span>${esc(platform)}</span></span>${spark(pp,indexTone(pp.at(-1)?.rank))}${navVal(scope, pp)}</button>`; }).join('') + '</div></div>';
     }).join('');
     const own = goals.filter(g => !named.has(String(HOMES[g.id].section || '').toLowerCase()));
-    if (!accounts && !own.length && !open){ empty.push(a); return ''; }
-    return accounts + (own.length || open ? `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${own.map(navGoal).join('') || (accounts ? '' : '<p class="nav-empty">Nothing placed yet</p>')}</div></div>` : '');
+    if (!accounts && !own.length && !stocks.length && !open){ empty.push(a); return ''; }
+    return accounts + (own.length || stocks.length || open ? `<div class="nav-area">${head(`data-area="${esc(a.id)}"`, esc(a.name), open)}<div class="nav-children">${own.map(navGoal).join('') + stocks.map(navStock).join('') || (accounts ? '' : '<p class="nav-empty">Nothing placed yet</p>')}</div></div>` : '');
   }).join('');
   // goals with no area yet sit under the list; stocks no goal names, and areas holding nothing, open from the foot
   const placed = new Set(GOALS.flatMap(g => [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]));
-  const loose = ALL.filter(m => !placed.has(m)), unhomed = GOALS.filter(g => !HOMES[g.id]);
+  const loose = ALL.filter(m => !placed.has(m) && !(RECORDEDAREAS[m] && areaOf(RECORDEDAREAS[m]))), unhomed = GOALS.filter(g => !HOMES[g.id]);
   const drawer = UNPLACED_OPEN && loose.length ? '<div class="nav-drawer"><p class="nav-head">Unplaced stocks</p>' + loose.map(m => `<button type="button" class="nav-stock" data-nav-stock="${esc(m)}"><span>${esc(human(m))}</span><span class="nav-val"><b>${LAST[m] ? num(Number(LAST[m].mean)) : '&#183;'}</b></span></button>`).join('') + '</div>'
     : OTHER_AREAS_OPEN && empty.length ? '<div class="nav-drawer"><p class="nav-head">Empty areas</p>' + empty.map(x => `<button type="button" class="nav-stock" data-area="${esc(x.id)}"><span>${esc(x.name)}</span></button>`).join('') + '</div>' : '';
   const foot = `<div class="nav-foot">${loose.length ? `<button type="button" data-unplaced aria-expanded="${UNPLACED_OPEN}">Unplaced · ${loose.length}</button>` : ''}${empty.length ? `<button type="button" data-other-areas aria-expanded="${OTHER_AREAS_OPEN}">Empty areas · ${empty.length}</button>` : ''}<button type="button" data-area="stats" aria-pressed="${AREA === 'stats'}">Yourself</button></div>`;
   $('area-rail').innerHTML = root + '<div class="area-list">' + areas + (unhomed.length ? `<div class="nav-area">${areas ? '<p class="nav-head">Not in an area</p>' : ''}<div class="nav-children">${unhomed.map(navGoal).join('')}</div></div>` : '') + '</div><div class="area-bottom">' + drawer + foot + '</div>';
+}
+function navStock(m){
+  const snap = snapshotOf(m);
+  if (LAST[m] || !snap) return `<button type="button" class="nav-stock" data-nav-stock="${esc(m)}"><span>${esc(human(m))}</span><span class="nav-val"><b>${LAST[m] ? num(Number(LAST[m].mean)) : '&#183;'}</b></span></button>`;
+  return `<button type="button" class="nav-stock" disabled title="${esc('Snapshot, kept as shown and never scored · ' + snap.window + (snap.day ? ' · read ' + snap.day : ''))}"><span>${esc(human(m))}</span><span class="nav-val"><b>${esc(snap.shown || '')}${snap.unit ? ' ' + esc(snap.unit) : ''}</b> <small class="nav-snap">${esc(snap.window)}</small></span></button>`;
 }
 function pickArea(id, section = ''){
   if (id !== YOU_ID && id !== 'stats' && !areaOf(id)) return;
@@ -1936,7 +1957,7 @@ $('ask-copy').onclick = async () => { try { await navigator.clipboard.writeText(
 async function load(){
   const version = ++LOAD_VERSION;
   const revision = await readLedgerRevision(db);   // before the snapshot: an append during any reader triggers another refresh
-  const [today, all, rules, goals, voids, cvoids, feeds, starts, info, ps, notes] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db), readMeasurementInfo(db), readAll(() => db.from('events').select('context').eq('event_type', 'photo').order('occurred_at', { ascending:false }).order('id', { ascending:false })), readNotes(db)]);
+  const [today, all, rules, goals, voids, cvoids, feeds, starts, info, ps, notes, snaps] = await Promise.all([readDay(db), readMetrics(db), readRules(db), readGoals(db), readVoids(db), readCommitVoids(db), readFeeds(db), readStarts(db), readMeasurementInfo(db), readAll(() => db.from('events').select('context').eq('event_type', 'photo').order('occurred_at', { ascending:false }).order('id', { ascending:false })), readNotes(db), readSnapshots(db)]);
   const [commits, rows] = await Promise.all([readCommits(db, today), all.length ? readDays(db, all) : []]);
   if (version !== LOAD_VERSION) return;
   TODAY = today; ALL = all; RULES = rules; GOALS = goals; VOIDS = voids; CVOIDS = cvoids; STARTS = starts;
@@ -1950,7 +1971,7 @@ async function load(){
   // OWNED counts the stocks with an index. YOU keeps every stock, so an active stock without an
   // index makes the day silent instead of disappearing from the average.
   SERIES = rankSeries(rows, rules, voids, STARTS); OWNED = Object.keys(SERIES).filter(m => indexState(SERIES[m]) !== 'none'); YOU = etfSeries(SERIES, Object.keys(SERIES), STALEBY);
-  DAYS = rows; LEDGER = null; NOTES = notes; readProfileNotes(notes); LTOKEN++; LIVE = null;
+  DAYS = rows; LEDGER = null; NOTES = notes; readProfileNotes(notes); readAreaNotes(notes); SNAPSHOTS = snaps; LTOKEN++; LIVE = null;
   CROSS = crossGrid(GOALS, liveRows(rows, voids), SERIES, TODAY);   // a voided reading is no more a lever than an outcome
   LAST = {}; for (const r of liveRows(rows, voids)) LAST[r.metric] = r;   // readDays is oldest first; a voided reading is not the latest one, a corrected one reads its correction
   // progress photos: the newest of each day for the goal it names, latest wins as a correction does. the row says where the private file is
@@ -1976,6 +1997,10 @@ const dstr = n => new Date(n * 864e5).toISOString().slice(0, 10);
 const arrOf = pts => { const a = new Array(N).fill(null); for (const p of pts){ const i = dayNum(p.day) - D0; if (i >= 0 && i < N && Number.isFinite(p.rank)) a[i] = p.rank; } return a; };
 // YOU is the goal made of every stock with a rule
 const youGoal = () => ({ id: YOU_ID, name: 'YOU', measures: Object.keys(SERIES), target: null });
+// the stocks an area_<metric> note places in an area, leaving out any a goal the browser placed already shows;
+// shown in the rail and on the area page as placed, never added to the area's measures or its index
+const notedIn = id => { const homed = new Set(GOALS.filter(g => HOMES[g.id]).flatMap(g => [...g.measures, ...g.levers.map(l => l.metric), ...(g.target ? [g.target.metric] : [])]));
+  return [...new Set([...ALL, ...SNAPSHOTS.map(x => x.metric)])].filter(m => RECORDEDAREAS[m] === id && !homed.has(m)); };
 const areaScope = (area = AREA, section = SECTION) => { const goals = GOALS.filter(g => HOMES[g.id]?.area === area && (!section || HOMES[g.id].section === section)); return {id:'area-view:' + area,name:areaOf(area)?.name || 'YOU',measures:[...new Set(goals.flatMap(g => g.measures))],levers:[],target:null,presentation:true,goals:goals.map(g => g.id)}; };
 const cur = () => ACCOUNT ? socialScope() : SEL === YOU_ID ? areaOf(AREA) ? areaScope() : youGoal() : GOALS.find(g => g.id === SEL);
 const pointsOf = g => g.presentation ? [] : g.id === YOU_ID ? YOU : goalSeries(g, SERIES, STALEBY);   // complete series for tests
@@ -2422,8 +2447,11 @@ function drawOutcomeFeedPaths(){
 // ---- what is counted: sources, the stocks they write, the goal those stocks make ----
 function drawFlow(g){
   const ms = [...new Set(listOf(g))], f = $('flow');
+  const pn = g.presentation && areaOf(AREA) && !SECTION ? notedIn(AREA) : [];
+  const placedLine = pn.length ? '<p class="outcome-empty">Placed here by notes, never scored: ' + pn.map(m => { const s = !LAST[m] && snapshotOf(m);
+    return esc(human(m)) + ' ' + (s ? esc((s.shown || '') + (s.unit ? ' ' + s.unit : '') + ' ' + s.window) : LAST[m] ? num(Number(LAST[m].mean)) : '&#183;'); }).join(' · ') + '</p>' : '';
   f.classList.remove('grouped'); f.classList.add('flow-compact');
-  if (!ms.length){ f.innerHTML = '<div class="outcome-heading"><h2>Outcomes</h2></div><p class="outcome-empty">No measurements in this view.</p>'; return; }
+  if (!ms.length){ f.innerHTML = '<div class="outcome-heading"><h2>Outcomes</h2></div><p class="outcome-empty">No measurements in this view.</p>' + placedLine; return; }
   const snapshot = availableContributions(SERIES,ms,TODAY), byMetric = new Map(snapshot.contributions.map(c => [c.metric,c]));
   const gp = chartPointsOf(g), gl = chartPointOn(gp,TODAY);
   const bySource = new Map();
@@ -2440,6 +2468,7 @@ function drawFlow(g){
     const list = bySource.get(source).sort((a,b) => human(a).localeCompare(human(b))), lane = sourceLane(source), info = SOURCEINFO[source];
     return `<section class="outcome-source${list.length > 12 ? ' long-source' : ''}" data-lane="${lane}"><header class="node s" data-s="${esc(source)}" data-k="${k}"><span class="source-identity">${sourceIdentity(source)}<small class="source-lane">${LANE_META[lane].label}</small></span><small class="source-saved" title="${esc(info?.lastSavedAt ? stamp(info.lastSavedAt) + ' · saved reading, not an import check' : 'No saved measurement time')}">${info?.lastSavedAt ? 'Saved ' : ''}${esc(recordedAgo(info?.lastSavedAt))}</small></header><div class="outcome-source-rows"${list.length > 12 ? ' tabindex="0" aria-label="Measurements from ' + esc(sourceName(source)) + '"' : ''}>${list.map(m => chip(m,k)).join('')}</div></section>`;
   }).join('')}</div></div>`;
+  if (placedLine) f.insertAdjacentHTML('beforeend', placedLine);
   wire();
 }
 function wire(){
@@ -3219,7 +3248,7 @@ async function showLedger(){
     catch (e) { error = e; }
     if (k !== LTOKEN) return;
     if (error){ say(error.message); return; }
-    LEDGER = data; NOTES = notes; readProfileNotes(notes); }
+    LEDGER = data; NOTES = notes; readProfileNotes(notes); readAreaNotes(notes); }
   if (SHOWLEDGER) drawLedger();
 }
 function notesPanel(){
@@ -3282,9 +3311,9 @@ function ledgerPager(page, pages, kind, total){
 }
 function ledgerEntries(){
   const q = LF_ENTRY_QUERY.trim().toLowerCase();
-  const rows = (LEDGER || []).filter(r => !q || [r.metric,r.source,r.event_type,r.occurred_at,r.value,r.unit].join(' ').toLowerCase().includes(q));
+  const rows = (LEDGER || []).filter(r => !q || [r.metric,r.source,r.event_type,r.occurred_at,r.value,r.unit,r.event_type === 'snapshot' ? r.context?.shown : '',r.event_type === 'snapshot' ? r.context?.window : ''].join(' ').toLowerCase().includes(q));
   const pages = Math.max(1,Math.ceil(rows.length / LF_ENTRY_SIZE)); LF_ENTRY_PAGE = Math.min(LF_ENTRY_PAGE,pages - 1);
-  return `<section class="lf-entries"><div class="lf-tools"><label>Find an entry<input id="lf-entry-search" type="search" value="${esc(LF_ENTRY_QUERY)}" placeholder="Metric, source, type or date" autocomplete="off"></label><span>${rows.length} entries · newest reading time first</span></div><div class="lf-table-wrap"><table><thead><tr><th>Occurred</th><th>Source</th><th>Type</th><th>Metric</th><th>Recorded value</th></tr></thead><tbody>${rows.slice(LF_ENTRY_PAGE * LF_ENTRY_SIZE,(LF_ENTRY_PAGE + 1) * LF_ENTRY_SIZE).map(r => { const lane = ledgerLane(r.source); return `<tr><td><time datetime="${esc(r.occurred_at || '')}">${esc(stamp(r.occurred_at))}</time></td><td><span style="color:${lane.color}">${sourceIdentity(r.source)}</span><small>${esc(lane.label)}</small></td><td>${esc(r.event_type || 'measurement')}</td><td>${esc(r.metric)}</td><td>${r.value == null ? '—' : esc(num(Number(r.value))) + (r.unit ? ' ' + esc(r.unit) : '')}</td></tr>`; }).join('') || '<tr><td colspan="5">No matching entries.</td></tr>'}</tbody></table></div>${ledgerPager(LF_ENTRY_PAGE,pages,'entries',rows.length)}<p class="lf-caption">Occurred is the event’s recorded time, not its save or import time. Notes are available in the Notes tab.</p></section>`;
+  return `<section class="lf-entries"><div class="lf-tools"><label>Find an entry<input id="lf-entry-search" type="search" value="${esc(LF_ENTRY_QUERY)}" placeholder="Metric, source, type or date" autocomplete="off"></label><span>${rows.length} entries · newest reading time first</span></div><div class="lf-table-wrap"><table><thead><tr><th>Occurred</th><th>Source</th><th>Type</th><th>Metric</th><th>Recorded value</th></tr></thead><tbody>${rows.slice(LF_ENTRY_PAGE * LF_ENTRY_SIZE,(LF_ENTRY_PAGE + 1) * LF_ENTRY_SIZE).map(r => { const lane = ledgerLane(r.source); return `<tr><td><time datetime="${esc(r.occurred_at || '')}">${esc(stamp(r.occurred_at))}</time></td><td><span style="color:${lane.color}">${sourceIdentity(r.source)}</span><small>${esc(lane.label)}</small></td><td>${esc(r.event_type || 'measurement')}</td><td>${esc(r.metric)}</td><td>${r.event_type === 'snapshot' && r.context && r.context.shown != null ? esc(r.context.shown) + (r.unit ? ' ' + esc(r.unit) : '') + (r.context.window ? ' · ' + esc(r.context.window) : '') : r.value == null ? '—' : esc(num(Number(r.value))) + (r.unit ? ' ' + esc(r.unit) : '')}</td></tr>`; }).join('') || '<tr><td colspan="5">No matching entries.</td></tr>'}</tbody></table></div>${ledgerPager(LF_ENTRY_PAGE,pages,'entries',rows.length)}<p class="lf-caption">Occurred is the event’s recorded time, not its save or import time. Notes are available in the Notes tab.</p></section>`;
 }
 // Account labels are provenance only. Never assign an unlabeled import to a sidebar account.
 function ledgerRecordedAccount(row){
