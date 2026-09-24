@@ -227,11 +227,16 @@ function steps(site, ai, self) {
         'Take the rates and leave the totals: percentage watched, not views. A total that only climbs can never hold an index.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
-        `On your phone, in the Claude app: new chat, +, Connectors, turn on wire, the one at \`${s}/api/mcp\`, and say a reading.`
+        // A connector added in Claude Code lives only in Claude Code, so a buyer who chose it has nothing on the phone
+        // yet; one added on claude.ai is already in the Claude app everywhere. Only one Wire is on in the phone chat,
+        // or the reading lands in whichever is on.
+        ...(ai && ai !== 'app' ? [`Add it once in the Claude app: Settings, Connectors, Add custom connector, name wire, URL \`${s}/api/mcp\`, and the header authorization with Bearer and your WIRE_TOKEN, the same address and token as step 3. It shows up on your phone.`] : []),
+        `On your phone, in the Claude app: new chat, +, Connectors, turn on wire, the one at \`${s}/api/mcp\`, turn off any other Wire connector, and say a reading.`
       ],
       ask: 'Say done when it has landed.',
       more: [
-        'A connector added on claude.ai is already in the Claude app on your phone, so there is nothing to set up there.'
+        'A connector added in the Claude app or on claude.ai is in the Claude app on every device you sign in to, your phone included. One added in Claude Code or Codex is not, which is why it is added once in the Claude app.',
+        'Only one Wire connector should be on in that chat, the one at `' + s + '/api/mcp`, or the reading lands in whichever is on.'
       ] },
     { need: ['site', 'timezone', 'ai'], lines: [
         'In a chat with wire on, say what you are working toward, what measures it, what moves it, and which way is better for each measure. Say yes to the rows.'

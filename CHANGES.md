@@ -3,6 +3,15 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, the phone step for a terminal buyer.** Step six said the
+  Claude app on the phone already has the connector, which is true only
+  for a buyer who added it in the Claude app or on claude.ai. A buyer
+  who picked Claude Code or Codex at step three added it only there, so
+  step six now tells them to add it once in the Claude app, with the
+  same address and token, and it shows up on the phone. Every buyer is
+  told to turn off any other Wire connector in that phone chat, so the
+  reading lands in the right one.
+
 - **23 Sep 2026, which login.** Step five said sign in and never with
   what. Every step that uses the login, making the user in step two,
   `import.html` in step five and `you.html` in step seven, now says:
