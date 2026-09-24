@@ -97,7 +97,7 @@ const FIX = {
     + `1. Open ${self}/token.html, press Make another, and Copy.\n`
     + '2. In Vercel: your project, Settings, Environment Variables, WIRE_TOKEN, Edit, paste the new one, Save.\n'
     + '3. Deployments, the newest one, the three dots, Redeploy. Until it has redeployed the old token still works.\n'
-    + '4. Update every place that holds the old one: the connector header in your AI (claude.ai: Settings, Connectors, wire; Claude Code: `claude mcp remove wire`, then the add command again with the new token), and your phone shortcut if you made one.\n'
+    + '4. Update every place that holds the old one: your AI\'s connector (the Claude app: Settings, Connectors, remove wire and add it again with the new token at the end of the URL; Claude Code: `claude mcp remove wire`, then the add command again with the new token), and your phone shortcut if you made one.\n'
     + 'Rows added with the old token stay in the ledger. If one is not yours, void it; nothing is ever deleted. Never paste the new one into a chat, a screenshot or a Discord.',
   supabase: self => 'Supabase asks for money when the account already has two active free projects; two is the free limit. Two ways out, and neither is Pro.\n'
     + '1. Pause a project you are not using. At supabase.com open it, Settings, General, Pause project. A paused project does not count. Then go back to the Vercel page and pick Free.\n'
@@ -159,12 +159,17 @@ const which = s => {
 // never into the chat.
 // What the buyer copies comes as a code block of its own, which a chat shows with a copy button, filled in with
 // their own address. The token is the one thing never filled in: it is typed where it goes, never into the chat.
+// The Claude app takes it at the end of the address: tested on a fresh copy, its connector form had the
+// Authorization header set and every request still came back 401, while /api/mcp/<token> with no header worked.
+// Claude Code's header works, so it keeps the header. An address holding a token is shown on the connector
+// page, so the buyer is told never to screenshot it.
 function connect(site) {
   const mcp = site + '/api/mcp';
   return {
     app: [
-      { say: 'Settings, Connectors, Add custom connector. Name: wire. URL, copy it from here:', code: mcp },
-      'Authentication: No sign-in. Add header: name authorization, value Bearer, a space, then your WIRE_TOKEN. Press Add.'
+      { say: 'Settings, Connectors, Add custom connector. Name: wire. URL: copy this, then swap YOUR_WIRE_TOKEN for your token in the URL box itself, never in this chat:', code: `${mcp}/YOUR_WIRE_TOKEN` },
+      'Authentication: No sign-in. No header. Press Add.',
+      'The connector page shows this address, with your token in it, so never screenshot it.'
     ],
     code: [{ say: 'Copy this, swap YOUR_WIRE_TOKEN for your token, and run it in your own terminal, not in this chat:', code: `claude mcp add --transport http wire ${mcp} --header "authorization: Bearer YOUR_WIRE_TOKEN"` }],
     codex: [
@@ -234,9 +239,9 @@ function steps(site, ai, self, manual) {
       ],
       ask: 'Say done when wire shows in your connectors.',
       more: [
-        'The token goes in a settings page or a terminal, never into a chat, a screenshot or a Discord: it is a key, and whoever has it can read your ledger and add rows. Bearer, a space, then the token, exactly as it is in Vercel.',
+        'The token goes in the connector\'s URL box or a terminal, never into a chat, a screenshot or a Discord: it is a key, and whoever has it can read your ledger and add rows. In the Claude app it goes at the end of the URL, after /api/mcp/, with no header; in Claude Code it goes in the header, after Bearer and a space. Exactly as it is in Vercel.',
         'If it has leaked, say so and you get the steps to replace it.',
-        'If it will not connect, or says 401, the token in the header is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the eye icon, and put it in the header.',
+        'If it will not connect, or says 401, the token is not the one in Vercel. Copy it again from Vercel, Settings, Environment Variables, WIRE_TOKEN, the eye icon. In the Claude app, remove wire and add it again with that token at the end of the URL.',
         'Vercel marks WIRE_TOKEN and WIRE_PASSWORD Needs Attention because they are not Sensitive. Leave them as they are: a Sensitive value can never be shown again, and this step, and signing in to your page, need to read them back. Nobody but you can open your Vercel project.',
         'If you already have an MCP called wire, adding this one fails, in Claude Code with "MCP server wire already exists in local config". Pick another name, like mywire, and use that name everywhere after: in the command or the connector form, and when a later step says to turn on wire.',
         'If you already have another Wire connected, this one is the one at `' + s + '/api/mcp`. Keep the two apart by name.',

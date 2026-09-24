@@ -78,9 +78,13 @@ a publishable key.
 **To let Claude use it**, add three more under Settings, Environment
 Variables, and redeploy: `WIRE_EMAIL` and `WIRE_PASSWORD` (the user you
 made in step 2) and `WIRE_TOKEN` (a long random string you make, for
-example with `openssl rand -hex 32`). In claude.ai, add a custom connector
-at `https://<your site>/api/mcp`, choose No sign-in, and add the header
-`authorization` with the value `Bearer ` followed by your token.
+example with `openssl rand -hex 32`). In claude.ai or the Claude app, add a
+custom connector at `https://<your site>/api/mcp/<your token>`, choose No
+sign-in, and add no header: with the header set, every request was refused,
+and the token at the end of the address works. The connector page then shows that address,
+so never screenshot it. Claude Code takes the header instead: `claude mcp
+add --transport http wire https://<your site>/api/mcp --header
+"authorization: Bearer <your token>"`.
 
 **For an iOS Shortcut**, which writes one reading from your phone, add a
 Get Contents of URL action: `https://<your site>/api/at`, method POST, a

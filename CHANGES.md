@@ -3,6 +3,21 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, the Claude app takes the token in the address.** Tested
+  on a fresh copy: a Claude app custom connector with No sign-in and the
+  Authorization header set got 401 on every request, with the token
+  confirmed identical, while the same connector at `/api/mcp/<token>`
+  with no header worked. Step three now gives Claude app buyers the
+  address with YOUR_WIRE_TOKEN at the end, to swap in the URL box and
+  never in the chat, No sign-in and no header, and says the connector
+  page shows that address, so never screenshot it. Claude Code keeps
+  the header, which works. Step six adds the phone's connector the same
+  way, and step three's help and the leaked-token answer say how to put
+  a new token in each. `health` counted every door that promises a
+  schedule and has never written as a failure, so a fresh copy read not
+  fed; it now counts only doors that have written at least once and
+  since fallen behind.
+
 - **24 Sep 2026, start your data flow.** The walkthrough's closing
   message ends with what to do next instead of what is missing: say a
   reading like "my weight today is 81.4 kg", ask "how am I doing?", or

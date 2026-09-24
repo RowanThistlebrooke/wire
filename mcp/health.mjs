@@ -71,7 +71,9 @@ export function keys() {
 // Which doors are still feeding the ledger. The doors, their promises and how
 // far behind each one is are worked out in you-reader.js, beside the rest of
 // the maths; this reads that answer and only says whether anything is wrong.
-// A door with no promise cannot be late, so it is never the reason this fails.
+// A door with no promise cannot be late, so it is never the reason this fails. Nor is a door that has never
+// written: a buyer who never set up whoop or youtube has not got a broken feed, only a door they do not use.
+// Only a door that has written at least once and has since fallen behind its promise turns this red.
 // Which stocks no longer fit their baseline, and why they have no index. ok only when none has.
 // A stock whose baseline has no spread yet is young, not broken, so it does not turn this red.
 // The gate and its explanation live in you-reader.js; this only says the supplied noIndexWhy.
@@ -83,13 +85,9 @@ export function index(outgrown) {
 
 export function feed(doors) {
   const all = doors || [];
-  const late = all.filter(d => d.state === 'drifting' || d.state === 'stale');
-  const never = all.filter(d => d.promise != null && d.days == null);
-  const ok = !late.length && !never.length;
-  const say = [
-    ...never.map(d => `${d.source} has never written`),
-    ...late.map(d => `${d.source} last wrote ${d.days} days ago and promises ${d.promise}`)
-  ].join('; ');
+  const late = all.filter(d => d.days != null && (d.state === 'drifting' || d.state === 'stale'));
+  const ok = !late.length;
+  const say = late.map(d => `${d.source} last wrote ${d.days} days ago and promises ${d.promise}`).join('; ');
   return { ok, doors: all, ...(ok ? {} : { say }) };
 }
 
