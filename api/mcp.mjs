@@ -38,7 +38,9 @@ export default async function handler(req, res) {
     return refuse(res, 405, 'method not allowed');
   }
 
-  const server = wireServer();
+  // the site's own address, so the server's answer names this Wire's own import page
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const server = wireServer({ site: host ? `https://${host}` : null });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   res.on('close', () => { transport.close(); server.close(); });
   try {

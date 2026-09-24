@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
+import { flow } from '../mcp/flow.mjs';
 
 const REPO = 'https://github.com/RowanThistlebrooke/wire';
 const TABLE_SQL = readFileSync(new URL('../sql/01_the_table.sql', import.meta.url), 'utf8');
@@ -292,8 +293,7 @@ function end(site) {
   const s = site || 'your site';
   return 'Done. Your Wire is yours.\n'
     + `Your connector is \`${s}/api/mcp\`, the address your AI talks to, not a web page. Your WIRE_TOKEN is a key: whoever has it can read your ledger and add rows. Never paste it into a chat, a screenshot or a Discord; if it leaks, ask for help and replace it.\n`
-    + `Two doors are open: say a reading to your AI in any chat with wire on, or drop an export onto ${s}/you.html.\n`
-    + 'Nothing fetches your numbers for you yet; every reading arrives because you sent it.\n'
+    + flow(site) + '\n'
     + 'Your copy updates itself every morning from the original and Vercel redeploys; ask your AI for health to see which version you are on.';
 }
 

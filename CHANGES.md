@@ -3,6 +3,16 @@
 Template updates, newest first. Each one is a whole file: open it on
 GitHub, copy all of it, paste over yours.
 
+- **24 Sep 2026, start your data flow.** The walkthrough's closing
+  message ends with what to do next instead of what is missing: say a
+  reading like "my weight today is 81.4 kg", ask "how am I doing?", or
+  drop an export on the buyer's own import.html, with YouTube Studio
+  working and WHOOP not yet. The Wire's own connector answers "what can
+  I do", "how do I add data" and "what now" with exactly that block and
+  nothing else, naming the buyer's own import page. The block lives once,
+  in `mcp/flow.mjs`, read by both, so the two can never say different
+  things; a new way in joins it only once it has shipped.
+
 - **24 Sep 2026, step two in one press.** Step two was the hardest one:
   open Supabase, paste the table's SQL, run it, then make a login by
   hand. A copy whose Supabase came with the Deploy button now does it

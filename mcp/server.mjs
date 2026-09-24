@@ -19,6 +19,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { supabaseUrl, publishableKey, isPublishable } from './env.mjs';
 import { code, feed, index, keys, table, version } from './health.mjs';
+import { flow } from './flow.mjs';
 
 const { WIRE_EMAIL, WIRE_PASSWORD } = process.env;
 
@@ -299,7 +300,8 @@ async function readAgain(rows, days, model) {
 
 // A fresh server with every tool on it. stdio makes one for the life of the
 // process; HTTP makes one per request, as a stateless server must.
-export function wireServer() {
+// site is the address the server is reached at, when there is one, so its answer names the buyer's own pages.
+export function wireServer({ site = null } = {}) {
   // mcp/MCP.md holds these laws, and a file in a repo is read by nobody. The ones that govern
   // writing travel with the server instead, so every session opens with them, a buyer's as much
   // as this one. Kept short on purpose: it is sent every time.
@@ -335,7 +337,8 @@ export function wireServer() {
       'A number missing or unclear on the page is not written; say so. Use the date the page shows for a number when it shows one. ' +
       'A total that only grows goes through record_page with total true, which keeps the total and scores its daily change; never subtract yourself. ' +
       'Write only through record_page, which signs every row chrome: show its full table and write on one yes. ' +
-      'Read only: never type, log in, accept, or click anything that changes the page, and stop and say so if a site blocks automation.'
+      'Read only: never type, log in, accept, or click anything that changes the page, and stop and say so if a site blocks automation. ' +
+      'When the user asks what they can do, how to add data, or what now, answer with exactly this and nothing else:\n' + flow(site)
   });
 
   server.tool(
